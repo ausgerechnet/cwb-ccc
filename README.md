@@ -285,10 +285,10 @@ This work was supported by the
 Fields Initiative (EFI)) of Friedrich-Alexander-Universität
 Erlangen-Nürnberg (project title:
 [https://www.linguistik.phil.fau.de/projects/efe/](Exploring the
-'Fukushima Effect' (EFE))).
+'Fukushima Effect')).
 
 Further development of the package has been funded by the Deutsche
 Forschungsgemeinschaft (DFG) within the project "Reconstructing
 Arguments from Noisy Text", grant number 377333057, as part of the
-Priority Program " [http://www.spp-ratio.de/home/](Robust
-Argumentation Machines (RATIO))" (SPP-1999).
+Priority Program "[http://www.spp-ratio.de/home/](Robust
+Argumentation Machines)" (SPP-1999).
