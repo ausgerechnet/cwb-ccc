@@ -16,8 +16,7 @@ You can install this module with pip from PyPI:
 	pip3 install cwb-ccc
 
 You can also clone the repository from
-[gitlab.cs.fau.de](https://gitlab.cs.fau.de/pheinrich/ccc) and use
-`setup.py`:
+[github](https://github.com/ausgerechnet/cwb-ccc) and use `setup.py`:
 
     python3 setup.py install
 
