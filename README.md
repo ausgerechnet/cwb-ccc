@@ -1,10 +1,10 @@
 # Collocation and Concordance Computation #
 
 ## Introduction ##
-This module is a wrapper around the [IMS Open Corpus Workbench
-(CWB)]([http://cwb.sourceforge.net/]).  Main purpose of the module is
-to extract concordance lines, calculate collocates, and run queries
-with several anchor points.
+This module is a wrapper around the
+[IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).
+Main purpose of the module is to extract concordance lines, calculate
+collocates, and run queries with several anchor points.
 
 If you want to extract the results of anchored queries with more than
 two anchor points, the module requires CWB version 3.4.16 or newer.
@@ -281,14 +281,11 @@ Markus Opolka for the implementation of
 and for forcing me to write tests.
 
 This work was supported by the
-[https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/](Emerging
-Fields Initiative (EFI)) of Friedrich-Alexander-Universität
+[https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/](Emerging Fields Initiative (EFI)) of Friedrich-Alexander-Universität
 Erlangen-Nürnberg (project title:
-[https://www.linguistik.phil.fau.de/projects/efe/](Exploring the
-'Fukushima Effect')).
+[https://www.linguistik.phil.fau.de/projects/efe/](Exploring the 'Fukushima Effect')).
 
 Further development of the package has been funded by the Deutsche
 Forschungsgemeinschaft (DFG) within the project "Reconstructing
 Arguments from Noisy Text", grant number 377333057, as part of the
-Priority Program "[http://www.spp-ratio.de/home/](Robust
-Argumentation Machines)" (SPP-1999).
+Priority Program "[http://www.spp-ratio.de/home/](Robust Argumentation Machines)" (SPP-1999).
