@@ -1,4 +1,5 @@
 import shelve
+import re
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
@@ -60,6 +61,23 @@ def formulate_cqp_query(items, p_att, s_att):
     else:
         cqp_exec = query
     return cqp_exec
+
+
+def anchor_query_to_anchors(anchor_query, strict=False):
+    """get anchors present in query"""
+
+    anchors = dict()
+    p = re.compile(r"@\d")
+
+    for m in p.finditer(anchor_query):
+        if strict:
+            if m.group() in anchors.keys():
+                raise KeyError('duplicate keys provided')
+        anchors[m.group()] = [m.start(), m.end()]
+
+    keys = [int(a[1]) for a in anchors.keys()]
+
+    return keys
 
 
 def time_it(func):

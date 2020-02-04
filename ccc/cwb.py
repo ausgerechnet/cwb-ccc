@@ -1,48 +1,29 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
 import os
 from io import StringIO
 from glob import glob
 from collections import Counter
 # part of module
 from .cqp_interface import CQP
-from .utils import Cache, formulate_cqp_query
+from .utils import Cache, formulate_cqp_query, anchor_query_to_anchors
 # requirements
 from pandas import DataFrame, read_csv, to_numeric
 from CWB.CL import Corpus
 
 
-# utilities that don't need the engine
-def anchor_query_to_anchors(anchor_query, strict=False):
-    """get anchors present in query"""
-
-    anchors = dict()
-    p = re.compile(r"@\d")
-
-    for m in p.finditer(anchor_query):
-        if strict:
-            if m.group() in anchors.keys():
-                raise KeyError('duplicate keys provided')
-        anchors[m.group()] = [m.start(), m.end()]
-
-    keys = [int(a[1]) for a in anchors.keys()]
-
-    return keys
-
-
-class CWBEngine(object):
+class CWBEngine:
     """ interface to CWB """
 
     def __init__(self,
                  corpus_name,
-                 registry_path="/usr/local/share/cwb/registry/",
+                 registry_path='/usr/local/share/cwb/registry/',
                  lib_path=None,
                  meta_path=None,
                  meta_s=None,
-                 cqp_bin="cqp",
-                 cache_path="/tmp/ccc-cache"):
+                 cqp_bin='cqp',
+                 cache_path='/tmp/ccc-cache'):
         """Establishes connection to indexed corpus. Raises KeyError if corpus
         not in registry.
 
@@ -61,7 +42,7 @@ class CWBEngine(object):
         # meta data
         self.meta_path = meta_path
         if self.meta_path:
-            self.meta = read_csv(meta_path, sep="\t", index_col=0)
+            self.meta = read_csv(meta_path, sep='\t', index_col=0)
         self.meta_s = meta_s
 
         # set interface
@@ -78,7 +59,7 @@ class CWBEngine(object):
         self.cqp.Exec(self.corpus_name)
 
         # get corpus attributes
-        df = read_csv(StringIO(self.cqp.Exec("show cd;")), sep="\t",
+        df = read_csv(StringIO(self.cqp.Exec('show cd;')), sep='\t',
                       names=['att', 'value', 'annotation'])
         self.corpus_attributes = df
 
@@ -94,9 +75,9 @@ class CWBEngine(object):
         """Reads macros and worldists."""
 
         # wordlists
-        wordlists = glob(os.path.join(path_lib, "wordlists", "*"))
+        wordlists = glob(os.path.join(path_lib, 'wordlists', '*'))
         for wordlist in wordlists:
-            name = wordlist.split("/")[-1].split(".")[0]
+            name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
             cqp_exec = 'define $%s < "%s";' % (
                 name, abs_path
@@ -104,14 +85,14 @@ class CWBEngine(object):
             self.cqp.Exec(cqp_exec)
 
         # macros
-        macros = glob(os.path.join(path_lib, "macros", "*"))
+        macros = glob(os.path.join(path_lib, 'macros', '*'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             self.cqp.Exec(cqp_exec)
 
     def get_meta_regions(self):
-        s_regions = self.corpus.attribute(self.meta_s, "s")
+        s_regions = self.corpus.attribute(self.meta_s, 's')
         records = list()
         for s in s_regions:
             records.append({
@@ -120,7 +101,7 @@ class CWBEngine(object):
                 'match_end': s[1]
             })
         df = DataFrame(records)
-        df.set_index("idx", inplace=True)
+        df.set_index('idx', inplace=True)
         df = df[['match_start', 'match_end']]
         return df
 
@@ -129,19 +110,19 @@ class CWBEngine(object):
         self.cqp.Exec(self.corpus_name)
         self.subcorpus = self.corpus_name
         # print(self.cqp.Exec("show named;"))
-        print("switched to corpus %s" % self.corpus_name)
+        print('CQP switched to corpus "%s"' % self.corpus_name)
 
     def subcorpus_from_query(self, query, name='Last', match_strategy='longest'):
         """Defines a subcorpus via a query and activates it."""
 
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
-        subcorpus_query = "{name}={subcorpus_query};".format(
+        subcorpus_query = '{name}={subcorpus_query};'.format(
             name=name, subcorpus_query=query
         )
         self.cqp.Exec(subcorpus_query)
         self.cqp.Exec(name)
         self.subcorpus = name
-        print("switched to subcorpus %s" % name)
+        print('CQP switched to subcorpus "%s" of corpus "%s"' % (name, self.corpus_name))
 
     def subcorpus_from_df(self, df, name='Last'):
         """Defines a subcorpus via corpus positions and activates it."""
@@ -149,7 +130,7 @@ class CWBEngine(object):
         self.cqp.Undump(name, df)
         self.cqp.Exec(name)
         self.subcorpus = name
-        print("switched to subcorpus %s" % name)
+        print('CQP switched to subcorpus "%s" of corpus "%s"' % (name, self.corpus_name))
 
     def _df_node_from_query(self, query, s_break, context, match_strategy):
         """see df_node_from_query, which is a cached version of this method"""
@@ -158,7 +139,7 @@ class CWBEngine(object):
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
 
         # run query and dump results
-        query += " within %s;" % s_break
+        query += ' within %s;' % s_break
         self.cqp.Query(query)
         df = self.cqp.Dump()
 
@@ -172,7 +153,7 @@ class CWBEngine(object):
         return df_node
 
     def df_node_from_query(self, query, s_break, context=50,
-                           match_strategy='longest', meta=False):
+                           match_strategy='longest'):
         """Executes query within s_break to get df_node.
 
         :param str query: valid CQP query (without 'within' clause)
@@ -207,11 +188,11 @@ class CWBEngine(object):
         anchors = anchor_query_to_anchors(anchor_query)
 
         # first run: 0 and 1
-        self.cqp.Exec("set AnchorNumberTarget 0; set AnchorNumberKeyword 1;")
-        self.cqp.Exec("tmp_anchor = " + anchor_query + " within " + s_break + ";")
+        self.cqp.Exec('set ant 0; ank 1;')
+        self.cqp.Exec('tmp_anchor = ' + anchor_query + ' within ' + s_break + ';')
 
         # dump result
-        df_anchor = self.cqp.Dump("tmp_anchor")
+        df_anchor = self.cqp.Dump('tmp_anchor')
         df_anchor.columns = [0, 1]
 
         # if there's nothing to return ...
@@ -222,10 +203,10 @@ class CWBEngine(object):
         for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
             if pair[0] in anchors or pair[1] in anchors:
                 # load initial matches
-                self.cqp.Exec("tmp_anchor;")
+                self.cqp.Exec('tmp_anchor;')
                 # set appropriate anchors
                 self.cqp.Exec(
-                    "set AnchorNumberTarget %d; set AnchorNumberKeyword %d;" % pair
+                    'set AnchorNumberTarget %d; set AnchorNumberKeyword %d;' % pair
                 )
                 self.cqp.Exec('tmp = <match> ( %s );' % anchor_query)
                 df = self.cqp.Dump("tmp")
@@ -234,7 +215,7 @@ class CWBEngine(object):
 
         # re-set CQP
         self.cqp.Exec(self.subcorpus)
-        self.cqp.Exec("set ant 0; ank 1;")
+        self.cqp.Exec('set ant 0; ank 1;')
 
         # NA handling
         df_anchor.dropna(axis=1, how='all', inplace=True)
@@ -249,7 +230,7 @@ class CWBEngine(object):
 
         return df_anchor
 
-    def df_anchor_from_query(self, anchor_query, s_break="text",
+    def df_anchor_from_query(self, anchor_query, s_break='text',
                              context=50, match_strategy='longest'):
         """Executes anchored query within s_break to get df_anchor.
 
@@ -299,7 +280,7 @@ class CWBEngine(object):
             s_id = df.match.apply(lambda x: s_regions.cpos2struc(x))
         elif self.meta_s.startswith(s_break):
             # case 2: use meta info from s_break variable
-            s_regions = self.corpus.attribute(self.meta_s, "s")
+            s_regions = self.corpus.attribute(self.meta_s, 's')
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )
@@ -308,13 +289,13 @@ class CWBEngine(object):
             s_id = s_region[2].apply(lambda x: x.decode('utf-8'))
         else:
             # case 3: add additional meta_s info
-            s_regions = self.corpus.attribute(s_break, "s")
+            s_regions = self.corpus.attribute(s_break, 's')
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )
             df['s_start'] = s_region[0]
             df['s_end'] = s_region[1]
-            meta_regions = self.corpus.attribute(self.meta_s, "s")
+            meta_regions = self.corpus.attribute(self.meta_s, 's')
             meta_region = DataFrame(
                 df.match.apply(lambda x: meta_regions.find_pos(x)).tolist()
             )
@@ -426,11 +407,11 @@ class CWBEngine(object):
 
         # tabulate matches
         match_strings = self.cqp.Exec(
-            "tabulate tmp_matches match .. matchend %s;" % p_att
-        ).split("\n")
+            'tabulate tmp_matches match .. matchend %s;' % p_att
+        ).split('\n')
 
         # switch back to full corpus
-        self.deactivate_subcorpus
+        self.deactivate_subcorpus()
 
         # optionally split strings into tokens
         if split:

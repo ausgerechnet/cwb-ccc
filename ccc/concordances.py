@@ -3,138 +3,137 @@
 
 from random import sample
 # part of module
-from .cwb import anchor_query_to_anchors
-from .utils import node2cooc
+from .utils import node2cooc, anchor_query_to_anchors
 # requirements
 from pandas import DataFrame
 
 
-class Concordance(object):
+MAX_MATCHES = 100000            # maximum number of matches to still calculate frequency breakdown
+
+
+class Concordance:
 
     def __init__(self,
                  engine,
                  context=20,
                  s_break='text',
-                 order='random',
-                 p_show=[],
-                 cut_off=100):
+                 match_strategy='standard'):
 
         self.engine = engine
 
         self.settings = {
             'context': context,
             's_break': s_break,
-            'p_show': p_show,
-            'order': order,
-            'cut_off': cut_off
+            'match_strategy': match_strategy
         }
 
-    def query(self, query, anchored=None):
+        # these values will
+        self.size = 0
+        self.meta = None
+        self.breakdown = None
+
+    def query(self, query, anchored=None, breakdown=True):
+        """ executes query and gets df_node, meta, and frequency breakdown """
 
         if anchored is None:
-            anchored = len(anchor_query_to_anchors(query)) > 0
+            anchored = (len(anchor_query_to_anchors(query)) > 0)
 
         if not anchored:
             df_node = self.engine.df_node_from_query(
                 query,
                 s_break=self.settings['s_break'],
-                context=self.settings['context']
+                context=self.settings['context'],
+                match_strategy=self.settings['match_strategy']
             )
         else:
             df_node = self.engine.df_anchor_from_query(
                 query,
                 s_break=self.settings['s_break'],
-                context=self.settings['context']
+                context=self.settings['context'],
+                match_strategy=self.settings['match_strategy']
             )
 
+        self.df_node = df_node
         if len(df_node) == 0:
-            return {}
+            print('WARNING: 0 query hits')
+            return
 
-        concordance = df_node_to_concordance(
-            engine=self.engine,
-            df_node=df_node,
-            order=self.settings['order'],
-            cut_off=self.settings['cut_off'],
-            p_show=self.settings['p_show'],
-            anchored=anchored
-        )
+        # get values
+        self.size = len(df_node)
+        matches = df_node.index.droplevel('matchend')
+        self.meta = DataFrame(index=matches,
+                              data=df_node['s_id'].values,
+                              columns=['s_id'])
 
-        return concordance
+        # frequency breakdown of matches
+        if self.size > MAX_MATCHES:
+            print('WARNING: found more than %d matches, skipping frequency breakdown' % MAX_MATCHES)
+            breakdown = False
 
+        if breakdown:
+            self.breakdown = self.engine.count_matches(df_node)
 
-# node to concordance (needs engine) ###########################################
-def df_node_to_concordance(engine,
-                           df_node,
-                           order='random',
-                           cut_off=100,
-                           p_show=[],
-                           anchored=None,
-                           role='match'):
-    """ formats concordance lines for a df_node """
+    def show(self, matches=None, p_show=[], order='first', cut_off=100):
+        """ creates concordance lines from self.df_node """
 
-    # reset the index to be able to work with it
-    df_node.reset_index(inplace=True)
+        # take appropriate sub-set of matches
+        topic_matches = set(self.df_node.index.droplevel('matchend'))
 
-    # avoid trying to get more concordance lines than there are
-    topic_matches = set(df_node['match'])
-    if not cut_off or len(topic_matches) < cut_off:
-        cut_off = len(topic_matches)
+        if matches is None:
+            if not cut_off or len(topic_matches) < cut_off:
+                cut_off = len(topic_matches)
+            if order == 'random':
+                topic_matches_cut = sample(topic_matches, cut_off)
+            elif order == 'first':
+                topic_matches_cut = sorted(list(topic_matches))[:cut_off]
+            elif order == 'last':
+                topic_matches_cut = sorted(list(topic_matches))[-cut_off:]
+            else:
+                raise NotImplementedError('concordance order not implemented')
+            df_node = self.df_node.loc[topic_matches_cut, :]
 
-    # take appropriate sub-set
-    if order == 'random':
-        topic_matches_cut = sample(topic_matches, cut_off)
-    elif order == 'first':
-        topic_matches_cut = sorted(list(topic_matches))[:cut_off]
-    elif order == 'last':
-        topic_matches_cut = sorted(list(topic_matches))[-cut_off:]
-    else:
-        raise NotImplementedError("concordance order not implemented")
+        else:
+            df_node = self.df_node.loc[matches, :]
 
-    # check if there's anchors
-    anchor_keys = set(df_node.columns) - {'region_start', 'region_end', 's_id',
-                                          'matchend', 'match'}
-
-    # automatically determine by default
-    if anchored is None:
+        # check if there's anchors
+        anchor_keys = set(df_node.columns) - {'region_start', 'region_end', 's_id'}
         anchored = len(anchor_keys) > 0
 
-    df_node['start'] = df_node['region_start']
-    df_node['end'] = df_node['region_end']
+        # fill concordance dictionary
+        concordance = dict()
+        for row_ in df_node.iterrows():
 
-    # fill concordance dictionary
-    concordance = dict()
-    for match in topic_matches_cut:
+            # gather values
+            match, matchend = row_[0]
+            row = dict(row_[1])
+            row['match'] = match
+            row['matchend'] = matchend
+            row['start'] = row['region_start']
+            row['end'] = row['region_end']
 
-        # take match from df_node
-        row = df_node.loc[df_node['match'] == match]
+            # create cotext
+            df = DataFrame(node2cooc(row))
+            df.columns = ['match', 'cpos', 'offset']
+            df.drop('match', inplace=True, axis=1)
 
-        # create cotext
-        df = DataFrame(row.apply(node2cooc, axis=1).values[0])
-        df.columns = ['match', 'cpos', 'offset']
-        df.drop('match', inplace=True, axis=1)
+            # lexicalize positions
+            for p_att in ['word'] + p_show:
+                df[p_att] = df.cpos.apply(
+                    lambda x: self.engine.cpos2token(x, p_att)
+                )
+            df.set_index('cpos', inplace=True)
 
-        # lexicalize positions
-        df['word'] = df.cpos.apply(engine.cpos2token)
-        for p_att in p_show:
-            df[p_att] = df.cpos.apply(
-                lambda x: engine.cpos2token(x, p_att)
-            )
-        df.set_index('cpos', inplace=True)
+            # handle optional anchors
+            if anchored:
+                anchors = dict()
+                for anchor in anchor_keys:
+                    anchors[anchor] = int(row[anchor])
+                df['anchor'] = None
+                for anchor in anchors.keys():
+                    if anchors[anchor] != -1:
+                        df.at[anchors[anchor], 'anchor'] = anchor
 
-        # role
-        df[role] = (df['offset'] == 0)
+            # save concordance line
+            concordance[match] = df
 
-        # handle optional anchors
-        if anchored:
-            anchors = dict()
-            for anchor in anchor_keys:
-                anchors[anchor] = int(row[anchor])
-            df['anchor'] = None
-            for anchor in anchors.keys():
-                if anchors[anchor] != -1:
-                    df.at[anchors[anchor], 'anchor'] = anchor
-
-        # save concordance line
-        concordance[match] = df
-
-    return concordance
+        return concordance
