@@ -27,8 +27,8 @@ class Concordance:
             'match_strategy': match_strategy
         }
 
-        # these values will
-        self.size = 0
+        # these values will be filled when querying
+        self.size = None
         self.meta = None
         self.breakdown = None
 
