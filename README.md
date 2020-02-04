@@ -1,5 +1,15 @@
 # Collocation and Concordance Computation #
 
+  * [Introduction](#introduction)
+  * [Installation](#installation)
+  * [Usage](#usage)
+      * [Initializing the engine](#cwbengine)
+      * [Extracting concordance lines](#concordancing)
+	  * [Dealing with anchored queries](#anchored-queries)
+	  * [Calculating collocates](#collocation-analyses)
+      * [Argument queries](#argument-queries)
+  * [Acknowledgements](#acknowledgements)
+
 ## Introduction ##
 This module is a wrapper around the
 [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).
