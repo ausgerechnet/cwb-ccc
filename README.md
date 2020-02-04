@@ -63,45 +63,98 @@ change the parameter when envoking the engine (or set it to `None`).
 
 You can use the `Concordance` class from `ccc.concordances` for
 concordancing. The concordancer has to be initialized with the engine
-and accepts valid CQP queries:
-	
+and will accept valid CQP queries:
 ```python
 from ccc.concordances import Concordance
 # initialize the concordancer with the engine
 concordance = Concordance(engine)
-# extract concordance lines
-concordance.query('[lemma="Angela"] [lemma="Merkel"]')
 ```
+The queries _must not_ end on a "within" clause.  If you want to
+restrict your concordance lines by a structural attribute, use the
+`s_break` parameter of `Concordance` (defaults to "text"). The default
+context window is 20 tokens to the left and 20 tokens to the right of
+the query match and matchend, respectively (parameter `context`).
+
+After executing the query
+```
+query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
+concordance.query(query)
+```
+you can access its frequency breakdown via `concordance.breakdown`:
+
+| *type*                 | freq |
+|------------------------|------|
+| Angela Merkel ( CDU )  | 2253 |
+| Merkel ( CDU )         | 29   |
+| Angela Merkels ( CDU ) | 2    |
+
+All query matches and their respective `meta_s` identifiers are listed
+in `concordance.meta` (if `meta_s=None`, it will use the CQP
+identifiers of the `s_break` parameter as `s_id`):
+           
+| *match* | s_id      |
+|---------|-----------|
+| 48349   | A44847086 |
+| 48856   | A44855701 |
+| 52966   | A44847097 |
+| 53395   | A44847526 |
+| ...     | ...       |
+
+You can use `concordance.lines()` to get concordance lines. This
+method either takes a list of specific `matches`, or a combination of
+`order` ("first", "last", or "random") and `cut_off`.
 
 The result will be a dictionary with the _cpos_ of the match as keys
 and the entries one concordance line each. Each concordance line is
 formatted as a `pandas.DataFrame` with the _cpos_ of each token as
 index:
 
-| *cpos*    | word    | match | offset |
-|-----------|---------|-------|--------|
-| 188530363 | ,       | False | -5     |
-| 188530364 | dass    | False | -4     |
-| 188530365 | die     | False | -3     |
-| 188530366 | Tage    | False | -2     |
-| 188530367 | von     | False | -1     |
-| 188530368 | Angela  | True  | 0      |
-| 188530369 | Merkel  | True  | 0      |
-| 188530370 | gezählt | False | 1      |
-| 188530371 | sind    | False | 2      |
-| 188530372 | .       | False | 3      |
+| *cpos* | offset | word                | anchor |
+|--------|--------|---------------------|--------|
+| 48344  | -5     | Eine                | None   |
+| 48345  | -4     | entsprechende       | None   |
+| 48346  | -3     | Steuererleichterung | None   |
+| 48347  | -2     | hat                 | None   |
+| 48348  | -1     | Kanzlerin           | None   |
+| 48349  | 0      | Angela              | None   |
+| 48350  | 0      | Merkel              | None   |
+| 48351  | 0      | (                   | None   |
+| 48352  | 0      | CDU                 | None   |
+| 48353  | 0      | )                   | None   |
+| 48354  | 1      | bisher              | None   |
+| 48355  | 2      | ausgeschlossen      | None   |
+| 48356  | 3      | .                   | None   |
 
-The queries _must not_ end on a "within" clause.  If you want to
-restrict your concordance lines by a structural attribute, use the
-`s_break` parameter (defaults to "text"). The default context window
-is 20 tokens to the left and 20 tokens to the right of the query match
-and matchend, respectively.
+You can specify a `list` of additional p-attributes besides the
+primary word layer to show via the `p_show` parameter of
+`Concordance.lines()` (these will be added as additional columns).
 
-Further parameters for the `Concordance` class are `order` (one of
-"random", "first", or "last"), `cut_off` (for the number of
-concordance lines to extract), and `p_show` (a `list` of additional
-p-attributes besides the primary word layer to show, e.g. "lemma" or
-"pos"; these will be added as additional columns).
+### Anchored Queries ###
+
+The `Concordance` class detects anchored queries by default. The following query
+```python
+concordance.query(
+	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\\("] @2[lemma="CDU"] [word="\\)"]'
+)
+```
+will thus return `DataFrame`s with appropriate anchors in the anchors column:
+
+| *cpos* | offset | word                | anchor |
+|--------|--------|---------------------|--------|
+| 48344  | -5     | Eine                | None   |
+| 48345  | -4     | entsprechende       | None   |
+| 48346  | -3     | Steuererleichterung | None   |
+| 48347  | -2     | hat                 | None   |
+| 48348  | -1     | Kanzlerin           | None   |
+| 48349  | 0      | Angela              | 0      |
+| 48350  | 0      | Merkel              | 1      |
+| 48351  | 0      | (                   | None   |
+| 48352  | 0      | CDU                 | 2      |
+| 48353  | 0      | )                   | None   |
+| 48354  | 1      | bisher              | None   |
+| 48355  | 2      | ausgeschlossen      | None   |
+| 48356  | 3      | .                   | None   |
+
 
 ### Collocation Analyses ###
 You can use the `Collocates` class to extract collocates for a given
@@ -152,36 +205,6 @@ initial query and its co-occurrence dataframe are cached (assuming the
 engine was not initialized with `cache_path=None`), which means that
 you can extract collocates for windows from 0 to `max_window_size`
 quickly after the first run.
-
-
-### Anchored Queries ###
-
-The `Concordance` class detects anchored queries by default. The following query
-```python
-concordance.query(
-	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\\("] @2[lemma="CDU"] [word="\\)"]'
-)
-```
-will thus return `DataFrame`s with an additional column indicating the
-anchor positions:
-
-| *cpos*    | word       | match | offset | anchor |
-|-----------|------------|-------|--------|--------|
-| 298906425 | auch       | False | -5     | None   |
-| 298906426 | das        | False | -4     | None   |
-| 298906427 | Handy      | False | -3     | None   |
-| 298906428 | von        | False | -2     | None   |
-| 298906429 | Kanzlerin  | False | -1     | None   |
-| 298906430 | Angela     | True  | 0      | 0      |
-| 298906431 | Merkel     | True  | 0      | 1      |
-| 298906432 | (          | True  | 0      | None   |
-| 298906433 | CDU        | True  | 0      | 2      |
-| 298906434 | )          | True  | 0      | None   |
-| 298906435 | sowie      | False | 1      | None   |
-| 298906436 | ihres      | False | 2      | None   |
-| 298906437 | Vorgängers | False | 3      | None   |
-| 298906438 | Gerhard    | False | 4      | None   |
-| 298906439 | Schröder   | False | 5      | None   |
 
 
 ### Argument Queries
