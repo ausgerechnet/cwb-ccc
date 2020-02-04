@@ -72,8 +72,9 @@ class Concordance:
 
         if breakdown:
             self.breakdown = self.engine.count_matches(df_node)
+            self.breakdown.index.name = 'type'
 
-    def show(self, matches=None, p_show=[], order='first', cut_off=100):
+    def lines(self, matches=None, p_show=[], order='first', cut_off=100):
         """ creates concordance lines from self.df_node """
 
         # take appropriate sub-set of matches

@@ -18,7 +18,7 @@ def test_query_default():
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
     concordance.query(query)
-    lines = concordance.show(p_show=['lemma', 'pos'], order='random', cut_off=100)
+    lines = concordance.lines(p_show=[], order='random', cut_off=100)
     assert(len(concordance.breakdown) > 0)
     assert(type(concordance.meta) == pd.DataFrame)
     assert(len(lines) == 100)
@@ -34,7 +34,7 @@ def test_anchor_query_default():
         '[word="\\("] @2[lemma="CDU"] [word="\\)"]'
     )
     concordance.query(query)
-    lines = concordance.show()
+    lines = concordance.lines()
     for df in lines.values():
         assert(all(x in set(df['anchor']) for x in [0, 1, 2]))
 
@@ -46,7 +46,7 @@ def test_query_many():
     concordance = Concordance(engine, s_break='s')
     query = ("[lemma='und']")
     concordance.query(query)
-    lines = concordance.show(p_show=['lemma', 'pos'], order='random', cut_off=100)
+    lines = concordance.lines(p_show=['lemma', 'pos'], order='random', cut_off=100)
     assert(concordance.breakdown is None)
     assert(type(concordance.meta) == pd.DataFrame)
     assert(len(lines) == 100)
