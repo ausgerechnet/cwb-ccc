@@ -3,7 +3,7 @@
 
 from itertools import chain
 # part of module
-from .utils import node2cooc
+from .utils import node2cooc, preprocess_query
 # requirements
 from pandas import DataFrame
 from association_measures import measures, frequencies
@@ -12,7 +12,7 @@ from association_measures import measures, frequencies
 class Collocates:
 
     def __init__(self, engine, max_window_size=20, s_break='text',
-                 p_query='lemma'):
+                 p_query='lemma', match_strategy='standard'):
 
         self.engine = engine
 
@@ -25,14 +25,18 @@ class Collocates:
             'max_window_size': max_window_size,
             's_break': s_break,
             'p_query': p_query,
+            'match_strategy': match_strategy
         }
 
     def query(self, query):
 
+        query, s_query, anchors = preprocess_query(query)
+
         print('... collecting nodes ...', end='\r')
         df_node = self.engine.df_node_from_query(
-            query, self.settings['s_break'],
-            context=self.settings['max_window_size']
+            query, s_query, anchors, self.settings['s_break'],
+            context=self.settings['max_window_size'],
+            match_strategy=self.settings['match_strategy']
         )
         print('... collecting nodes ... collected %d nodes' % len(df_node))
 

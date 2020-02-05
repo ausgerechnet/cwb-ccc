@@ -7,7 +7,7 @@ from glob import glob
 from collections import Counter
 # part of module
 from .cqp_interface import CQP
-from .utils import Cache, formulate_cqp_query, anchor_query_to_anchors
+from .utils import Cache, formulate_cqp_query, preprocess_query
 # requirements
 from pandas import DataFrame, read_csv, to_numeric
 from CWB.CL import Corpus
@@ -21,7 +21,7 @@ class CWBEngine:
                  registry_path='/usr/local/share/cwb/registry/',
                  lib_path=None,
                  meta_path=None,
-                 meta_s=None,
+                 s_meta=None,
                  cqp_bin='cqp',
                  cache_path='/tmp/ccc-cache'):
         """Establishes connection to indexed corpus. Raises KeyError if corpus
@@ -43,7 +43,7 @@ class CWBEngine:
         self.meta_path = meta_path
         if self.meta_path:
             self.meta = read_csv(meta_path, sep='\t', index_col=0)
-        self.meta_s = meta_s
+        self.s_meta = s_meta
 
         # set interface
         self.corpus = Corpus(
@@ -92,7 +92,7 @@ class CWBEngine:
             self.cqp.Exec(cqp_exec)
 
     def get_meta_regions(self):
-        s_regions = self.corpus.attribute(self.meta_s, 's')
+        s_regions = self.corpus.attribute(self.s_meta, 's')
         records = list()
         for s in s_regions:
             records.append({
@@ -105,167 +105,146 @@ class CWBEngine:
         df = df[['match', 'matchend']]
         return df
 
-    def deactivate_subcorpus(self):
-        """Deactivates subcorpus."""
-        self.cqp.Exec(self.corpus_name)
-        self.subcorpus = self.corpus_name
-        # print(self.cqp.Exec("show named;"))
-        print('CQP switched to corpus "%s"' % self.corpus_name)
+    def show_subcorpora(self):
+        cqp_return = self.cqp.Exec("show named;")
+        df = read_csv(StringIO(cqp_return), sep="\t", header=None)
+        if not df.empty:
+            df.columns = ["storage", "corpus:subcorpus", "size"]
+            df['corpus'], df['subcorpus'] = df["corpus:subcorpus"].str.split(":", 1).str
+            df.drop('corpus:subcorpus', axis=1, inplace=True)
+            df = df[['corpus', 'subcorpus', 'size', 'storage']]
+        return df
 
-    def subcorpus_from_query(self, query, name='Last', match_strategy='longest'):
+    def activate_subcorpus(self, subcorpus=None):
+        """Activates subcorpus or corpus."""
+        if subcorpus is not None:
+            self.cqp.Exec(subcorpus)
+            self.subcorpus = subcorpus
+            print('CQP switched to subcorpus "%s"' % subcorpus)
+        else:
+            self.cqp.Exec(self.corpus_name)
+            self.subcorpus = self.corpus_name
+            print('CQP switched to corpus "%s"' % self.corpus_name)
+        print(self.show_subcorpora())
+
+    def define_subcorpus(self, query, name='Last',
+                         match_strategy='longest', activate=False):
         """Defines a subcorpus via a query and activates it."""
 
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
-        subcorpus_query = '{name}={subcorpus_query};'.format(
-            name=name, subcorpus_query=query
-        )
-        self.cqp.Exec(subcorpus_query)
-        self.cqp.Exec(name)
-        self.subcorpus = name
-        print('CQP switched to subcorpus "%s" of corpus "%s"' % (name, self.corpus_name))
 
-    def subcorpus_from_df(self, df, name='Last'):
-        """Defines a subcorpus via corpus positions and activates it."""
+        if type(query) == DataFrame:
+            self.cqp.Undump(name, query)
+        elif type(query) == str:
+            subcorpus_query = '{name}={query};'.format(
+                name=name, query=query
+            )
+            self.cqp.Exec(subcorpus_query)
+        if activate:
+            self.activate_subcorpus(name)
 
-        self.cqp.Undump(name, df)
-        self.cqp.Exec(name)
-        self.subcorpus = name
-        print('CQP switched to subcorpus "%s" of corpus "%s"' % (name, self.corpus_name))
-
-    def _df_node_from_query(self, query, s_break, context, match_strategy):
+    def _df_node_from_query(self, query, s_query, anchors,
+                            s_break, context, match_strategy):
         """see df_node_from_query, which is a cached version of this method"""
 
         # match strategy
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
 
-        # run query and dump results
-        query += ' within %s;' % s_break
-        self.cqp.Query(query)
-        df = self.cqp.Dump()
+        # strip within statement from query and check which anchors there are
+        query, s_query, anchors = preprocess_query(query)
 
-        # return empty dataframe if query has no results
-        if df.empty:
-            return DataFrame()
-
-        # confine regions
-        df_node = self.confine_df_node(df, s_break, context)
-
-        return df_node
-
-    def df_node_from_query(self, query, s_break, context=50,
-                           match_strategy='longest'):
-        """Executes query within s_break to get df_node.
-
-        :param str query: valid CQP query (without 'within' clause)
-        :param str s_break: s-attribute to confine regions
-        :param int context: maximum context around node (symmetric)
-
-        :return: df_node (match, matchend) + (region_start, region_end, s_id)
-        :rtype: pd.DataFrame
-
-        """
-
-        identifiers = ['df_node', query, s_break, context, match_strategy]
-        cached_data = self.cache.get(identifiers, self.subcorpus)
-
-        # create result
-        if cached_data is None:
-            df_node = self._df_node_from_query(query, s_break,
-                                               context, match_strategy)
-            self.cache.set(identifiers, df_node, self.subcorpus)
+        # process s_query and s_break
+        if s_query is None:
+            s_query = s_break
+        if s_query is None:
+            start_query = query
         else:
-            df_node = cached_data
+            start_query = query + ' within ' + s_query
 
-        return df_node
-
-    def _df_anchor_from_query(self, anchor_query, s_break, context, match_strategy):
-        """see df_anchor_from_query, which is a cached version of this method"""
-
-        # match strategy
-        self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
-
-        # check which anchors there are
-        anchors = anchor_query_to_anchors(anchor_query)
-
-        # first run: 0 and 1
+        # first run: 0 and 1 (considering within statement)
         print("... running query for anchor pair (0, 1) ...", end="\r")
         self.cqp.Exec('set ant 0; ank 1;')
-        self.cqp.Exec('tmp_anchor = ' + anchor_query + ' within ' + s_break + ';')
-
-        # dump result
-        df_anchor = self.cqp.Dump('tmp_anchor')
-        df_anchor.columns = [0, 1]
-        print("... running query for anchor pair (0, 1) ... found %d matches" % len(df_anchor))
+        # find matches and dump result
+        self.define_subcorpus(start_query, 'tmp_nodes')
+        df_node = self.cqp.Dump('tmp_nodes')
+        df_node.columns = [0, 1]
+        print("... running query for anchor pair (0, 1) ... found %d matches" % len(df_node))
 
         # if there's nothing to return ...
-        if df_anchor.empty:
-            return DataFrame()
+        if df_node.empty:
+            return df_node
 
-        # join all the other ones
-        for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
-            if pair[0] in anchors or pair[1] in anchors:
-                print("... running query for anchor pair %s ..." % str(pair))
-                # load initial matches
-                self.cqp.Exec('tmp_anchor;')
-                # set appropriate anchors
-                self.cqp.Exec(
-                    'set AnchorNumberTarget %d; set AnchorNumberKeyword %d;' % pair
-                )
-                self.cqp.Exec('tmp = <match> ( %s );' % anchor_query)
-                df = self.cqp.Dump("tmp")
-                df.columns = [pair[0], pair[1]]
-                df_anchor = df_anchor.join(df)
+        # join all other anchors
+        if len(anchors) > 0:
 
-        # re-set CQP
-        self.cqp.Exec(self.subcorpus)
-        self.cqp.Exec('set ant 0; ank 1;')
+            # restrict subsequent queries on results
+            current_subcorpus = self.subcorpus
+            self.activate_subcorpus('tmp_nodes')
 
-        # NA handling
-        print("... collected all anchors ... post-processing dataframe ...")
-        df_anchor.dropna(axis=1, how='all', inplace=True)
-        df_anchor = df_anchor.apply(to_numeric, downcast='integer')
-        df_anchor.fillna(-1, inplace=True)
+            for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
+                if pair[0] in anchors or pair[1] in anchors:
+                    print("... running query for anchor pair %s ..." % str(pair))
+                    # set appropriate anchors
+                    self.cqp.Exec('set ant %d; set ank %d;' % pair)
+                    # dump new anchors
+                    self.cqp.Exec('tmp = <match> ( %s );' % query)
+                    df = self.cqp.Dump("tmp")
+                    # selet columns and join to global df
+                    df.columns = [pair[0], pair[1]]
+                    df_node = df_node.join(df)
 
-        # drop constant columns (contain only -1)
-        df_anchor = df_anchor.loc[:, (df_anchor != df_anchor.iloc[0]).any()]
+            # NA handling
+            print("... collected all anchors ... post-processing dataframe ...")
+            df_node.dropna(axis=1, how='all', inplace=True)
+            df_node = df_node.apply(to_numeric, downcast='integer')
+            df_node.fillna(-1, inplace=True)
+            # drop constant columns (contain only -1)
+            df_node = df_node.loc[:, (df_node != df_node.iloc[0]).any()]
+
+            # re-set CQP
+            self.cqp.Exec('set ant 0; ank 1;')
+            self.activate_subcorpus(current_subcorpus)
 
         # confine regions
-        df_anchor = self.confine_df_node(df_anchor, s_break, context)
+        df_node = self.confine_df_node(df_node, s_break, context)
 
-        return df_anchor
+        return df_node
 
-    def df_anchor_from_query(self, anchor_query, s_break='text',
-                             context=50, match_strategy='longest'):
+    def df_node_from_query(self, query, s_query=None, anchors=None,
+                           s_break="text", context=20,
+                           match_strategy="standard"):
         """Executes anchored query within s_break to get df_anchor.
 
-        :param str anchor_query: anchored CQP query (without 'within' clause)
+        :param str query: valid CQP query (without 'within' clause)
+        :param str s_query: s-attribute use for initial query
+        :param list anchors: anchors to search for
         :param str s_break: s-attribute to confine regions
         :param int context: maximum context around match (symmetric)
+        :param str match_strategy: CQP matching strategy
 
-        :return: df_anchor with 5 base columns (match, matchend,
-        region_start, region_end, s_id) and additional columns for each anchor
+        :return: df_node (match, matchend) + (region_start, region_end, s_id)
+        + additional columns for each anchor
         :rtype: pd.DataFrame
 
         """
+        identifiers = ['df_node_from_query', self.corpus_name, self.subcorpus,
+                       query, s_query, anchors, s_break, context, match_strategy]
 
-        identifiers = ['df_anchor_from_query', anchor_query, s_break,
-                       context, match_strategy]
-        cached_data = self.cache.get(identifiers, self.subcorpus)
+        df_node = self.cache.get(identifiers)
 
-        # create result
-        if cached_data is None:
-            df_anchor = self._df_anchor_from_query(anchor_query,
-                                                   s_break, context,
-                                                   match_strategy)
-            self.cache.set(identifiers, df_anchor, self.subcorpus)
-        else:
-            df_anchor = cached_data
+        if df_node is None:
+            # create result
+            df_node = self._df_node_from_query(
+                query, s_query, anchors, s_break, context, match_strategy
+            )
+            # put in cache
+            self.cache.set(identifiers, df_node)
 
-        return df_anchor
+        return df_node
 
     def confine_df_node(self, df, s_break, context):
-        """Confines a given df_node by given context size, taking s_breaks
-        into consideration.
+        """Confines a df_node by given context size, taking s_breaks into
+        consideration and annotating self.s_meta ids.
 
         """
 
@@ -273,7 +252,7 @@ class CWBEngine:
         df = df.reset_index()
 
         # meta data handling:
-        if self.meta_s is None:
+        if self.s_meta is None:
             # case 1: just get s_break info
             s_regions = self.corpus.attribute(s_break, "s")
             s_region = DataFrame(
@@ -282,9 +261,9 @@ class CWBEngine:
             df['s_start'] = s_region[0]
             df['s_end'] = s_region[1]
             s_id = df.match.apply(lambda x: s_regions.cpos2struc(x))
-        elif self.meta_s.startswith(s_break):
+        elif self.s_meta.startswith(s_break):
             # case 2: use meta info from s_break variable
-            s_regions = self.corpus.attribute(self.meta_s, 's')
+            s_regions = self.corpus.attribute(self.s_meta, 's')
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )
@@ -292,14 +271,14 @@ class CWBEngine:
             df['s_end'] = s_region[1]
             s_id = s_region[2].apply(lambda x: x.decode('utf-8'))
         else:
-            # case 3: add additional meta_s info
+            # case 3: add additional s_meta info
             s_regions = self.corpus.attribute(s_break, 's')
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )
             df['s_start'] = s_region[0]
             df['s_end'] = s_region[1]
-            meta_regions = self.corpus.attribute(self.meta_s, 's')
+            meta_regions = self.corpus.attribute(self.s_meta, 's')
             meta_region = DataFrame(
                 df.match.apply(lambda x: meta_regions.find_pos(x)).tolist()
             )
@@ -335,10 +314,10 @@ class CWBEngine:
         :rtype: str
 
         """
-        tokens_all = self.corpus.attribute(p_att, 'p')
         if ignore_missing:
             if cpos == -1:
                 return None
+        tokens_all = self.corpus.attribute(p_att, 'p')
         return tokens_all[cpos]
 
     def cpos2counts(self, cpos, p_att='word'):
@@ -374,14 +353,14 @@ class CWBEngine:
         f2['freq'] = counts
         return f2
 
-    def item_freq(self, items, p_att='word', s_break='text'):
+    def item_freq(self, items, p_att='word', s_query='text'):
         """Calculates item frequencies."""
 
         freqs = list()
         # run query for each item
         for item in items:
-            query = formulate_cqp_query([item], p_att, s_break)
-            freq = self.cqp.Exec('tmp=%s; size tmp;' % query)
+            query = formulate_cqp_query([item], p_att, s_query)
+            freq = self.cqp.Exec('tmp_freq=%s; size tmp_freq;' % query)
             if freq is None:
                 freq = 0
             else:
@@ -393,12 +372,11 @@ class CWBEngine:
 
         return df
 
-    def item_freq_2(self, items, p_att='word', s_break='text'):
+    def item_freq_2(self, items, p_att='word', s_query='text'):
         """Calculates item frequencies."""
 
-        query = formulate_cqp_query(items, p_att, s_att=None)
-        df_node = self._df_node_from_query(query, s_break, context=0,
-                                           match_strategy='standard')
+        query = formulate_cqp_query(items, p_att)
+        df_node = self.df_node_from_query(query, s_query, context=0)
         df = self.count_matches(df_node, p_att)
         # fill missing values
         missing = set(items) - set(df.index)
@@ -411,15 +389,12 @@ class CWBEngine:
         """counts strings or tokens in df_nodes.index"""
 
         # undump the dump
-        self.subcorpus_from_df(df_node, name='tmp_matches')
+        self.define_subcorpus(df_node, name='tmp_counts', activate=False)
 
         # tabulate matches
         match_strings = self.cqp.Exec(
-            'tabulate tmp_matches match .. matchend %s;' % p_att
+            'tabulate tmp_counts match .. matchend %s;' % p_att
         ).split('\n')
-
-        # switch back to full corpus
-        self.deactivate_subcorpus()
 
         # optionally split strings into tokens
         if split:

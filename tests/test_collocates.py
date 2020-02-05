@@ -95,5 +95,4 @@ def test_collocates_speed_many():
                             p_query='lemma')
     collocates.query(query)
     c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
-    print(c2[['O11']])
     assert(type(c2) == pd.DataFrame)

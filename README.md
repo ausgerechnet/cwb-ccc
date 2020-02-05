@@ -58,7 +58,7 @@ Point your engine to meta data stored as a tab-separated (and possibly
 gziped) file via the `meta_path` parameter. The first column must be a
 unique identifier, and the corresponding text regions have to be
 annotated in the corpus as structural attribute (whose name you can
-specify via the `meta_s` parameter, e.g. "text_id").
+specify via the `s_meta` parameter, e.g. "text_id").
 
 You can use the `cqp_bin` to point the engine to a specific version of
 `cqp` (this is also helpful if `cqp` is not in your `PATH`).
@@ -80,13 +80,16 @@ The concordancer accepts valid CQP queries such as
 query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
 ```
 
-Note that the queries _must not_ end on a "within" clause. By default,
-queries will not transgress "text" boundaries. You can change this
-behaviour via the `s_break` parameter of `Concordance`. Note that this
-will also cut your concordance lines at the specified boundaries. The
-default context window is 20 tokens to the left and 20 tokens to the
-right of the query match and matchend, respectively (parameter
-`context`).
+The default context window is 20 tokens to the left and 20 tokens to
+the right of the query match and matchend, respectively. You can
+change this via the `context` parameter.
+
+Note that queries _may_ end on a "within" clause, which will limit the
+matches to certain regions defined by structural
+attributes. Additionally, you can specify an `s_break` parameter,
+which will cut the context (defaults to "text"). NB: The
+implementation assumes that `s_query` regions are confined by
+`s_break` regions, and both of them are within `s_meta` regions.
 
 After executing the query
 ```
@@ -101,7 +104,7 @@ you can access its frequency breakdown via `concordance.breakdown`:
 | Angela Merkels ( CDU ) | 2    |
 
 All query matches and their respective `meta_s` identifiers are listed
-in `concordance.meta` (if `meta_s=None`, it will use the CQP
+in `concordance.meta` (if `s_meta=None`, it will use the CQP
 identifiers of the `s_break` parameter as `s_id`):
 
 | *match* | s_id      |
@@ -135,10 +138,11 @@ index:
 | 48356  | 3      | .                   | None   |
 
 
-You can decide which and how many concordance lines you will by means
-of the parameters `order` ("first", "last", or "random") and
-`cut_off`. You can also provide a list of `matches` (from
-`concordance.meta.index`) to get specific concordance lines.
+You can decide which and how many concordance lines you want to
+retrieve by means of the parameters `order` ("first", "last", or
+"random") and `cut_off`. You can also provide a list of `matches`
+(from `concordance.meta.index`) to get a `dict` of specific
+concordance lines.
 
 You can specify a `list` of additional p-attributes besides the
 primary word layer to show via the `p_show` parameter of
@@ -187,7 +191,7 @@ up to this parameter (defaults to 20).
 
 By default, windows are cut at the "text" s-attribute. You can change
 this using the `s_break` attribute. As for the concordancer, the
-queries must thus not end on a "within" clause.
+initial query may contain an additional "within" statement.
 
 By default, collocates are calculated on the "lemma"-layer, assuming
 that this is a valid p-attribute in the corpus. The corresponding

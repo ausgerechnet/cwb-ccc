@@ -12,6 +12,7 @@ context = 50
 corpus_name = "BREXIT_V20190522"
 lib_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/lib/"
 s_break = 'tweet'
+s_query = 'tweet'
 query = '[lemma="test"]'
 query_wordlist = (
     '<np>[pos_simple!="P"] []*</np> [lemma = $verbs_cause] [pos_simple="R"]? '
@@ -20,12 +21,14 @@ query_wordlist = (
 
 # SZ CORPUS
 corpus_name_2 = 'SZ_FULL'
-s_break_2 = 's'
+s_query_2 = 's'
+s_break_2 = 'text'
 query_2 = '[lemma="Angela"] [lemma="Merkel"] | [lemma="CDU"]'
 anchor_query_2 = (
     '@0[lemma="Angela"]? @1[lemma="Merkel"] '
     '[word="\\("] @2[lemma="CDU"] [word="\\)"]'
 )
+anchors_2 = [0, 1, 2]
 
 
 # tests
@@ -52,6 +55,8 @@ def test_df_node_from_query():
     engine = CWBEngine(corpus_name, registry_path, lib_path, cache_path=None)
     df_node = engine.df_node_from_query(
         query,
+        s_query,
+        None,
         s_break,
         context
     )
@@ -63,8 +68,10 @@ def test_df_node_from_query():
 @pytest.mark.engine_anchor
 def test_df_anchor_from_query():
     engine = CWBEngine(corpus_name_2, registry_path, cache_path=None)
-    df_node = engine.df_anchor_from_query(
+    df_node = engine.df_node_from_query(
         anchor_query_2,
+        s_query_2,
+        anchors_2,
         s_break_2,
         context
     )
@@ -79,7 +86,7 @@ def test_df_anchor_from_query():
 def test_subcorpus_from_query():
     engine = CWBEngine(corpus_name, registry_path)
     assert(int(engine.cqp.Exec('size SBCRPS1')) == 0)
-    engine.subcorpus_from_query(
+    engine.define_subcorpus(
         "[lemma='test*']",
         'SBCRPS1'
     )
@@ -90,8 +97,8 @@ def test_subcorpus_from_query():
 def test_subcorpus_from_df():
     engine = CWBEngine(corpus_name, registry_path)
     assert(int(engine.cqp.Exec('size SBCRPS2')) == 0)
-    df = engine.df_node_from_query(query, 'tweet')
-    engine.subcorpus_from_df(
+    df = engine.df_node_from_query(query, s_query, None, s_break)
+    engine.define_subcorpus(
         df,
         'SBCRPS2'
     )
@@ -102,15 +109,15 @@ def test_subcorpus_from_df():
 def test_deactivate_subcorpus():
 
     engine = CWBEngine(corpus_name, registry_path)
-    df1 = engine.df_node_from_query(query, 'tweet')
+    df1 = engine.df_node_from_query(query, s_query, None, s_break)
 
     # activation
-    engine.subcorpus_from_query("[lemma='be'] expand to tweet", 'SBCRPS3')
-    df2 = engine.df_node_from_query(query, 'tweet')
+    engine.define_subcorpus("[lemma='be'] expand to tweet", 'SBCRPS3', activate=True)
+    df2 = engine.df_node_from_query(query, s_query, None, s_break)
 
     # deactivation
-    engine.deactivate_subcorpus()
-    df3 = engine.df_node_from_query(query, 'tweet')
+    engine.activate_subcorpus()
+    df3 = engine.df_node_from_query(query, s_query, None, s_break)
 
     assert(len(df1) == len(df3))
     assert(len(df1) > len(df2))
@@ -119,14 +126,17 @@ def test_deactivate_subcorpus():
 @pytest.mark.anchor_subcorpus
 def test_subcorpus_anchor():
     engine = CWBEngine(corpus_name_2, registry_path, lib_path)
-    df1 = engine.df_node_from_query("[lemma='Angela']", s_break_2)
+    df1 = engine.df_node_from_query("[lemma='Angela']", s_query_2, None, s_break_2)
     df_anchor = engine.df_node_from_query(
         anchor_query_2,
+        s_query_2,
+        anchors_2,
         s_break_2
     )
-    engine.subcorpus_from_df(
+    engine.define_subcorpus(
         df_anchor,
-        'SBCRPS5'
+        'SBCRPS5',
+        activate=True
     )
     df2 = engine.df_node_from_query("[lemma='Angela']", s_break_2)
     assert(len(df1) > len(df_anchor) > len(df2))
@@ -157,15 +167,15 @@ def test_item_freq_subcorpora():
     assert(counts1.equals(counts2))
 
     # subcorpus
-    engine.subcorpus_from_query('[lemma="Bundesregierung"] expand to s',
-                                'Bundesregierung')
+    engine.define_subcorpus('[lemma="Bundesregierung"] expand to s',
+                            name='Bundesregierung', activate=True)
 
     counts1 = engine.marginals(["Angela", "Merkel", "CDU"])
     counts2 = engine.item_freq(["Angela", "Merkel", "CDU"])
     assert(counts1.loc['Angela', 'freq'] > counts2.loc['Angela', 'freq'])
 
     # whole corpus
-    engine.deactivate_subcorpus()
+    engine.activate_subcorpus()
     counts1 = engine.marginals(["Angela", "Merkel", "CDU"])
     counts2 = engine.item_freq(["Angela", "Merkel", "CDU"])
     assert(counts1.equals(counts2))
@@ -203,17 +213,18 @@ def test_item_freq_2():
 @pytest.mark.subcorpus2
 def test_subcorpus_2():
     engine = CWBEngine(corpus_name, registry_path)
-    df = engine.df_node_from_query(query, 'tweet')
-    engine.subcorpus_from_df(
-        df,
-        'SBCRPS2'
-    )
+    engine.define_subcorpus('[lemma="make"]', name='make', activate=True)
+    engine.activate_subcorpus()
+    engine.define_subcorpus('[lemma="nigel"] expand to tweet',
+                            name='nigel', activate=True)
+    engine.define_subcorpus('[lemma="make"]', name='make', activate=True)
 
 
 @pytest.mark.s_ids
 def test_get_s_ids():
-    engine = CWBEngine(corpus_name, registry_path, meta_s='tweet_id')
-    df_node = engine.df_node_from_query("[lemma='make']", s_break='tweet')
+    engine = CWBEngine(corpus_name, registry_path, s_meta='tweet_id')
+    df_node = engine.df_node_from_query("[lemma='make']", s_query,
+                                        None, s_break)
     assert('s_id' in df_node.columns)
     meta_regions = engine.get_meta_regions()
     assert('match' in meta_regions.columns)

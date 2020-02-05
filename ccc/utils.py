@@ -44,7 +44,7 @@ def cqp_escape(token):
     return escaped
 
 
-def formulate_cqp_query(items, p_att, s_att):
+def formulate_cqp_query(items, p_query, s_query=None):
     """ wrapper for easy queries """
 
     mwu_queries = list()
@@ -53,31 +53,36 @@ def formulate_cqp_query(items, p_att, s_att):
         tokens = item.split(" ")
         mwu_query = ""
         for token in tokens:
-            mwu_query += '[{p_att}="{token}"]'.format(p_att=p_att, token=token)
+            mwu_query += '[{p_query}="{token}"]'.format(p_query=p_query, token=token)
         mwu_queries.append("(" + mwu_query + ")")
     query = '|'.join(mwu_queries)
-    if s_att is not None:
-        cqp_exec = '({query}) within {s_att};'.format(query=query, s_att=s_att)
+    if s_query is not None:
+        cqp_exec = '({query}) within {s_query};'.format(query=query, s_query=s_query)
     else:
         cqp_exec = query
     return cqp_exec
 
 
-def anchor_query_to_anchors(anchor_query, strict=False):
+def preprocess_query(query):
     """get anchors present in query"""
 
-    anchors = dict()
+    # get s_query and strip within statement
+    s_query = None
+    query = query.rstrip(";")
+    tokens = query.split(" ")
+    if len(tokens) > 2:
+        if tokens[-2] == "within":
+            query = " ".join(tokens[:-2])
+            s_query = tokens[-1]
+
+    # get anchors
     p = re.compile(r"@\d")
-
-    for m in p.finditer(anchor_query):
-        if strict:
-            if m.group() in anchors.keys():
-                raise KeyError('duplicate keys provided')
+    anchors = dict()
+    for m in p.finditer(query):
         anchors[m.group()] = [m.start(), m.end()]
+    anchors = [int(a[1]) for a in anchors.keys()]
 
-    keys = [int(a[1]) for a in anchors.keys()]
-
-    return keys
+    return query, s_query, anchors
 
 
 def time_it(func):
