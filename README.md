@@ -10,6 +10,7 @@
       * [Argument queries](#argument-queries)
   * [Acknowledgements](#acknowledgements)
 
+
 ## Introduction ##
 This module is a wrapper around the
 [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).
@@ -17,7 +18,7 @@ Main purpose of the module is to extract concordance lines, calculate
 collocates, and run queries with several anchor points.
 
 If you want to extract the results of anchored queries with more than
-two anchor points, the module requires CWB version 3.4.16 or newer.
+two anchor points, the module requires CWB version 3.4.16 or later.
 
 
 ## Installation ##
@@ -26,13 +27,10 @@ You can install this module with pip from PyPI:
 	pip3 install cwb-ccc
 
 You can also clone the repository from
-[github](https://github.com/ausgerechnet/cwb-ccc) and use `setup.py`:
+[github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the
+respective folder, and use `setup.py`:
 
     python3 setup.py install
-
-You can also just install all requirements specified in `setup.py` and
-make sure the `ccc` subfolder can be found by Python by including it
-in your `PYTHONPATH`.
 
 
 ## Usage ##
@@ -72,14 +70,16 @@ change the parameter when envoking the engine (or set it to `None`).
 ### Concordancing ###
 
 You can use the `Concordance` class from `ccc.concordances` for
-concordancing. The concordancer has to be initialized with the engine
-and will accept valid CQP queries:
+concordancing. The concordancer has to be initialized with the engine:
 ```python
 from ccc.concordances import Concordance
-# initialize the concordancer with the engine
 concordance = Concordance(engine)
 ```
-The queries _must not_ end on a "within" clause.  If you want to
+The concordancer accepts valid CQP queries such as
+```python
+query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
+```
+Note that the queries _must not_ end on a "within" clause.  If you want to
 restrict your concordance lines by a structural attribute, use the
 `s_break` parameter of `Concordance` (defaults to "text"). The default
 context window is 20 tokens to the left and 20 tokens to the right of
@@ -87,7 +87,6 @@ the query match and matchend, respectively (parameter `context`).
 
 After executing the query
 ```
-query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
 concordance.query(query)
 ```
 you can access its frequency breakdown via `concordance.breakdown`:
@@ -111,10 +110,7 @@ identifiers of the `s_break` parameter as `s_id`):
 | ...     | ...       |
 
 You can use `concordance.lines()` to get concordance lines. This
-method either takes a list of specific `matches`, or a combination of
-`order` ("first", "last", or "random") and `cut_off`.
-
-The result will be a dictionary with the _cpos_ of the match as keys
+method will return a dictionary with the _cpos_ of the match as keys
 and the entries one concordance line each. Each concordance line is
 formatted as a `pandas.DataFrame` with the _cpos_ of each token as
 index:
@@ -135,13 +131,19 @@ index:
 | 48355  | 2      | ausgeschlossen      | None   |
 | 48356  | 3      | .                   | None   |
 
+
+You can decide which and how many concordance lines you will by means
+of the parameters `order` ("first", "last", or "random") and
+`cut_off`. You can also provide a list of `matches` (from
+`concordance.meta.index`) to get specific concordance lines.
+
 You can specify a `list` of additional p-attributes besides the
 primary word layer to show via the `p_show` parameter of
-`Concordance.lines()` (these will be added as additional columns).
+`concordance.lines()` (these will be added as additional columns).
 
 ### Anchored Queries ###
 
-The `Concordance` class detects anchored queries by default. The following query
+The concordancer detects anchored queries automatically. The following query
 ```python
 concordance.query(
 	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\\("] @2[lemma="CDU"] [word="\\)"]'
@@ -171,12 +173,29 @@ You can use the `Collocates` class to extract collocates for a given
 window size (symmetric windows around the corpus matches):
 ```python
 from ccc.collocates import Collocates
-# initialize the collocation calculator with the engine
 collocates = Collocates(engine)
-# extract collocates
-collocates.query('[lemma="Angela"] [lemma="Merkel"]', window=5)
+# execute a query
+collocates.query('[lemma="Angela"] [lemma="Merkel"]')
 ```
+Upon executing a query, `collocates` will create a dataframe of
+the cotext of the query matches. Its size is determined by the
+`max_window_size` parameter. You will only be able to score collocates
+up to this parameter (defaults to 20). 
 
+By default, windows are cut at the "text" s-attribute. You can change
+this using the `s_break` attribute.
+
+By default, collocates are calculated on the "lemma"-layer, assuming
+that this is a valid p-attribute in the corpus. The corresponding
+parameter is `p_query` (which will fall back to "word" if the
+specified attribute is not annotated in the corpus).
+
+Using the marginal frequencies of the items in the whole corpus as a
+reference, you can directly annotate the co-occurrence counts in a
+given window:
+```python
+collocates.show(window=5)
+```
 The result will be a `DataFrame` with lexical items (lemmas by
 default) as index and frequency signatures and association measures as
 columns:
@@ -189,15 +208,9 @@ columns:
 | ,               | 814  | 17562059 | 300917702 | 22832 | 22018 | 17561245 | 283333625 | 1332.513602 | 21499.486398 | 1.756073e+07 | 2.833341e+08 | -14.204447     | ... |
 | Kanzlerin       | 648  | 17622    | 300917702 | 22832 | 22184 | 16974    | 300877896 | 1.337062    | 22830.662938 | 1.762066e+04 | 3.008772e+08 | 559.245198     | ... |
 
-By default, the dataframe is sorted by co-occurrence frequency (O11),
-and only the first 100 most frequently co-occurring collocates are
-retrieved. You can change the `order` and `cut_off` parameters when
-envoking the `Collocates` class.
-
-By default, collocates are calculated on the "lemma"-layer (assuming
-that this is a valid p-attribute in the corpus) and windows are cut at
-the "text" s-attribute. The corresponding parameters are `s_break` and
-`p_query`.
+For improved performance, all hapax legomena in the cotext are dropped
+after counting the cotext size. You can change this behaviour via the
+`drop_hapaxes` parameter.
 
 By default, the dataframe is annotated with "z_score", "t_score",
 "dice", "log_likelihood", and "mutual_information" (parameter `ams`).
@@ -208,13 +221,11 @@ association measures depend on their implementation in the
 [association-measures](https://pypi.org/project/association-measures/)
 module.
 
-A further parameter of the `Collocates` class is the
-`max_window_size`. This is an internal parameter that determines the
-result of the initial query via the `CWBEngine`. The result of the
-initial query and its co-occurrence dataframe are cached (assuming the
-engine was not initialized with `cache_path=None`), which means that
-you can extract collocates for windows from 0 to `max_window_size`
-quickly after the first run.
+By default, the dataframe is sorted by co-occurrence frequency (O11),
+and only the first 100 most frequently co-occurring collocates are
+retrieved. You can change this behaviour via the `order` and `cut_off`
+parameters. 
+
 
 
 ### Argument Queries
@@ -307,18 +318,20 @@ The result is a `dict` with the following keys:
 
 ## Acknowledgements ##
 The module relies on
-[cwb-python](https://pypi.org/project/cwb-python/), special thanks to
-Yannick Versley and Jorg Asmussen for the implementation. Thanks to
+[cwb-python](https://pypi.org/project/cwb-python/), thanks to Yannick
+Versley and Jorg Asmussen for the implementation. Special thanks to
 Markus Opolka for the implementation of
 [association-measures](https://pypi.org/project/association-measures/)
 and for forcing me to write tests.
 
-This work was supported by the
-[Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of Friedrich-Alexander-Universität
-Erlangen-Nürnberg. project title 
-[Exploring the 'Fukushima Effect'](https://www.linguistik.phil.fau.de/projects/efe/).
+This work was supported by the [Emerging Fields Initiative
+(EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/)
+of Friedrich-Alexander-Universität Erlangen-Nürnberg, project title
+[Exploring the *Fukushima
+Effect*](https://www.linguistik.phil.fau.de/projects/efe/).
 
 Further development of the package has been funded by the Deutsche
-Forschungsgemeinschaft (DFG) within the project "Reconstructing
-Arguments from Noisy Text", grant number 377333057, as part of the
-Priority Program [Robust Argumentation Machines](http://www.spp-ratio.de/home/) (SPP-1999).
+Forschungsgemeinschaft (DFG) within the project *Reconstructing
+Arguments from Noisy Text*, grant number 377333057, as part of the
+Priority Program [Robust Argumentation
+Machines](http://www.spp-ratio.de/home/) (SPP-1999).

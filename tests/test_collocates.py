@@ -19,7 +19,8 @@ def test_query_default():
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    c = collocates.query(query)
+    collocates.query(query)
+    c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
     assert('Bundeskanzlerin' in c.index)
@@ -30,10 +31,11 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     # CCC
     engine = CWBEngine("GERMAPARL_1114", registry_path)
     collocates = Collocates(engine, max_window_size=window,
-                            s_break='s', drop_hapaxes=drop_hapaxes,
-                            p_query='lemma', cut_off=None)
+                            s_break='s', p_query='lemma')
     query = '[lemma="' + lemma + '"]'
-    col = collocates.query(query, window=window)
+    collocates.query(query)
+    col = collocates.show(window=5, cut_off=None,
+                          drop_hapaxes=drop_hapaxes)
 
     # UCS
     ucs = pd.read_csv("tests/gold/ucs-germaparl1114-" + lemma +
@@ -63,6 +65,7 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     ucs.columns = ['O11', 'f2']
     ucs.sort_values(by=['O11', 'item'], ascending=False, inplace=True)
     col = col[['O11', 'f2']]
+
     assert(col.equals(ucs))
     assert(nr['N_ccc'] + nr['f1_ccc'] == nr['N_ucs'])
     assert(nr['f1_infl_ccc'] == nr['f1_infl_ucs'] - nr['O11_ucs_node'])
@@ -89,7 +92,8 @@ def test_collocates_speed_many():
     engine = CWBEngine("GERMAPARL_1114", registry_path)
     query = '[lemma="sagen"]'
     collocates = Collocates(engine, max_window_size=2, s_break='s',
-                            drop_hapaxes=True, p_query='lemma',
-                            cut_off=None)
-    c2 = collocates.query(query, 2)
+                            p_query='lemma')
+    collocates.query(query)
+    c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
+    print(c2[['O11']])
     assert(type(c2) == pd.DataFrame)
