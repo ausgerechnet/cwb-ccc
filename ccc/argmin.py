@@ -84,7 +84,7 @@ class ArgConcordance(Concordance):
     def argmin_query(self, query, anchors, regions, p_show=['lemma']):
 
         # run the query
-        self.query(query)
+        query, s_query, anchors_query = self.query(query)
         if self.size == 0:
             return
 
@@ -96,6 +96,11 @@ class ArgConcordance(Concordance):
 
         # initialize output
         result = dict()
+        result['query'] = {
+            'query': query,
+            's_query': s_query,
+            'anchors': anchors_query
+        }
         result['nr_matches'] = self.size
         result['matches'] = list()
         result['holes'] = defaultdict(list)

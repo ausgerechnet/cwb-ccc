@@ -21,7 +21,7 @@ def test_argconc():
 
     engine = CWBEngine(corpus_name=corpus_name,
                        registry_path=registry_path, lib_path=lib_path,
-                       meta_s="tweet_id", meta_path=None)
+                       s_meta="tweet_id", meta_path=None)
 
     with open(query_path, "rt") as f:
         try:
@@ -41,8 +41,8 @@ def test_process_argmin_file():
 
     engine = CWBEngine(corpus_name=corpus_name,
                        registry_path=registry_path, lib_path=lib_path,
-                       meta_s="tweet_id")
-    engine.subcorpus_from_query(subcorpus_query, subcorpus_name)
+                       s_meta="tweet_id")
+    engine.define_subcorpus(subcorpus_query, subcorpus_name)
     result = process_argmin_file(engine, query_path)
     assert(all(x in result.keys() for x in ['corpus_name',
                                             'subcorpus',

@@ -3,7 +3,7 @@
 
 from random import sample
 # part of module
-from .utils import node2cooc, anchor_query_to_anchors
+from .utils import node2cooc, preprocess_query
 # requirements
 from pandas import DataFrame
 
@@ -32,26 +32,21 @@ class Concordance:
         self.meta = None
         self.breakdown = None
 
-    def query(self, query, anchored=None, breakdown=True):
+    def query(self, query, breakdown=True):
         """ executes query and gets df_node, meta, and frequency breakdown """
 
-        if anchored is None:
-            anchored = (len(anchor_query_to_anchors(query)) > 0)
+        query, s_query, anchors = preprocess_query(query)
+        if s_query is None:
+            s_query = self.settings['s_break']
 
-        if not anchored:
-            df_node = self.engine.df_node_from_query(
-                query,
-                s_break=self.settings['s_break'],
-                context=self.settings['context'],
-                match_strategy=self.settings['match_strategy']
-            )
-        else:
-            df_node = self.engine.df_anchor_from_query(
-                query,
-                s_break=self.settings['s_break'],
-                context=self.settings['context'],
-                match_strategy=self.settings['match_strategy']
-            )
+        df_node = self.engine.df_node_from_query(
+            query,
+            s_query,
+            anchors,
+            s_break=self.settings['s_break'],
+            context=self.settings['context'],
+            match_strategy=self.settings['match_strategy']
+        )
 
         self.df_node = df_node
         if len(df_node) == 0:
@@ -74,6 +69,8 @@ class Concordance:
             self.breakdown = self.engine.count_matches(df_node)
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
+
+        return query, s_query, anchors
 
     def lines(self, matches=None, p_show=[], order='first', cut_off=100):
         """ creates concordance lines from self.df_node """

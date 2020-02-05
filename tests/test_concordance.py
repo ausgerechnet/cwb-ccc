@@ -11,7 +11,7 @@ corpus_name = "SZ_FULL"
 
 @pytest.mark.concordance_simple
 def test_query_default():
-    engine = CWBEngine(corpus_name, registry_path, meta_s='text_id', cache_path=None)
+    engine = CWBEngine(corpus_name, registry_path, s_meta='text_id', cache_path=None)
     concordance = Concordance(engine, s_break='s')
     query = (
         '[lemma="Angela"]? [lemma="Merkel"] '
@@ -42,7 +42,7 @@ def test_anchor_query_default():
 @pytest.mark.skip
 @pytest.mark.concordance_many
 def test_query_many():
-    engine = CWBEngine(corpus_name, registry_path, meta_s='text_id', cache_path=None)
+    engine = CWBEngine(corpus_name, registry_path, s_meta='text_id', cache_path=None)
     concordance = Concordance(engine, s_break='s')
     query = ("[lemma='und']")
     concordance.query(query)
