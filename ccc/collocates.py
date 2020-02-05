@@ -9,57 +9,48 @@ from pandas import DataFrame
 from association_measures import measures, frequencies
 
 
-class Collocates(object):
+class Collocates:
 
     def __init__(self, engine, max_window_size=20, s_break='text',
-                 order='O11', p_query='lemma', cut_off=100,
-                 drop_hapaxes=True, ams=['z_score', 't_score', 'dice',
-                                         'log_likelihood', 'mutual_information']):
+                 p_query='lemma'):
 
         self.engine = engine
+
+        if p_query not in set(self.engine.corpus_attributes.value):
+            print('WARNING: specified p-attribute not annotated.')
+            print('         tokens from the primary layer will be used.')
+            p_query = 'word'
 
         self.settings = {
             'max_window_size': max_window_size,
             's_break': s_break,
             'p_query': p_query,
-            'order': order,
-            'cut_off': cut_off,
-            'ams': ams,
-            'drop_hapaxes': drop_hapaxes
         }
 
-    def query(self, query, window=5):
+    def query(self, query):
+
+        print('... collecting nodes ...', end='\r')
+        df_node = self.engine.df_node_from_query(
+            query, self.settings['s_break'],
+            context=self.settings['max_window_size']
+        )
+        print('... collecting nodes ... collected %d nodes' % len(df_node))
+
+        print('... collecting cotexts ...', end='\r')
+        deflated, f1_set = df_node_to_cooc(df_node)
+        print('... collecting cotexts ... collected %d positions' % len(deflated))
+
+        self.deflated = deflated
+        self.f1_set = f1_set
+
+    def count(self, window):
 
         if window > self.settings['max_window_size']:
-            print("WARNING: desired window outside maximum window size")
-            return DataFrame()
-
-        print("... collecting nodes ...", end="\r")
-        df_node = self.engine.df_node_from_query(
-            query, self.settings['s_break'], context=self.settings['max_window_size']
-        )
-        print("... collecting nodes ... collected %d nodes" % len(df_node))
-
-        print("... collecting cotexts ...", end="\r")
-        df_cooc, match_pos = df_node_to_cooc(df_node)
-        print("... collecting cotexts ... collected %d positions" % len(df_cooc))
-
-        if df_cooc.empty:
-            return DataFrame()
-
-        print("... calculating collocates ...", end="\r")
-        collocates = self.calculate_collocates(
-            df_cooc, len(match_pos), window
-        )
-        print("... scoring collocates ... scored %d types" % len(collocates))
-
-        return collocates
-
-    def df_cooc_to_counts(self, df_cooc, window):
+            print('WARNING: desired window outside maximum window size')
+            return DataFrame(), 0
 
         # slice relevant window
-        relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
-        # relevant = relevant.drop_duplicates('cpos')
+        relevant = self.deflated.loc[abs(self.deflated['offset']) <= window]
 
         # number of possible occurrence positions within window
         f1_inflated = len(relevant)
@@ -68,37 +59,49 @@ class Collocates(object):
         counts = self.engine.cpos2counts(
             relevant['cpos'], self.settings['p_query']
         )
-        counts.columns = ["O11"]
-
-        # drop hapax legomena for improved performance
-        if self.settings['drop_hapaxes']:
-            counts = counts.loc[~(counts['O11'] <= 1)]
+        counts.columns = ['O11']
 
         return counts, f1_inflated
 
-    def calculate_collocates(self, df_cooc, f1, window):
+    def show(self, window=5, order='O11', cut_off=100, ams=None,
+             drop_hapaxes=True):
 
-        # get counts
-        counts, f1_inflated = self.df_cooc_to_counts(
-            df_cooc,
-            window
-        )
+        if ams is None:
+            ams = [
+                'z_score', 't_score', 'dice',
+                'log_likelihood', 'mutual_information'
+            ]
+
+        counts, f1_inflated = self.count(window)
+        if counts.empty:
+            return DataFrame()
+
+        # drop hapax legomena for improved performance
+        if drop_hapaxes:
+            counts = counts.loc[~(counts['O11'] <= 1)]
+
         # get marginals
         f2 = self.engine.marginals(
             counts.index, self.settings['p_query']
         )
         f2.columns = ['f2']
-        # get frequency signatures
-        contingencies = counts_to_contingencies(
-            counts, f1, f1_inflated, f2, self.engine.corpus_size
-        )
-        # add measures and sort dataframe
-        collocates = add_ams(
-            contingencies, self.settings['ams']
-        )
+        contingencies = counts.join(f2)
+
+        # add constant columns
+        contingencies['N'] = self.engine.corpus_size - len(self.f1_set)
+        contingencies['f1'] = f1_inflated
+
+        # add measures
+        collocates = add_ams(contingencies, ams)
+
+        # sort dataframe
         collocates.sort_values(
-            by=[self.settings['order'], 'item'], ascending=False, inplace=True
+            by=[order, 'item'],
+            ascending=False, inplace=True
         )
+
+        if cut_off is not None:
+            collocates = collocates.head(cut_off)
 
         return collocates
 
@@ -150,29 +153,17 @@ def df_node_to_cooc(df_node, context=None):
     df_infl.drop(["abs_offset"], axis=1)
 
     # print("(3) drop duplicates")
-    df_infl.drop_duplicates(subset='cpos', inplace=True)
+    df_defl = df_infl.drop_duplicates(subset='cpos')
 
     # print("(4a) identify matches")
-    f1_set = set(df_infl.loc[df_infl['offset'] == 0]['cpos'])
+    f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
     # print("(4b) remove matches")
-    df_infl = df_infl[df_infl['offset'] != 0]
+    df_defl = df_defl[df_defl['offset'] != 0]
 
-    return df_infl, f1_set
-
-
-def counts_to_contingencies(counts, f1, f1_inflated, f2, N):
-    """ window counts + marginals to contingency table"""
-
-    # create contingency table
-    N_deflated = N - f1
-    contingencies = counts
-    contingencies = contingencies.join(f2)
-    contingencies['N'] = N_deflated
-    contingencies['f1'] = f1_inflated
-    return contingencies
+    return df_defl, f1_set
 
 
-def add_ams(contingencies, am_names):
+def add_ams(df, am_names):
     """ annotates a contingency table with AMs """
 
     # select relevant association measures
@@ -185,16 +176,13 @@ def add_ams(contingencies, am_names):
     }
     ams = [ams_all[k] for k in am_names if k in ams_all.keys()]
 
-    # rename for convenience
-    df = contingencies
-
-    # create the contigency table with the observed frequencies
+    # create contigency table with observed frequencies
     df['O11'], df['O12'], df['O21'], df['O22'] = frequencies.observed_frequencies(df)
-    # create the indifference table with the expected frequencies
+    # create indifference table with expected frequencies
     df['E11'], df['E12'], df['E21'], df['E22'] = frequencies.expected_frequencies(df)
 
-    # calculate all association measures
-    measures.calculate_measures(df, measures=ams)
+    # calculate association measures
+    df = measures.calculate_measures(df, measures=ams)
     df.index.name = 'item'
 
     return df

@@ -1,4 +1,5 @@
 import shelve
+import re
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
@@ -62,6 +63,23 @@ def formulate_cqp_query(items, p_att, s_att):
     return cqp_exec
 
 
+def anchor_query_to_anchors(anchor_query, strict=False):
+    """get anchors present in query"""
+
+    anchors = dict()
+    p = re.compile(r"@\d")
+
+    for m in p.finditer(anchor_query):
+        if strict:
+            if m.group() in anchors.keys():
+                raise KeyError('duplicate keys provided')
+        anchors[m.group()] = [m.start(), m.end()]
+
+    keys = [int(a[1]) for a in anchors.keys()]
+
+    return keys
+
+
 def time_it(func):
     """
     decorator for printing the execution time of a function call
@@ -105,3 +123,21 @@ def node2cooc(row):
     }
 
     return result
+
+
+# dataframe corrections
+def apply_correction(row, correction):
+    value, lower_bound, upper_bound = row
+    value += correction
+    if value < lower_bound or value > upper_bound:
+        value = -1
+    return value
+
+
+def apply_corrections(df_anchor, corrections):
+    for correction in corrections:
+        if correction[0] in df_anchor.columns:
+            df_anchor[correction[0]] = df_anchor[
+                [correction[0], 'region_start', 'region_end']
+            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
+    return df_anchor

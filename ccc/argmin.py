@@ -4,25 +4,8 @@
 import json
 from collections import defaultdict
 # part of module
-from .concordances import df_node_to_concordance
-
-
-# corrections
-def apply_correction(row, correction):
-    value, lower_bound, upper_bound = row
-    value += correction
-    if value < lower_bound or value > upper_bound:
-        value = -1
-    return value
-
-
-def apply_corrections(df_anchor, corrections):
-    for correction in corrections:
-        if correction[0] in df_anchor.columns:
-            df_anchor[correction[0]] = df_anchor[
-                [correction[0], 'region_start', 'region_end']
-            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
-    return df_anchor
+from .concordances import Concordance
+from .utils import apply_corrections
 
 
 # hole structure
@@ -90,73 +73,61 @@ def get_holes(df, anchors, regions):
     return holes
 
 
-# actual query
-def argmin_query(engine, query, anchors, regions=[],
-                 s_break='text', context=0, p_show=['lemma'],
-                 cut_off=None, order="first", match_strategy='longest'):
+class ArgConcordance(Concordance):
+    """ just a concordancer with extra formatting """
 
-    print("running anchor query ...", end="\r")
-    df_anchor = engine.df_anchor_from_query(
-        query,
-        s_break=s_break,
-        context=context,
-        match_strategy=match_strategy
-    )
-    print("running anchor query ... %d matches" % len(df_anchor))
+    def __init__(self, engine, context=None, s_break='tweet',
+                 match_strategy='longest'):
 
-    # initialize output
-    result = dict()
-    result['matches'] = list()
-    result['holes'] = defaultdict(list)
+        super().__init__(engine, context, s_break, match_strategy)
 
-    # if result is empty ...
-    if df_anchor.empty:
-        result['nr_matches'] = 0
+    def argmin_query(self, query, anchors, regions, p_show=['lemma']):
+
+        # run the query
+        self.query(query)
+        if self.size == 0:
+            return
+
+        # apply corrections
+        self.df_node = apply_corrections(self.df_node, anchors)
+
+        # get concordance
+        concordance = self.lines(p_show=p_show, order='first', cut_off=None)
+
+        # initialize output
+        result = dict()
+        result['nr_matches'] = self.size
+        result['matches'] = list()
+        result['holes'] = defaultdict(list)
+
+        # loop through concordances
+        for key in concordance.keys():
+
+            line = concordance[key]
+
+            # fill concordance line
+            entry = dict()
+            entry['df'] = line.to_dict()
+            entry['position'] = key
+            entry['full'] = " ".join(entry['df']['word'].values())
+
+            # hole structure
+            holes = get_holes(line, anchors, regions)
+            if 'lemmas' in holes.keys():
+                entry['holes'] = holes['lemmas']
+            else:
+                entry['holes'] = holes['words']
+
+            result['matches'].append(entry)
+
+            # append to global holes list
+            for idx in entry['holes'].keys():
+                result['holes'][idx].append(entry['holes'][idx])
+
         return result
 
-    # apply corrections
-    df_anchor = apply_corrections(df_anchor, anchors)
 
-    # retrieve concordance
-    concordance = df_node_to_concordance(engine,
-                                         df_anchor,
-                                         order=order,
-                                         cut_off=cut_off,
-                                         p_show=p_show,
-                                         anchored=True)
-
-    # number of matches
-    result['nr_matches'] = len(concordance)
-
-    # loop through concordances
-    for key in concordance.keys():
-
-        line = concordance[key]
-
-        # fill concordance line
-        entry = dict()
-        entry['df'] = line.to_dict()
-        entry['position'] = key
-        entry['full'] = " ".join(entry['df']['word'].values())
-
-        # hole structure
-        holes = get_holes(line, anchors, regions)
-        if 'lemmas' in holes.keys():
-            entry['holes'] = holes['lemmas']
-        else:
-            entry['holes'] = holes['words']
-
-        result['matches'].append(entry)
-
-        # append to global holes list
-        for idx in entry['holes'].keys():
-            result['holes'][idx].append(entry['holes'][idx])
-
-    return result
-
-
-# read file and process query
-def process_argmin_file(engine, query_path, concordance_settings):
+def process_argmin_file(engine, query_path, p_show=['lemma']):
 
     with open(query_path, "rt") as f:
         try:
@@ -167,16 +138,14 @@ def process_argmin_file(engine, query_path, concordance_settings):
 
     # add query parameters
     query['corpus_name'] = engine.corpus_name
-    query['concordance_settings'] = concordance_settings
+    query['subcorpus'] = engine.subcorpus
     query['query_path'] = query_path
 
-    # get result
-    query['result'] = argmin_query(engine,
-                                   query['query'],
-                                   query['anchors'],
-                                   query['regions'],
-                                   concordance_settings['s_break'],
-                                   concordance_settings['context'],
-                                   concordance_settings['p_show'])
+    # run the query
+    concordance = ArgConcordance(engine)
+    query['result'] = concordance.argmin_query(query['query'],
+                                               query['anchors'],
+                                               query['regions'],
+                                               p_show)
 
     return query

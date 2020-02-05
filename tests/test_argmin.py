@@ -1,9 +1,8 @@
 from ccc.cwb import CWBEngine
-from ccc.argmin import process_argmin_file, argmin_query, get_holes
+from ccc.argmin import ArgConcordance, process_argmin_file
 import pytest
 import gzip
 import json
-import pandas as pd
 
 
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
@@ -13,25 +12,16 @@ subcorpus_query = "/region[tweet,a] :: (a.tweet_duplicate_status!='1') within tw
 subcorpus_name = "DEDUP"
 match_strategy = 'longest'
 
-
-query_path = "/home/ausgerechnet/projects/ccc/tests/gold/query-example.json"
-result_path = "/home/ausgerechnet/projects/ccc/tests/gold/query-example-result.ldjson.gz"
-
-# set concordance settings
-concordance_settings = {
-    'order': 'first',
-    'cut_off': None,
-    'p_show': ['lemma'],
-    's_break': 'tweet',
-    'context': 50
-}
+query_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example.json"
+result_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example-result.ldjson.gz"
 
 
-@pytest.mark.holes
-def test_get_holes():
+@pytest.mark.argconc
+def test_argconc():
 
-    query_path = "/home/ausgerechnet/projects/ccc/tests/gold/query-example-2.json"
-    # result_path = "/home/ausgerechnet/projects/ccc/tests/gold/query-example-2-result.ldjson.gz"
+    engine = CWBEngine(corpus_name=corpus_name,
+                       registry_path=registry_path, lib_path=lib_path,
+                       meta_s="tweet_id", meta_path=None)
 
     with open(query_path, "rt") as f:
         try:
@@ -40,47 +30,10 @@ def test_get_holes():
             print("WARNING: not a valid json file")
             return
 
-    engine = CWBEngine(corpus_name=corpus_name,
-                       registry_path=registry_path, lib_path=lib_path,
-                       meta_s="tweet_id", meta_path=None)
-
-    result = argmin_query(engine,
-                          query['query'],
-                          query['anchors'],
-                          query['regions'],
-                          concordance_settings['s_break'],
-                          concordance_settings['context'],
-                          concordance_settings['p_show'])
-
-    df = pd.DataFrame(result['matches'][0]['df'])
-    get_holes(df, query['anchors'], query['regions'])
-
-
-@pytest.mark.argmin_query
-def test_argmin_query():
-
-    with open(query_path, "rt") as f:
-        try:
-            query = json.loads(f.read())
-        except json.JSONDecodeError:
-            print("WARNING: not a valid json file")
-            return
-
-    engine = CWBEngine(corpus_name=corpus_name,
-                       registry_path=registry_path, lib_path=lib_path,
-                       meta_s="tweet_id", meta_path=None)
-
-    result = argmin_query(engine,
-                          query['query'],
-                          query['anchors'],
-                          query['regions'],
-                          concordance_settings['s_break'],
-                          concordance_settings['context'],
-                          concordance_settings['p_show'])
-
-    assert(all(x in result.keys() for x in ['matches',
-                                            'holes',
-                                            'nr_matches']))
+    argconc = ArgConcordance(engine)
+    result = argconc.argmin_query(query['query'], query['anchors'], query['regions'])
+    assert('test' in result['holes'].keys())
+    assert(type(result['matches']) == list)
 
 
 @pytest.mark.argmin_file
@@ -90,13 +43,14 @@ def test_process_argmin_file():
                        registry_path=registry_path, lib_path=lib_path,
                        meta_s="tweet_id")
     engine.subcorpus_from_query(subcorpus_query, subcorpus_name)
-    result = process_argmin_file(engine, query_path, concordance_settings)
-    assert(all(x in result.keys() for x in ['query',
+    result = process_argmin_file(engine, query_path)
+    assert(all(x in result.keys() for x in ['corpus_name',
+                                            'subcorpus',
+                                            'query',
                                             'pattern',
                                             'name',
                                             'anchors',
                                             'regions',
-                                            'concordance_settings',
                                             'query_path',
                                             'result']))
     assert(all(x in result['result'].keys() for x in ['matches',

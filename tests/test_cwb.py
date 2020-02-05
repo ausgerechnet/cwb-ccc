@@ -213,8 +213,7 @@ def test_subcorpus_2():
 @pytest.mark.s_ids
 def test_get_s_ids():
     engine = CWBEngine(corpus_name, registry_path, meta_s='tweet_id')
-    df_node = engine.df_node_from_query("[lemma='make']", 'tweet', meta=True)
-    print(df_node)
-
-    meta = engine.get_meta_regions()
-    print(meta)
+    df_node = engine.df_node_from_query("[lemma='make']", s_break='tweet')
+    assert('s_id' in df_node.columns)
+    meta_regions = engine.get_meta_regions()
+    assert('match' in meta_regions.columns)
