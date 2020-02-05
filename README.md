@@ -1,15 +1,15 @@
 # Collocation and Concordance Computation #
 
-  * [Introduction](#introduction)
-  * [Installation](#installation)
-  * [Usage](#usage)
-      * [Initializing the engine](#cwbengine)
-      * [Extracting concordance lines](#concordancing)
-  	  * [Dealing with anchored queries](#anchored-queries)
-	    * [Calculating collocates](#collocation-analyses)
-      * [Argument queries](#argument-queries)
-  * [Acknowledgements](#acknowledgements)
-  
+* [Introduction](#introduction)
+* [Installation](#installation)
+* [Usage](#usage)
+	* [Initializing the engine](#cwbengine)
+	* [Extracting concordance lines](#concordancing)
+	* [Dealing with anchored queries](#anchored-queries)
+	* [Calculating collocates](#collocation-analyses)
+	* [Argument queries](#argument-queries)
+* [Acknowledgements](#acknowledgements)
+
 
 ## Introduction ##
 This module is a wrapper around the
@@ -30,7 +30,7 @@ You can also clone the repository from
 [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the
 respective folder, and use `setup.py`:
 
-    python3 setup.py install
+	python3 setup.py install
 
 
 ## Usage ##
@@ -103,7 +103,7 @@ you can access its frequency breakdown via `concordance.breakdown`:
 All query matches and their respective `meta_s` identifiers are listed
 in `concordance.meta` (if `meta_s=None`, it will use the CQP
 identifiers of the `s_break` parameter as `s_id`):
-           
+
 | *match* | s_id      |
 |---------|-----------|
 | 48349   | A44847086 |
@@ -183,7 +183,7 @@ collocates.query('[lemma="Angela"] [lemma="Merkel"]')
 Upon executing a query, `collocates` will create a dataframe of
 the cotext of the query matches. Its size is determined by the
 `max_window_size` parameter. You will only be able to score collocates
-up to this parameter (defaults to 20). 
+up to this parameter (defaults to 20).
 
 By default, windows are cut at the "text" s-attribute. You can change
 this using the `s_break` attribute. As for the concordancer, the
@@ -228,7 +228,7 @@ module.
 By default, the dataframe is sorted by co-occurrence frequency (O11),
 and only the first 100 most frequently co-occurring collocates are
 retrieved. You can change this behaviour via the `order` and `cut_off`
-parameters. 
+parameters.
 
 
 ### Argument Queries
@@ -303,7 +303,7 @@ Note that the `argmin_query` method directly returns the result as
 
 - "nr_matches": the number of query matches in the corpus.
 - "matches": a list of concordance lines. Each concordance line
-  contains 
+  contains:
   - "position": the corpus position of the match
   - "df": the actual concordance line as returned from
 	`Concordance().query()` (see above) converted to a `dict`
