@@ -103,8 +103,9 @@ you can access its frequency breakdown via `concordance.breakdown`:
 | Merkel ( CDU )         | 29   |
 | Angela Merkels ( CDU ) | 2    |
 
-All query matches and their respective `s_meta` identifiers are listed
-in `concordance.meta`:
+All query matches and their respective `meta_s` identifiers are listed
+in `concordance.meta` (if `s_meta=None`, it will use the CQP
+identifiers of the `s_break` parameter as `s_id`):
 
 | *match* | s_id      |
 |---------|-----------|
