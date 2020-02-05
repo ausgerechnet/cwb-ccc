@@ -152,7 +152,7 @@ concordance.query(
 	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\\("] @2[lemma="CDU"] [word="\\)"]'
 )
 ```
-will thus return `DataFrame`s with appropriate anchors in the anchors column:
+will thus return `DataFrame`s with appropriate anchors in the anchor column:
 
 | *cpos* | offset | word                | anchor |
 |--------|--------|---------------------|--------|
@@ -280,29 +280,26 @@ table of regions, respectively, should not overlap.
 
 It is customary to store these queries in json objects (see an
 [example](tests/gold/query-example.json) in the repository). You can
-process argument queries with the `argmin_query` method from
-`ccc.argmin`:
-
+process argument queries with the `ArgConcordance` class from
+`ccc.argmin`. As usual, the class has to be initialized with the
+engine:
 ```python
-import json
-from ccc.argmin import argmin_query
+from ccc.argmin import ArgConcordance
 # read the query file
+import json
 query_path = "tests/gold/query-example.json"
 with open(query_path, "rt") as f:
 	query = json.loads(f.read())
 # query the corpus
-result = argmin_query(
-	engine,
+conc = ArgConcordance(engine)
+result = conc.argmin_query(
 	query=query['query'],
 	anchors=query['anchors'],
 	regions=query['regions']
 )
 ```
-Further parameters for `argmin_query` are `s_break`, `context`,
-`p_show`, and `match_strategy` (one of "longest" or "standard", see
-documentation of CQP).
-
-The result is a `dict` with the following keys:
+Note that the `argmin_query` method directly returns the result as
+`dict` with the following keys:
 
 - "nr_matches": the number of query matches in the corpus.
 - "matches": a list of concordance lines. Each concordance line
