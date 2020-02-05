@@ -79,11 +79,14 @@ The concordancer accepts valid CQP queries such as
 ```python
 query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
 ```
-Note that the queries _must not_ end on a "within" clause.  If you want to
-restrict your concordance lines by a structural attribute, use the
-`s_break` parameter of `Concordance` (defaults to "text"). The default
-context window is 20 tokens to the left and 20 tokens to the right of
-the query match and matchend, respectively (parameter `context`).
+
+Note that the queries _must not_ end on a "within" clause. By default,
+queries will not transgress "text" boundaries. You can change this
+behaviour via the `s_break` parameter of `Concordance`. Note that this
+will also cut your concordance lines at the specified boundaries. The
+default context window is 20 tokens to the left and 20 tokens to the
+right of the query match and matchend, respectively (parameter
+`context`).
 
 After executing the query
 ```
@@ -183,7 +186,8 @@ the cotext of the query matches. Its size is determined by the
 up to this parameter (defaults to 20). 
 
 By default, windows are cut at the "text" s-attribute. You can change
-this using the `s_break` attribute.
+this using the `s_break` attribute. As for the concordancer, the
+queries must thus not end on a "within" clause.
 
 By default, collocates are calculated on the "lemma"-layer, assuming
 that this is a valid p-attribute in the corpus. The corresponding
