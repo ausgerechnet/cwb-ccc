@@ -5,11 +5,11 @@
   * [Usage](#usage)
       * [Initializing the engine](#cwbengine)
       * [Extracting concordance lines](#concordancing)
-	  * [Dealing with anchored queries](#anchored-queries)
-	  * [Calculating collocates](#collocation-analyses)
+  	  * [Dealing with anchored queries](#anchored-queries)
+	    * [Calculating collocates](#collocation-analyses)
       * [Argument queries](#argument-queries)
   * [Acknowledgements](#acknowledgements)
-
+  
 
 ## Introduction ##
 This module is a wrapper around the
