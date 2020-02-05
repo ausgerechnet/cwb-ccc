@@ -84,9 +84,9 @@ The default context window is 20 tokens to the left and 20 tokens to
 the right of the query match and matchend, respectively. You can
 change this via the `context` parameter.
 
-Note that queries _may_ end on a "within" clause, which will limit the
-matches to certain regions defined by structural
-attributes. Additionally, you can specify an `s_break` parameter,
+Note that queries _may_ end on a "within" clause (`s_query`), which
+will limit the matches to certain regions defined by structural
+attributes . Additionally, you can specify an `s_break` parameter,
 which will cut the context (defaults to "text"). NB: The
 implementation assumes that `s_query` regions are confined by
 `s_break` regions, and both of them are within `s_meta` regions.
@@ -190,8 +190,8 @@ the cotext of the query matches. Its size is determined by the
 up to this parameter (defaults to 20).
 
 By default, windows are cut at the "text" s-attribute. You can change
-this using the `s_break` attribute. As for the concordancer, the
-initial query may contain an additional "within" statement.
+this using the `s_break` attribute. Just like with the concordancer,
+the initial query may contain an additional "within" statement.
 
 By default, collocates are calculated on the "lemma"-layer, assuming
 that this is a valid p-attribute in the corpus. The corresponding
