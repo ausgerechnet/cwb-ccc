@@ -231,7 +231,6 @@ retrieved. You can change this behaviour via the `order` and `cut_off`
 parameters. 
 
 
-
 ### Argument Queries
 Argument queries are anchored queries with additional information. (1)
 Each anchor can be modified by an offset (usually used to capture

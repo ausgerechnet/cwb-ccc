@@ -97,12 +97,12 @@ class CWBEngine:
         for s in s_regions:
             records.append({
                 'idx': s[2].decode(),
-                'match_start': s[0],
-                'match_end': s[1]
+                'match': s[0],
+                'matchend': s[1]
             })
         df = DataFrame(records)
         df.set_index('idx', inplace=True)
-        df = df[['match_start', 'match_end']]
+        df = df[['match', 'matchend']]
         return df
 
     def deactivate_subcorpus(self):
@@ -188,12 +188,14 @@ class CWBEngine:
         anchors = anchor_query_to_anchors(anchor_query)
 
         # first run: 0 and 1
+        print("... running query for anchor pair (0, 1) ...", end="\r")
         self.cqp.Exec('set ant 0; ank 1;')
         self.cqp.Exec('tmp_anchor = ' + anchor_query + ' within ' + s_break + ';')
 
         # dump result
         df_anchor = self.cqp.Dump('tmp_anchor')
         df_anchor.columns = [0, 1]
+        print("... running query for anchor pair (0, 1) ... found %d matches" % len(df_anchor))
 
         # if there's nothing to return ...
         if df_anchor.empty:
@@ -202,6 +204,7 @@ class CWBEngine:
         # join all the other ones
         for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
             if pair[0] in anchors or pair[1] in anchors:
+                print("... running query for anchor pair %s ..." % str(pair))
                 # load initial matches
                 self.cqp.Exec('tmp_anchor;')
                 # set appropriate anchors
@@ -218,6 +221,7 @@ class CWBEngine:
         self.cqp.Exec('set ant 0; ank 1;')
 
         # NA handling
+        print("... collected all anchors ... post-processing dataframe ...")
         df_anchor.dropna(axis=1, how='all', inplace=True)
         df_anchor = df_anchor.apply(to_numeric, downcast='integer')
         df_anchor.fillna(-1, inplace=True)
@@ -301,14 +305,18 @@ class CWBEngine:
             )
             s_id = meta_region[2].apply(lambda x: x.decode('utf-8'))
 
-        # confine regions by s_break
-        df['region_start'] = df.match - context
-        df['region_end'] = df.matchend + context
-        df.region_start = df[['region_start', 's_start']].max(axis=1)
-        df.region_end = df[['region_end', 's_end']].min(axis=1)
-        df = df.drop(['s_start', 's_end'], axis=1)
+        # confine regions by s_break and context
+        if context is None:
+            df['region_start'] = df.s_start
+            df['region_end'] = df.s_end
+        else:
+            df['region_start'] = df.match - context
+            df['region_end'] = df.matchend + context
+            df.region_start = df[['region_start', 's_start']].max(axis=1)
+            df.region_end = df[['region_end', 's_end']].min(axis=1)
 
-        # downcast values
+        # downcast dataframe, add and drop columns
+        df = df.drop(['s_start', 's_end'], axis=1)
         df = df.apply(to_numeric, downcast='integer')
         df['s_id'] = s_id
 

@@ -123,3 +123,21 @@ def node2cooc(row):
     }
 
     return result
+
+
+# dataframe corrections
+def apply_correction(row, correction):
+    value, lower_bound, upper_bound = row
+    value += correction
+    if value < lower_bound or value > upper_bound:
+        value = -1
+    return value
+
+
+def apply_corrections(df_anchor, corrections):
+    for correction in corrections:
+        if correction[0] in df_anchor.columns:
+            df_anchor[correction[0]] = df_anchor[
+                [correction[0], 'region_start', 'region_end']
+            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
+    return df_anchor
