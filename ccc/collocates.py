@@ -7,51 +7,62 @@ from .utils import node2cooc, preprocess_query
 # requirements
 from pandas import DataFrame
 from association_measures import measures, frequencies
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Collocates:
 
-    def __init__(self, engine, max_window_size=20, s_break='text',
-                 p_query='lemma', match_strategy='standard'):
+    def __init__(self, engine, query, max_window_size=20,
+                 s_break='text', p_query='lemma',
+                 match_strategy='standard'):
 
         self.engine = engine
 
+        # evaluate query
+        query, s_query, anchors_query = preprocess_query(query)
         if p_query not in set(self.engine.corpus_attributes.value):
-            print('WARNING: specified p-attribute not annotated.')
-            print('         tokens from the primary layer will be used.')
+            logger.warning('specified p-attribute not annotated.')
+            logger.warning('tokens from the primary layer will be used.')
             p_query = 'word'
 
+        # settings
         self.settings = {
+            'query': query,
+            's_query': s_query,
+            'anchors_query': anchors_query,
             'max_window_size': max_window_size,
             's_break': s_break,
             'p_query': p_query,
             'match_strategy': match_strategy
         }
 
-    def query(self, query):
-
-        query, s_query, anchors = preprocess_query(query)
-
-        print('... collecting nodes ...', end='\r')
+        logger.info('collecting nodes')
         df_node = self.engine.df_node_from_query(
-            query, s_query, anchors, self.settings['s_break'],
+            query, s_query, anchors_query, self.settings['s_break'],
             context=self.settings['max_window_size'],
             match_strategy=self.settings['match_strategy']
         )
-        print('... collecting nodes ... collected %d nodes' % len(df_node))
+        logger.info('collected %d nodes' % len(df_node))
 
-        print('... collecting cotexts ...', end='\r')
+        if len(df_node) == 0:
+            logger.warning('0 query hits')
+            return
+
+        logger.info('collecting cotexts')
         deflated, f1_set = df_node_to_cooc(df_node)
-        print('... collecting cotexts ... collected %d positions' % len(deflated))
+        logger.info('collected %d positions' % len(deflated))
 
         self.deflated = deflated
         self.f1_set = f1_set
 
     def count(self, window):
 
-        if window > self.settings['max_window_size']:
-            print('WARNING: desired window outside maximum window size')
-            return DataFrame(), 0
+        mws = self.settings['max_window_size']
+        if window > mws:
+            logger.warning('desired window outside maximum window size')
+            logger.warning('will use maximum window (%d)' % mws)
+            window = self.settings['max_window_size']
 
         # slice relevant window
         relevant = self.deflated.loc[abs(self.deflated['offset']) <= window]
@@ -128,11 +139,11 @@ def df_node_to_cooc(df_node, context=None):
     NB: equivalent to UCS when switching steps 3 and 4
     """
 
-    # print("reset the index to be able to work with it")
+    # reset the index to be able to work with it
     df_node.reset_index(inplace=True)
 
     if context is not None:
-        # print("re-confine regions by given context")
+        logger.info("re-confine regions by given context")
         df_node['start'] = df_node['match'] - context
         df_node['start'] = df_node[['start', 'region_start']].max(axis=1)
         df_node['end'] = df_node['matchend'] + context
@@ -141,27 +152,27 @@ def df_node_to_cooc(df_node, context=None):
         df_node['start'] = df_node['region_start']
         df_node['end'] = df_node['region_end']
 
-    # print("(1a) create local cotexts")
+    logger.info("(1a) create local cotexts")
     df = DataFrame.from_records(df_node.apply(node2cooc, axis=1).values)
 
-    # print("(1b) concatenate local cotexts")
+    logger.info("(1b) concatenate local cotexts")
     df_infl = DataFrame({
         'match': list(chain.from_iterable(df['match_list'].values)),
         'cpos': list(chain.from_iterable(df['cpos_list'].values)),
         'offset': list(chain.from_iterable(df['offset_list'].values))
     })
 
-    # print("(2) sort by absolut offset")
+    logger.info("(2) sort by absolut offset")
     df_infl['abs_offset'] = df_infl.offset.abs()
     df_infl.sort_values(by=['abs_offset', 'cpos'], inplace=True)
     df_infl.drop(["abs_offset"], axis=1)
 
-    # print("(3) drop duplicates")
+    logger.info("(3) drop duplicates")
     df_defl = df_infl.drop_duplicates(subset='cpos')
 
-    # print("(4a) identify matches")
+    logger.info("(4) identify matches")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
-    # print("(4b) remove matches")
+    logger.info("(5) remove matches")
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set

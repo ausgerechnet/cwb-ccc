@@ -11,6 +11,8 @@ from .utils import Cache, formulate_cqp_query, preprocess_query
 # requirements
 from pandas import DataFrame, read_csv, to_numeric
 from CWB.CL import Corpus
+import logging
+logger = logging.getLogger(__name__)
 
 
 class CWBEngine:
@@ -110,7 +112,9 @@ class CWBEngine:
         df = read_csv(StringIO(cqp_return), sep="\t", header=None)
         if not df.empty:
             df.columns = ["storage", "corpus:subcorpus", "size"]
-            df['corpus'], df['subcorpus'] = df["corpus:subcorpus"].str.split(":", 1).str
+            crpssbcrps = df["corpus:subcorpus"].str.split(":", 1).str
+            df['corpus'] = crpssbcrps[0]
+            df['subcorpus'] = crpssbcrps[1]
             df.drop('corpus:subcorpus', axis=1, inplace=True)
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
         return df
@@ -120,12 +124,12 @@ class CWBEngine:
         if subcorpus is not None:
             self.cqp.Exec(subcorpus)
             self.subcorpus = subcorpus
-            print('CQP switched to subcorpus "%s"' % subcorpus)
+            logger.info('CQP switched to subcorpus "%s"' % subcorpus)
         else:
             self.cqp.Exec(self.corpus_name)
             self.subcorpus = self.corpus_name
-            print('CQP switched to corpus "%s"' % self.corpus_name)
-        print(self.show_subcorpora())
+            logger.info('CQP switched to corpus "%s"' % self.corpus_name)
+        # logger.info("subcorpora:\n" + str(self.show_subcorpora()))
 
     def define_subcorpus(self, query, name='Last',
                          match_strategy='longest', activate=False):
@@ -162,13 +166,13 @@ class CWBEngine:
             start_query = query + ' within ' + s_query
 
         # first run: 0 and 1 (considering within statement)
-        print("... running query for anchor pair (0, 1) ...", end="\r")
+        logger.info("running query for anchor pair (0, 1)")
         self.cqp.Exec('set ant 0; ank 1;')
         # find matches and dump result
         self.define_subcorpus(start_query, 'tmp_nodes')
         df_node = self.cqp.Dump('tmp_nodes')
         df_node.columns = [0, 1]
-        print("... running query for anchor pair (0, 1) ... found %d matches" % len(df_node))
+        logger.info("found %d matches" % len(df_node))
 
         # if there's nothing to return ...
         if df_node.empty:
@@ -183,7 +187,7 @@ class CWBEngine:
 
             for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
                 if pair[0] in anchors or pair[1] in anchors:
-                    print("... running query for anchor pair %s ..." % str(pair))
+                    logger.info("running query for anchor pair %s" % str(pair))
                     # set appropriate anchors
                     self.cqp.Exec('set ant %d; set ank %d;' % pair)
                     # dump new anchors
@@ -194,7 +198,7 @@ class CWBEngine:
                     df_node = df_node.join(df)
 
             # NA handling
-            print("... collected all anchors ... post-processing dataframe ...")
+            logger.info("post-processing dataframe")
             df_node.dropna(axis=1, how='all', inplace=True)
             df_node = df_node.apply(to_numeric, downcast='integer')
             df_node.fillna(-1, inplace=True)
@@ -253,7 +257,7 @@ class CWBEngine:
 
         # meta data handling:
         if self.s_meta is None:
-            # case 1: just get s_break info
+            logger.info('meta: no meta data available')
             s_regions = self.corpus.attribute(s_break, "s")
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
@@ -262,8 +266,9 @@ class CWBEngine:
             df['s_end'] = s_region[1]
             s_id = df.match.apply(lambda x: s_regions.cpos2struc(x))
         elif self.s_meta.startswith(s_break):
-            # case 2: use meta info from s_break variable
+            logger.info('meta: s_break="%s", s_meta="%s"' % (s_break, self.s_meta))
             s_regions = self.corpus.attribute(self.s_meta, 's')
+            print(s_regions)
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )
@@ -271,7 +276,7 @@ class CWBEngine:
             df['s_end'] = s_region[1]
             s_id = s_region[2].apply(lambda x: x.decode('utf-8'))
         else:
-            # case 3: add additional s_meta info
+            logger.info('meta: s_break="%s", s_meta="%s"' % (s_break, self.s_meta))
             s_regions = self.corpus.attribute(s_break, 's')
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()

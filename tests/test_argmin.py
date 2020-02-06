@@ -1,7 +1,7 @@
 from ccc.cwb import CWBEngine
-from ccc.argmin import ArgConcordance, process_argmin_file
-import pytest
+from ccc.concordances import Concordance, process_argmin_file
 import gzip
+import pytest
 import json
 
 
@@ -30,8 +30,8 @@ def test_argconc():
             print("WARNING: not a valid json file")
             return
 
-    argconc = ArgConcordance(engine)
-    result = argconc.argmin_query(query['query'], query['anchors'], query['regions'])
+    conc = Concordance(engine, query['query'])
+    result = conc.show_argmin(query['anchors'], query['regions'])
     assert('test' in result['holes'].keys())
     assert(type(result['matches']) == list)
 

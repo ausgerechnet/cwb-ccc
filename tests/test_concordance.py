@@ -12,12 +12,11 @@ corpus_name = "SZ_FULL"
 @pytest.mark.concordance_simple
 def test_query_default():
     engine = CWBEngine(corpus_name, registry_path, s_meta='text_id', cache_path=None)
-    concordance = Concordance(engine, s_break='s')
     query = (
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    concordance.query(query)
+    concordance = Concordance(engine, query, s_break='s')
     lines = concordance.lines(p_show=[], order='random', cut_off=100)
     assert(len(concordance.breakdown) > 0)
     assert(type(concordance.meta) == pd.DataFrame)
@@ -28,12 +27,11 @@ def test_query_default():
 @pytest.mark.concordance_anchors
 def test_anchor_query_default():
     engine = CWBEngine(corpus_name, registry_path)
-    concordance = Concordance(engine, s_break='s')
     query = (
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] @2[lemma="CDU"] [word="\\)"]'
     )
-    concordance.query(query)
+    concordance = Concordance(engine, query, s_break='s')
     lines = concordance.lines()
     for df in lines.values():
         assert(all(x in set(df['anchor']) for x in [0, 1, 2]))
@@ -43,9 +41,8 @@ def test_anchor_query_default():
 @pytest.mark.concordance_many
 def test_query_many():
     engine = CWBEngine(corpus_name, registry_path, s_meta='text_id', cache_path=None)
-    concordance = Concordance(engine, s_break='s')
     query = ("[lemma='und']")
-    concordance.query(query)
+    concordance = Concordance(engine, query)
     lines = concordance.lines(p_show=['lemma', 'pos'], order='random', cut_off=100)
     assert(concordance.breakdown is None)
     assert(type(concordance.meta) == pd.DataFrame)

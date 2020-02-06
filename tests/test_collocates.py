@@ -14,12 +14,25 @@ corpus_name = "SZ_FULL"
 @pytest.mark.collocates_default
 def test_query_default():
     engine = CWBEngine(corpus_name, registry_path)
-    collocates = Collocates(engine)
     query = (
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    collocates.query(query)
+    collocates = Collocates(engine, query)
+    c = collocates.show(order='log_likelihood')
+    assert(type(c) == pd.DataFrame)
+    assert(len(c) > 9)
+    assert('Bundeskanzlerin' in c.index)
+
+
+@pytest.mark.logger
+def test_query_logging():
+    engine = CWBEngine(corpus_name, registry_path)
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    collocates = Collocates(engine, query, p_query='fail')
     c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -30,10 +43,9 @@ def compare_counts(lemma, window, drop_hapaxes=False):
 
     # CCC
     engine = CWBEngine("GERMAPARL_1114", registry_path)
-    collocates = Collocates(engine, max_window_size=window,
-                            s_break='s', p_query='lemma')
     query = '[lemma="' + lemma + '"]'
-    collocates.query(query)
+    collocates = Collocates(engine, query, max_window_size=window,
+                            s_break='s', p_query='lemma')
     col = collocates.show(window=5, cut_off=None,
                           drop_hapaxes=drop_hapaxes)
 
@@ -91,8 +103,7 @@ def test_compare_counts_3():
 def test_collocates_speed_many():
     engine = CWBEngine("GERMAPARL_1114", registry_path)
     query = '[lemma="sagen"]'
-    collocates = Collocates(engine, max_window_size=2, s_break='s',
-                            p_query='lemma')
-    collocates.query(query)
+    collocates = Collocates(engine, query, max_window_size=2,
+                            s_break='s', p_query='lemma')
     c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
     assert(type(c2) == pd.DataFrame)
