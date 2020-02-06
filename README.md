@@ -70,10 +70,9 @@ change the parameter when envoking the engine (or set it to `None`).
 ### Concordancing ###
 
 You can use the `Concordance` class from `ccc.concordances` for
-concordancing. The concordancer has to be initialized with the engine:
+concordancing.
 ```python
 from ccc.concordances import Concordance
-concordance = Concordance(engine)
 ```
 The concordancer accepts valid CQP queries such as
 ```python
@@ -91,11 +90,11 @@ which will cut the context (defaults to "text"). NB: The
 implementation assumes that `s_query` regions are confined by
 `s_break` regions, and both of them are within `s_meta` regions.
 
-After executing the query
+The concordancer has to be initialized with the engine and a query:
 ```
-concordance.query(query)
+concordance = Concordance(engine, query)
 ```
-you can access its frequency breakdown via `concordance.breakdown`:
+Now you can access they query frequency breakdown via `concordance.breakdown`:
 
 | *type*                 | freq |
 |------------------------|------|
@@ -180,14 +179,14 @@ You can use the `Collocates` class to extract collocates for a given
 window size (symmetric windows around the corpus matches):
 ```python
 from ccc.collocates import Collocates
-collocates = Collocates(engine)
-# execute a query
-collocates.query('[lemma="Angela"] [lemma="Merkel"]')
+query = '[lemma="Angela"] [lemma="Merkel"]'
+collocates = Collocates(engine, query)
 ```
-Upon executing a query, `collocates` will create a dataframe of
-the cotext of the query matches. Its size is determined by the
-`max_window_size` parameter. You will only be able to score collocates
-up to this parameter (defaults to 20).
+
+`collocates` will create a dataframe of the cotext of the query
+matches. Its size is determined by the `max_window_size`
+parameter. You will only be able to score collocates up to this
+parameter (defaults to 20).
 
 By default, windows are cut at the "text" s-attribute. You can change
 this using the `s_break` attribute. Just like with the concordancer,
@@ -284,26 +283,25 @@ table of regions, respectively, should not overlap.
 
 It is customary to store these queries in json objects (see an
 [example](tests/gold/query-example.json) in the repository). You can
-process argument queries with the `ArgConcordance` class from
-`ccc.argmin`. As usual, the class has to be initialized with the
-engine:
+use the `Concordance` to process argument queries and display the results:
 ```python
-from ccc.argmin import ArgConcordance
 # read the query file
 import json
 query_path = "tests/gold/query-example.json"
 with open(query_path, "rt") as f:
 	query = json.loads(f.read())
-# query the corpus
-conc = ArgConcordance(engine)
-result = conc.argmin_query(
-	query=query['query'],
-	anchors=query['anchors'],
-	regions=query['regions']
+
+concordance = Concordance(
+	engine, query['query'], context=None,
+	s_break='tweet', match_strategy='longest'
+)
+concordance.show_argmin(
+	query['anchors'], query['regions']
 )
 ```
-Note that the `argmin_query` method directly returns the result as
-`dict` with the following keys:
+
+The `show_argmin` method returns the result as a `dict` with the
+following keys:
 
 - "nr_matches": the number of query matches in the corpus.
 - "matches": a list of concordance lines. Each concordance line

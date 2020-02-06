@@ -30,7 +30,8 @@ def test_argconc():
             print("WARNING: not a valid json file")
             return
 
-    conc = Concordance(engine, query['query'])
+    conc = Concordance(engine, query['query'], context=None,
+                       s_break='tweet', match_strategy='longest')
     result = conc.show_argmin(query['anchors'], query['regions'])
     assert('test' in result['holes'].keys())
     assert(type(result['matches']) == list)
