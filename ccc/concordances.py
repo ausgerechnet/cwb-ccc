@@ -18,7 +18,7 @@ MAX_MATCHES = 100000            # maximum number of matches to still calculate f
 
 class Concordance:
 
-    def __init__(self, engine, query, context=20, s_break='text',
+    def __init__(self, engine, query, context=20, s_break=None,
                  match_strategy='standard', breakdown=True):
 
         self.engine = engine
@@ -188,7 +188,8 @@ class Concordance:
         return result
 
 
-def process_argmin_file(engine, query_path, p_show=['lemma']):
+def process_argmin_file(engine, query_path, p_show=['lemma'],
+                        context=None, s_break='tweet', match_strategy='longest'):
 
     with open(query_path, "rt") as f:
         try:
@@ -198,12 +199,14 @@ def process_argmin_file(engine, query_path, p_show=['lemma']):
             return
 
     # add query parameters
+    query['query_path'] = query_path
     query['corpus_name'] = engine.corpus_name
     query['subcorpus'] = engine.subcorpus
-    query['query_path'] = query_path
 
     # run the query
-    concordance = Concordance(engine, query['query'])
+    concordance = Concordance(engine, query['query'], context,
+                              s_break, match_strategy)
+    query['concordance_settings'] = concordance.settings
     query['result'] = concordance.show_argmin(
         query['anchors'],
         query['regions'],
