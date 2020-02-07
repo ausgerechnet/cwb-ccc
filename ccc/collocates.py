@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Collocates:
+    """ calculating collocates """
 
     def __init__(self, engine, query, max_window_size=20,
                  s_break='text', p_query='lemma',

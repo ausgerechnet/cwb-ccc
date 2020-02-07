@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class CWBEngine:
-    """ interface to CWB """
+    """ interface to CWB / CQP """
 
     def __init__(self,
                  corpus_name,
@@ -28,6 +28,14 @@ class CWBEngine:
                  cache_path='/tmp/ccc-cache'):
         """Establishes connection to indexed corpus. Raises KeyError if corpus
         not in registry.
+
+        :param str corpus_name: name of the corpus in CWB registry
+        :param str registry_path: path/to/your/cwb/registry/
+        :param str lib_path: path to macros and wordlists
+        :param str meta_path: path to meta data (tab-separated, gziped)
+        :param str s_meta: s-attribute (usually text_id) referencing meta data rows
+        :param str cqp: cqp binary
+        :param str cache_path: path/to/store/cache
 
         """
 
@@ -73,11 +81,14 @@ class CWBEngine:
         if self.lib_path:
             self.read_lib(self.lib_path)
 
-    def read_lib(self, path_lib):
-        """Reads macros and worldists."""
+    def read_lib(self, lib_path):
+        """Reads macros and worldists. Folder has to contain to sub-folders
+        ("macros" and "wordlists").
+
+        """
 
         # wordlists
-        wordlists = glob(os.path.join(path_lib, 'wordlists', '*'))
+        wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
@@ -87,13 +98,14 @@ class CWBEngine:
             self.cqp.Exec(cqp_exec)
 
         # macros
-        macros = glob(os.path.join(path_lib, 'macros', '*'))
+        macros = glob(os.path.join(lib_path, 'macros', '*'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             self.cqp.Exec(cqp_exec)
 
     def get_meta_regions(self):
+        """Maps self.s_meta to corresponding regions, returns DataFrame."""
         s_regions = self.corpus.attribute(self.s_meta, 's')
         records = list()
         for s in s_regions:
@@ -108,6 +120,7 @@ class CWBEngine:
         return df
 
     def show_subcorpora(self):
+        """Returns subcorpora as DataFrame."""
         cqp_return = self.cqp.Exec("show named;")
         df = read_csv(StringIO(cqp_return), sep="\t", header=None)
         if not df.empty:
@@ -143,19 +156,16 @@ class CWBEngine:
             subcorpus_query = '{name}={query};'.format(
                 name=name, query=query
             )
-            self.cqp.Exec(subcorpus_query)
+            self.cqp.Query(subcorpus_query)
         if activate:
             self.activate_subcorpus(name)
 
-    def _df_node_from_query(self, query, s_query, anchors,
-                            s_break, context, match_strategy):
+    def _df_node_from_query(self, query, s_query, anchors, s_break,
+                            context, match_strategy):
         """see df_node_from_query, which is a cached version of this method"""
 
         # match strategy
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
-
-        # strip within statement from query and check which anchors there are
-        query, s_query, anchors = preprocess_query(query)
 
         # process s_query and s_break
         if s_query is None:
@@ -191,7 +201,7 @@ class CWBEngine:
                     # set appropriate anchors
                     self.cqp.Exec('set ant %d; set ank %d;' % pair)
                     # dump new anchors
-                    self.cqp.Exec('tmp = <match> ( %s );' % query)
+                    self.cqp.Query('tmp = <match> ( %s );' % query)
                     df = self.cqp.Dump("tmp")
                     # selet columns and join to global df
                     df.columns = [pair[0], pair[1]]
@@ -214,20 +224,20 @@ class CWBEngine:
 
         return df_node
 
-    def df_node_from_query(self, query, s_query=None, anchors=None,
+    def df_node_from_query(self, query, s_query=None, anchors=[],
                            s_break="text", context=20,
                            match_strategy="standard"):
-        """Executes anchored query within s_break to get df_anchor.
+        """Executes query, gets DataFrame of nodes.
 
         :param str query: valid CQP query (without 'within' clause)
-        :param str s_query: s-attribute use for initial query
+        :param str s_query: s-attribute used for initial query
         :param list anchors: anchors to search for
         :param str s_break: s-attribute to confine regions
         :param int context: maximum context around match (symmetric)
         :param str match_strategy: CQP matching strategy
 
-        :return: df_node (match, matchend) + (region_start, region_end, s_id)
-        + additional columns for each anchor
+        :return: df_node (match, matchend) + (region_start, region_end, s_id) + additional columns for each anchor
+
         :rtype: pd.DataFrame
 
         """
@@ -268,7 +278,6 @@ class CWBEngine:
         elif self.s_meta.startswith(s_break):
             logger.info('meta: s_break="%s", s_meta="%s"' % (s_break, self.s_meta))
             s_regions = self.corpus.attribute(self.s_meta, 's')
-            print(s_regions)
             s_region = DataFrame(
                 df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
             )

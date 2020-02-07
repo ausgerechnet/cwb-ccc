@@ -17,6 +17,7 @@ MAX_MATCHES = 100000            # maximum number of matches to still calculate f
 
 
 class Concordance:
+    """ concordancing """
 
     def __init__(self, engine, query, context=20, s_break=None,
                  match_strategy='standard', breakdown=True):
@@ -29,7 +30,7 @@ class Concordance:
             if s_break is not None:
                 s_query = s_break
                 logger.warning('no "within" statement in query')
-                logger.warning('"%s" (s_break) will be used to confine context' % s_break)
+                logger.warning('"%s" (s_break) will be used to confine query' % s_break)
         self.query = query
         self.s_query = s_query
         self.anchors_query = anchors_query
@@ -41,7 +42,9 @@ class Concordance:
             'anchors_query': anchors_query,
             'context': context,
             's_break': s_break,
-            'match_strategy': match_strategy
+            'match_strategy': match_strategy,
+            'corpus': self.engine.corpus_name,
+            'subcorpus': self.engine.subcorpus
         }
 
         # get df node
@@ -152,11 +155,7 @@ class Concordance:
 
         # initialize output
         result = dict()
-        result['query'] = {
-            'query': self.query,
-            's_query': self.s_query,
-            'anchors': self.anchors_query
-        }
+        result['settings'] = self.settings
         result['nr_matches'] = self.size
         result['matches'] = list()
         result['holes'] = defaultdict(list)
@@ -198,15 +197,12 @@ def process_argmin_file(engine, query_path, p_show=['lemma'],
             logger.error("not a valid json file")
             return
 
-    # add query parameters
+    # add query
     query['query_path'] = query_path
-    query['corpus_name'] = engine.corpus_name
-    query['subcorpus'] = engine.subcorpus
 
     # run the query
     concordance = Concordance(engine, query['query'], context,
                               s_break, match_strategy)
-    query['concordance_settings'] = concordance.settings
     query['result'] = concordance.show_argmin(
         query['anchors'],
         query['regions'],
