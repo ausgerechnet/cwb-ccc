@@ -56,7 +56,7 @@ def test_df_node_from_query():
     df_node = engine.df_node_from_query(
         query,
         s_query,
-        None,
+        [],
         s_break,
         context
     )
@@ -97,7 +97,7 @@ def test_subcorpus_from_query():
 def test_subcorpus_from_df():
     engine = CWBEngine(corpus_name, registry_path)
     assert(int(engine.cqp.Exec('size SBCRPS2')) == 0)
-    df = engine.df_node_from_query(query, s_query, None, s_break)
+    df = engine.df_node_from_query(query, s_query, [], s_break)
     engine.define_subcorpus(
         df,
         'SBCRPS2'
@@ -109,15 +109,15 @@ def test_subcorpus_from_df():
 def test_deactivate_subcorpus():
 
     engine = CWBEngine(corpus_name, registry_path)
-    df1 = engine.df_node_from_query(query, s_query, None, s_break)
+    df1 = engine.df_node_from_query(query, s_query, [], s_break)
 
     # activation
     engine.define_subcorpus("[lemma='be'] expand to tweet", 'SBCRPS3', activate=True)
-    df2 = engine.df_node_from_query(query, s_query, None, s_break)
+    df2 = engine.df_node_from_query(query, s_query, [], s_break)
 
     # deactivation
     engine.activate_subcorpus()
-    df3 = engine.df_node_from_query(query, s_query, None, s_break)
+    df3 = engine.df_node_from_query(query, s_query, [], s_break)
 
     assert(len(df1) == len(df3))
     assert(len(df1) > len(df2))
@@ -126,7 +126,7 @@ def test_deactivate_subcorpus():
 @pytest.mark.anchor_subcorpus
 def test_subcorpus_anchor():
     engine = CWBEngine(corpus_name_2, registry_path, lib_path)
-    df1 = engine.df_node_from_query("[lemma='Angela']", s_query_2, None, s_break_2)
+    df1 = engine.df_node_from_query("[lemma='Angela']", s_query_2, [], s_break_2)
     df_anchor = engine.df_node_from_query(
         anchor_query_2,
         s_query_2,
@@ -224,7 +224,7 @@ def test_subcorpus_2():
 def test_get_s_ids():
     engine = CWBEngine(corpus_name, registry_path, s_meta='tweet_id')
     df_node = engine.df_node_from_query("[lemma='make']", s_query,
-                                        None, s_break)
+                                        [], s_break)
     assert('s_id' in df_node.columns)
     meta_regions = engine.get_meta_regions()
     assert('match' in meta_regions.columns)

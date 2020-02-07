@@ -45,13 +45,9 @@ def test_process_argmin_file():
                        s_meta="tweet_id")
     engine.define_subcorpus(subcorpus_query, subcorpus_name)
     result = process_argmin_file(engine, query_path)
-    assert(all(x in result.keys() for x in ['corpus_name',
-                                            'subcorpus',
-                                            'query',
+    assert(all(x in result.keys() for x in ['query',
                                             'pattern',
                                             'name',
-                                            'anchors',
-                                            'regions',
                                             'query_path',
                                             'result']))
     assert(all(x in result['result'].keys() for x in ['matches',
