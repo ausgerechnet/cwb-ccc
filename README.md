@@ -37,11 +37,11 @@ respective folder, and use `setup.py`:
 ## Usage ##
 
 ### Corpus Setup
-All methods rely on the `Corpus` class from `ccc.cwb`, which
-establishes the connection to your CWB-indexed corpus:
+All methods rely on the `Corpus` class, which establishes the
+connection to your CWB-indexed corpus:
 
 ```python
-from ccc.cwb import Corpus
+from ccc import Corpus
 corpus = Corpus(
 	corpus_name="EXAMPLE_CORPUS",
 	registry_path="/path/to/your/cwb/registry/"

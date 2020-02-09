@@ -1,4 +1,4 @@
-from ccc.cwb import Corpus
+from ccc import Corpus
 import pytest
 import pandas as pd
 

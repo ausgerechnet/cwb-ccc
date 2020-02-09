@@ -1,4 +1,4 @@
-from ccc.cwb import Corpus
+from ccc import Corpus
 from ccc.concordances import process_argmin_file
 import gzip
 import pytest

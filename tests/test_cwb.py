@@ -1,4 +1,4 @@
-from ccc.cwb import Corpus
+from ccc import Corpus
 from ccc.utils import time_it
 import pandas as pd
 import pytest

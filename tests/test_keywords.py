@@ -1,4 +1,4 @@
-from ccc.cwb import Corpus
+from ccc import Corpus
 from pandas import read_csv, to_numeric
 import pytest
 
