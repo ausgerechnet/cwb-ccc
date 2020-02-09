@@ -29,7 +29,6 @@ class Concordance:
         self.meta = DataFrame(index=matches,
                               data=df_node['s_id'].values,
                               columns=['s_id'])
-
         self.corpus = corpus
         self.df_node = df_node
         self.size = len(df_node)
@@ -40,7 +39,7 @@ class Concordance:
             logger.warning('skipping frequency breakdown')
             breakdown = False
         if breakdown:
-            self.breakdown = self.corpus.count_matches(df_node)
+            self.breakdown = self.corpus.count_matches(df=df_node)
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
 
@@ -120,11 +119,11 @@ class Concordance:
 
         # initialize output
         result = dict()
-        result['settings'] = self.settings
+        result['settings'] = self.corpus.hits['parameters']
         result['nr_matches'] = self.size
         result['matches'] = list()
         result['holes'] = defaultdict(list)
-        result['meta'] = self.df_meta.to_dict()
+        result['meta'] = self.meta.to_dict()
 
         # loop through concordances
         for key in lines.keys():
@@ -167,8 +166,9 @@ def process_argmin_file(corpus, query_path, p_show=['lemma'],
     query['query_path'] = query_path
 
     # run the query
-    concordance = Concordance(corpus, query['query'], context,
-                              s_break, match_strategy)
+    corpus.query(query['query'], s_break=s_break, context=None,
+                 match_strategy='longest')
+    concordance = corpus.concordance()
     query['result'] = concordance.show_argmin(
         query['anchors'],
         query['regions'],

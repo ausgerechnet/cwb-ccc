@@ -174,7 +174,6 @@ def test_marginals():
 
 
 @pytest.mark.cwb_counts
-@pytest.mark.now
 def test_item_freq_subcorpora():
 
     corpus = Corpus(corpus_name_2, registry_path)

@@ -4,6 +4,8 @@ from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
 from collections import defaultdict
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Cache:
@@ -114,7 +116,8 @@ def time_it(func):
         start = default_timer()
         result = func(*args, **kwargs)
         end = default_timer()
-        print("{} ran in {}s".format(func.__name__, round(end - start, 2)))
+        name = func.__name__
+        logger.info("%s took %s seconds" % (name, round(end - start, 2)))
         return result
     return wrapper
 
@@ -166,7 +169,7 @@ def get_holes(df, anchors, regions):
 
     for idx in anchor_holes.keys():
         anchor = anchor_holes[idx]
-        row = df[df['anchor'] == anchor]
+        row = df.loc[df['anchor'] == anchor]
 
         if row.empty:
             word = None
@@ -186,8 +189,8 @@ def get_holes(df, anchors, regions):
         region_start = region_holes[idx][0]
         region_end = region_holes[idx][1]
 
-        row_start = df[df['anchor'] == region_start]
-        row_end = df[df['anchor'] == region_end]
+        row_start = df.loc[df['anchor'] == region_start]
+        row_end = df.loc[df['anchor'] == region_end]
 
         # if both of them are empty
         if row_start.empty and row_end.empty:

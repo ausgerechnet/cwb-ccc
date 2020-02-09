@@ -11,6 +11,7 @@ from .utils import Cache, formulate_cqp_query, preprocess_query
 from .concordances import Concordance
 from .collocates import Collocates
 from .keywords import Keywords
+from .utils import time_it
 # requirements
 from pandas import DataFrame, read_csv, to_numeric
 from CWB.CL import Corpus as Crps
@@ -25,7 +26,6 @@ class Corpus:
                  corpus_name,
                  registry_path='/usr/local/share/cwb/registry/',
                  lib_path=None,
-                 meta_path=None,
                  s_meta=None,
                  cqp_bin='cqp',
                  cache_path='/tmp/ccc-cache'):
@@ -35,7 +35,6 @@ class Corpus:
         :param str corpus_name: name of the corpus in CWB registry
         :param str registry_path: path/to/your/cwb/registry/
         :param str lib_path: path to macros and wordlists
-        :param str meta_path: path to meta data (tab-separated, gziped)
         :param str s_meta: s-attribute (usually text_id) referencing meta data rows
         :param str cqp_bin: cqp binary
         :param str cache_path: path/to/store/cache
@@ -52,11 +51,6 @@ class Corpus:
         self.corpus_name = corpus_name
         self.subcorpus = None
 
-        # meta data
-        self.meta_path = meta_path
-        self.s_meta = s_meta
-        self.meta = None        # populate with self.load_meta()
-
         # connect to corpus
         self.attributes = Crps(
             self.corpus_name,
@@ -66,9 +60,12 @@ class Corpus:
             bin=cqp_bin,
             options='-c -r ' + self.registry_path
         )
-
-        # activate corpus
         self.cqp.Exec(self.corpus_name)
+
+        # meta regions
+        self.s_meta = s_meta
+        if s_meta is not None:
+            self.meta = self.get_meta_regions()
 
         # get corpus attributes
         self.attributes_available = read_csv(
@@ -107,30 +104,25 @@ class Corpus:
             cqp_exec = 'define macro < "%s";' % abs_path
             self.cqp.Exec(cqp_exec)
 
-    def load_meta(self, add_regions=True):
-        """ loads meta data table. """
-        if not self.meta_path:
-            logger.error('no meta data to load')
-        else:
-            logger.info('loading meta data')
-            meta = read_csv(self.meta_path, sep='\t', index_col=0, dtype=str)
-            meta.index.name = 's_id'
-            if add_regions:
-                logger.info('loading meta regions and joining to meta data')
-                regions = self.get_meta_regions()
-                meta = meta.join(regions)
-            self.meta = meta
-
-    def get_meta_regions(self):
+    def get_meta_regions(self, ids=None):
         """Maps self.s_meta to corresponding regions, returns DataFrame."""
+
+        # TODO cache
+
         s_regions = self.attributes.attribute(self.s_meta, 's')
         records = list()
         for s in s_regions:
-            records.append({
-                's_id': s[2].decode(),
-                'match': s[0],
-                'matchend': s[1]
-            })
+            idx = s[2].decode()
+            add = True
+            if ids is not None:
+                if idx not in ids:
+                    add = False
+            if add:
+                records.append({
+                    's_id': idx,
+                    'match': s[0],
+                    'matchend': s[1]
+                })
         df = DataFrame(records)
         df.set_index('s_id', inplace=True)
         df = df[['match', 'matchend']]
@@ -174,39 +166,45 @@ class Corpus:
             return
 
         elif df_node is not None:
+            logger.info('defining subcorpus "%s" from dataframe' % name)
             self.cqp.Undump(name, df_node)
             parameters = {
                 'query': 'directly defined by dataframe',
+                'type': 'dataframe',
                 'context': None,
-                'name': name,
                 'corpus': self.corpus_name,
                 'subcorpus': self.subcorpus
             }
-            self.query_result = {
-                'parameters': parameters,
-                'df_node': df_node
-            }
-            logger.info('defined subcorpus "%s" from dataframe' % name)
 
         elif query is not None:
+            logger.info('defining subcorpus "%s" from query' % name)
             subcorpus_query = '%s=%s;' % (name, query)
             self.cqp.Exec(subcorpus_query)
             parameters = {
                 'query': query,
-                'df': 'directly defined by query',
-                'name': name,
+                'type': 'query',
+                'context': None,
                 'corpus': self.corpus_name,
                 'subcorpus': self.subcorpus
             }
             df_node = self.cqp.Dump(name)
-            self.query_result = {
+
+        if activate:
+            self.hits = {
+                'name': name,
                 'parameters': parameters,
                 'df_node': df_node
             }
-            logger.info('defined subcorpus "%s" from query' % name)
-
-        if activate:
             self.activate_subcorpus(name)
+
+    def subcorpus_from_ids(self, ids, name='tmp_keywords'):
+        """ defines a subcorpus by provided s_meta ids. """
+        logger.info("defining subcorpus from provided ids")
+        meta = self.get_meta_regions(ids)
+        meta.reset_index(inplace=True)
+        meta.set_index(['match', 'matchend'], inplace=True, drop=False)
+        meta.columns = ['s_id', 'region_start', 'region_end']
+        self.define_subcorpus(df_node=meta, activate=True, name=name)
 
     def df_node_from_query(self, query, s_query, anchors, s_break,
                            context, match_strategy='standard',
@@ -383,18 +381,6 @@ class Corpus:
         df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
         return df_counts
 
-    def regions2counts(self, df_node, p_att='word'):
-        """Creates a frequency table for the p_att-values in the regions
-        defined by df_node."""
-        self.define_subcorpus(df_node=df_node, name='tmp_regions', activate=False)
-        cqp_return = self.cqp.Exec(
-            "tabulate tmp_regions match .. matchend %s;" % p_att
-        )
-        tokens = cqp_return.replace("\n", " ").split(" ")
-        counts = Counter(tokens)
-        df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
-        return df_counts
-
     def marginals(self, items, p_att='word', flags=3, regex=False):
         """Extracts marginal frequencies for given items (0 if not in corpus).
 
@@ -445,7 +431,7 @@ class Corpus:
         query = "tmp_query=" + formulate_cqp_query(items, p_att)
         self.cqp.Exec(query)
         df_node = self.cqp.Dump("tmp_query")
-        df = self.count_matches(df_node, p_att)
+        df = self.count_matches(df=df_node, p_att=p_att)
         # fill missing values
         missing = set(items) - set(df.index)
         df_missing = DataFrame(data=0, index=missing, columns=['freq'])
@@ -453,30 +439,60 @@ class Corpus:
 
         return df
 
-    def count_matches(self, df_node, p_att="word", split=False):
-        """counts strings or tokens in df_nodes.index"""
+    @time_it
+    def count_matches(self, name=None, df=None, p_att="word", split=False):
+        """counts strings or tokens ([match .. matchend] for df)"""
 
         # undump the dump
-        self.define_subcorpus(df_node=df_node, name='tmp_counts', activate=False)
+        if name is not None and df is not None:
+            logger.error("cannot count name *and* df")
+            return DataFrame()
+        elif name is None and df is None:
+            logger.error("cannot count *nothing*")
+            return DataFrame()
+        elif name is None:
+            name = "tmp_counts"
+            self.define_subcorpus(df_node=df, name=name, activate=False)
 
         # tabulate matches
-        match_strings = self.cqp.Exec(
-            'tabulate tmp_counts match .. matchend %s;' % p_att
-        ).split('\n')
+        logger.info("tabulating ...")
+        cqp_return = self.cqp.Exec(
+            'tabulate %s match .. matchend %s;' % (name, p_att)
+        )
 
         # optionally split strings into tokens
         if split:
-            tokens = list()
-            for t in match_strings:
-                tokens += t.split(" ")
+            tokens = cqp_return.replace("\n", " ").split(" ")
         else:
-            tokens = match_strings
+            tokens = cqp_return.split("\n")
+        logger.info("... found %d tokens" % len(tokens))
 
         # count
         counts = Counter(tokens)
         df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
 
         return df_counts
+
+    @time_it
+    def count_matches_2(self, df_node, p_att="word", split=False):
+        """counts tokens in [region_start .. region_end]"""
+
+        logger.info("count tokens in each region")
+        ls = df_node.apply(lambda x: self.node2regions(x, p_att), axis=1).values
+        logger.info("counting")
+        counts = Counter([token for tokens in ls for token in tokens])
+        df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
+        logger.info("... done counting")
+
+        return df_counts
+
+    def node2regions(self, row, p_att):
+        start = row['region_start']
+        end = row['region_end']
+        tokens = [
+            self.attributes.attribute(p_att, 'p')[pos] for pos in range(start, end + 1)
+        ]
+        return tokens
 
     def query(self, query, context=20, s_break=None,
               match_strategy='standard', name='tmp_query'):
@@ -493,7 +509,6 @@ class Corpus:
         parameters = {
             'query': query,
             's_query': s_query,
-            'name': name,
             'anchors_query': anchors_query,
             'context': context,
             's_break': s_break,
@@ -526,28 +541,30 @@ class Corpus:
         else:
             logger.info("df_node has %d matches" % len(df_node))
 
-        self.query_result = {
+        self.hits = {
             'parameters': parameters,
+            'name': name,
             'df_node': df_node
         }
 
     def concordance(self, breakdown=True):
         return Concordance(
             self,
-            df_node=self.query_result['df_node'],
+            df_node=self.hits['df_node'],
             breakdown=breakdown
         )
 
     def collocates(self, p_query='lemma'):
         return Collocates(
             self,
-            df_node=self.query_result['df_node'],
+            df_node=self.hits['df_node'],
             p_query=p_query
         )
 
     def keywords(self, p_query='lemma'):
         return Keywords(
             self,
-            df_node=self.query_result['df_node'],
+            name=self.hits['name'],
+            df_node=self.hits['df_node'],
             p_query=p_query
         )

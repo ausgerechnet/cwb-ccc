@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ calculate and format collocates """
 
-    def __init__(self, corpus, df_node, p_query):
+    def __init__(self, corpus, df_node, p_query, mws=10):
 
         if len(df_node) == 0:
             logger.warning('cannot calculate collocates of 0 contexts')
@@ -23,6 +23,14 @@ class Collocates:
         self.corpus = corpus
         self.df_node = df_node
         self.size = len(df_node)
+        context = self.corpus.hits['parameters']['context']
+        if context is not None:
+            if mws > context:
+                logger.warning(
+                    "maximum window size outside context, using mws=%d" % context
+                )
+                mws = context
+        self.mws = mws
         if p_query not in self.corpus.attributes_available['value'].values:
             logger.warning(
                 'p_att "%s" not available, falling back to primary layer' % p_query
@@ -30,7 +38,7 @@ class Collocates:
             p_query = 'word'
         self.p_query = p_query
 
-        logger.info('collecting cotexts')
+        logger.info('collecting contexts')
         deflated, f1_set = df_node_to_cooc(df_node)
         logger.info('collected %d token positions' % len(deflated))
 
@@ -39,7 +47,7 @@ class Collocates:
 
     def count(self, window):
 
-        mws = self.corpus.query_result['parameters']['context']
+        mws = self.mws
         if window > mws:
             logger.warning('desired window outside maximum window size')
             logger.warning('will use maximum window (%d)' % mws)
@@ -111,12 +119,12 @@ class Collocates:
 def df_node_to_cooc(df_node, context=None):
     """ converts df_node to df_cooc
 
-    df_node: [match, matchend] + [target, keyword, s_id, region_start, region_end]
+    df_node: [match, matchend] + [s_id, region_start, region_end]
     df_cooc: [match, cpos, offset] (dedpulicated)
     f1_set: cpos of nodes
 
     deduplication strategy:
-    (1) create overlapping cotexts with nodes
+    (1) create overlapping contexts with nodes
     (2) sort by abs(offset)
     (3) deduplicate by offset, keep first occurrences
     (4) f1_set = (cpos where offset == 0)
@@ -145,10 +153,10 @@ def df_node_to_cooc(df_node, context=None):
         df_node['end'] = df_node['matchend'] + context
         df_node['end'] = df_node[['end', 'region_end']].min(axis=1)
 
-    logger.info("(1a) create local cotexts")
+    logger.info("(1a) create local contexts")
     df = DataFrame.from_records(df_node.apply(node2cooc, axis=1).values)
 
-    logger.info("(1b) concatenate local cotexts")
+    logger.info("(1b) concatenate local contexts")
     df_infl = DataFrame({
         'match': list(chain.from_iterable(df['match_list'].values)),
         'cpos': list(chain.from_iterable(df['cpos_list'].values)),

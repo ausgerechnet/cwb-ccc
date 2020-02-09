@@ -10,24 +10,30 @@ logger = logging.getLogger(__name__)
 class Keywords:
     """ calculating collocates """
 
-    def __init__(self, corpus, df_node, p_query):
+    def __init__(self, corpus, name=None, df_node=None, p_query='word'):
 
-        if len(df_node) == 0:
+        if df_node is not None:
+            self.df_node = df_node
+            self.size = len(df_node)
+
+        elif name is not None:
+            self.name = name
+            self.size = int(corpus.cqp.Exec("size %s" % name))
+
+        if self.size == 0:
             logger.warning('cannot calculate keywords on 0 regions')
             return
 
-        self.corpus = corpus
-        self.df_node = df_node
-        self.size = len(df_node)
-        if p_query not in self.corpus.attributes_available['value'].values:
+        if p_query not in corpus.attributes_available['value'].values:
             logger.warning(
                 'p_att "%s" not available, falling back to primary layer' % p_query
             )
             p_query = 'word'
         self.p_query = p_query
+        self.corpus = corpus
 
         logger.info('collecting token counts of subcorpus')
-        counts = corpus.regions2counts(df_node, p_att=p_query)
+        counts = corpus.count_matches(df=df_node, p_att=p_query, split=True)
         counts.columns = ['O11']
 
         self.counts = counts

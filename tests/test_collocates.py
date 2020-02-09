@@ -138,17 +138,13 @@ def test_collocates_persistence():
     assert(not line_2.equals(line_3))
 
 
-# @pytest.mark.keywords_collocates
-# def test_query_keywords_collocates():
-#     corpus = Corpus(corpus_name, registry_path)
-#     query = (
-#         '[lemma="Angela"]? [lemma="Merkel"] '
-#         '[word="\\("] [lemma="CDU"] [word="\\)"]'
-#     )
-#     corpus.query(query)
-#     collocates = corpus.keywords()
-#     # c = collocates.show(order='log_likelihood')
-#     # print(c)
-#     # assert(type(c) == pd.DataFrame)
-#     # assert(len(c) > 9)
-#     # assert('Bundeskanzlerin' in c.index)
+@pytest.mark.keywords_collocates
+def test_query_keywords_collocates():
+    corpus = Corpus(corpus_name, registry_path)
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"] expand to s'
+    )
+    corpus.query(query)
+    keywords = corpus.keywords()
+    print(keywords.show().head(100))

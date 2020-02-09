@@ -8,7 +8,6 @@ registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 corpus_name = "SZ_FULL"
 
 
-@pytest.mark.now
 def test_concordance_new():
     corpus = Corpus(corpus_name, registry_path, s_meta='text_id')
     query = (
@@ -80,19 +79,19 @@ def test_concordance_persistence():
     # will show results for query_1
     corpus.query(query_1, s_break='s')
     concordance = corpus.concordance()
-    line_1 = concordance.lines(p_show=[], order='first', cut_off=1)
+    line_1 = concordance.lines(cut_off=1)
     df_1 = line_1[list(line_1.keys())[0]]
     breakdown_1 = concordance.breakdown
 
     # will show results for query_1
     corpus.query(query_2, s_break='s')
-    line_2 = concordance.lines(p_show=[], order='first', cut_off=1)
+    line_2 = concordance.lines(cut_off=1)
     df_2 = line_2[list(line_2.keys())[0]]
     breakdown_2 = concordance.breakdown
 
     # will show results for query_2
     concordance = corpus.concordance()
-    line_3 = concordance.lines(p_show=[], order='first', cut_off=1)
+    line_3 = concordance.lines(cut_off=1)
     df_3 = line_3[list(line_3.keys())[0]]
     breakdown_3 = concordance.breakdown
 
