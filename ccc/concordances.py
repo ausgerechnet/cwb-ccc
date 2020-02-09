@@ -2,75 +2,46 @@
 # -*- coding: utf-8 -*-
 
 from random import sample
+from collections import defaultdict
+import json
 # part of module
-from .utils import node2cooc, preprocess_query
+from .utils import node2cooc
+from .utils import get_holes, apply_corrections
 # requirements
 from pandas import DataFrame
+import logging
+logger = logging.getLogger(__name__)
 
 
 MAX_MATCHES = 100000            # maximum number of matches to still calculate frequency breakdown
 
 
 class Concordance:
+    """ concordancing """
 
-    def __init__(self,
-                 engine,
-                 context=20,
-                 s_break='text',
-                 match_strategy='standard'):
+    def __init__(self, corpus, df_node, breakdown=True):
 
-        self.engine = engine
-
-        self.settings = {
-            'context': context,
-            's_break': s_break,
-            'match_strategy': match_strategy
-        }
-
-        # these values will be filled when querying
-        self.size = None
-        self.meta = None
-        self.breakdown = None
-
-    def query(self, query, breakdown=True):
-        """ executes query and gets df_node, meta, and frequency breakdown """
-
-        query, s_query, anchors = preprocess_query(query)
-        if s_query is None:
-            s_query = self.settings['s_break']
-
-        df_node = self.engine.df_node_from_query(
-            query,
-            s_query,
-            anchors,
-            s_break=self.settings['s_break'],
-            context=self.settings['context'],
-            match_strategy=self.settings['match_strategy']
-        )
-
-        self.df_node = df_node
         if len(df_node) == 0:
-            print('WARNING: 0 query hits')
+            logger.warning('0 query hits')
             return
 
-        # get values
-        self.size = len(df_node)
         matches = df_node.index.droplevel('matchend')
         self.meta = DataFrame(index=matches,
                               data=df_node['s_id'].values,
                               columns=['s_id'])
+        self.corpus = corpus
+        self.df_node = df_node
+        self.size = len(df_node)
 
         # frequency breakdown of matches
         if self.size > MAX_MATCHES:
-            print('WARNING: found more than %d matches, skipping frequency breakdown' % MAX_MATCHES)
+            logger.warning('found %d matches (more than %d)' % (self.size, MAX_MATCHES))
+            logger.warning('skipping frequency breakdown')
             breakdown = False
-
         if breakdown:
-            self.breakdown = self.engine.count_matches(df_node)
+            self.breakdown = self.corpus.count_matches(df=df_node)
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
-
-        return query, s_query, anchors
 
     def lines(self, matches=None, p_show=[], order='first', cut_off=100):
         """ creates concordance lines from self.df_node """
@@ -118,7 +89,7 @@ class Concordance:
             # lexicalize positions
             for p_att in ['word'] + p_show:
                 df[p_att] = df.cpos.apply(
-                    lambda x: self.engine.cpos2token(x, p_att)
+                    lambda x: self.corpus.cpos2token(x, p_att)
                 )
             df.set_index('cpos', inplace=True)
 
@@ -136,3 +107,72 @@ class Concordance:
             concordance[match] = df
 
         return concordance
+
+    def show_argmin(self, anchors, regions, p_show=['lemma'],
+                    order='first', cut_off=None):
+
+        # apply corrections
+        self.df_node = apply_corrections(self.df_node, anchors)
+
+        # get concordance
+        lines = self.lines(p_show=p_show, order='first', cut_off=None)
+
+        # initialize output
+        result = dict()
+        result['settings'] = self.corpus.hits['parameters']
+        result['nr_matches'] = self.size
+        result['matches'] = list()
+        result['holes'] = defaultdict(list)
+        result['meta'] = self.meta.to_dict()
+
+        # loop through concordances
+        for key in lines.keys():
+
+            line = lines[key]
+
+            # fill concordance line
+            entry = dict()
+            entry['df'] = line.to_dict()
+            entry['position'] = key
+            entry['full'] = " ".join(entry['df']['word'].values())
+
+            # hole structure
+            holes = get_holes(line, anchors, regions)
+            if 'lemmas' in holes.keys():
+                entry['holes'] = holes['lemmas']
+            else:
+                entry['holes'] = holes['words']
+
+            result['matches'].append(entry)
+
+            # append to global holes list
+            for idx in entry['holes'].keys():
+                result['holes'][idx].append(entry['holes'][idx])
+
+        return result
+
+
+def process_argmin_file(corpus, query_path, p_show=['lemma'],
+                        context=None, s_break='tweet', match_strategy='longest'):
+
+    with open(query_path, "rt") as f:
+        try:
+            query = json.loads(f.read())
+        except json.JSONDecodeError:
+            logger.error("not a valid json file")
+            return
+
+    # add query
+    query['query_path'] = query_path
+
+    # run the query
+    corpus.query(query['query'], s_break=s_break, context=None,
+                 match_strategy='longest')
+    concordance = corpus.concordance()
+    query['result'] = concordance.show_argmin(
+        query['anchors'],
+        query['regions'],
+        p_show
+    )
+
+    return query

@@ -1,7 +1,7 @@
-from ccc.cwb import CWBEngine
-from ccc.argmin import ArgConcordance, process_argmin_file
-import pytest
+from ccc import Corpus
+from ccc.concordances import process_argmin_file
 import gzip
+import pytest
 import json
 
 
@@ -19,9 +19,9 @@ result_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example-resu
 @pytest.mark.argconc
 def test_argconc():
 
-    engine = CWBEngine(corpus_name=corpus_name,
-                       registry_path=registry_path, lib_path=lib_path,
-                       s_meta="tweet_id", meta_path=None)
+    corpus = Corpus(corpus_name=corpus_name,
+                    registry_path=registry_path, lib_path=lib_path,
+                    s_meta="tweet_id")
 
     with open(query_path, "rt") as f:
         try:
@@ -30,8 +30,10 @@ def test_argconc():
             print("WARNING: not a valid json file")
             return
 
-    argconc = ArgConcordance(engine)
-    result = argconc.argmin_query(query['query'], query['anchors'], query['regions'])
+    corpus.query(query['query'], context=None, s_break='tweet',
+                 match_strategy='longest')
+    conc = corpus.concordance()
+    result = conc.show_argmin(query['anchors'], query['regions'])
     assert('test' in result['holes'].keys())
     assert(type(result['matches']) == list)
 
@@ -39,18 +41,15 @@ def test_argconc():
 @pytest.mark.argmin_file
 def test_process_argmin_file():
 
-    engine = CWBEngine(corpus_name=corpus_name,
-                       registry_path=registry_path, lib_path=lib_path,
-                       s_meta="tweet_id")
-    engine.define_subcorpus(subcorpus_query, subcorpus_name)
-    result = process_argmin_file(engine, query_path)
-    assert(all(x in result.keys() for x in ['corpus_name',
-                                            'subcorpus',
-                                            'query',
+    corpus = Corpus(corpus_name=corpus_name,
+                    registry_path=registry_path, lib_path=lib_path,
+                    s_meta="tweet_id")
+    corpus.define_subcorpus(query=subcorpus_query,
+                            name=subcorpus_name, activate=True)
+    result = process_argmin_file(corpus, query_path)
+    assert(all(x in result.keys() for x in ['query',
                                             'pattern',
                                             'name',
-                                            'anchors',
-                                            'regions',
                                             'query_path',
                                             'result']))
     assert(all(x in result['result'].keys() for x in ['matches',

@@ -3,6 +3,9 @@ import re
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
+from collections import defaultdict
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Cache:
@@ -33,6 +36,25 @@ class Cache:
                 db[key] = value
 
 
+# dataframe corrections
+def apply_correction(row, correction):
+    value, lower_bound, upper_bound = row
+    value += correction
+    if value < lower_bound or value > upper_bound:
+        value = -1
+    return value
+
+
+def apply_corrections(df_anchor, corrections):
+    for correction in corrections:
+        if correction[0] in df_anchor.columns:
+            df_anchor[correction[0]] = df_anchor[
+                [correction[0], 'region_start', 'region_end']
+            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
+    return df_anchor
+
+
+# query processing
 def cqp_escape(token):
     escaped = token.translate(str.maketrans({".": r"\.", "?": r"\?",
                                              "*": r"\*", "+": r"\+",
@@ -94,7 +116,8 @@ def time_it(func):
         start = default_timer()
         result = func(*args, **kwargs)
         end = default_timer()
-        print("{} ran in {}s".format(func.__name__, round(end - start, 2)))
+        name = func.__name__
+        logger.info("%s took %s seconds" % (name, round(end - start, 2)))
         return result
     return wrapper
 
@@ -130,19 +153,66 @@ def node2cooc(row):
     return result
 
 
-# dataframe corrections
-def apply_correction(row, correction):
-    value, lower_bound, upper_bound = row
-    value += correction
-    if value < lower_bound or value > upper_bound:
-        value = -1
-    return value
+# hole structure
+def get_holes(df, anchors, regions):
 
+    anchor_holes = dict()
+    for anchor in anchors:
+        if anchor[2] is not None:
+            anchor_holes[anchor[2]] = anchor[0]
+    region_holes = dict()
+    for region in regions:
+        if region[2] is not None:
+            region_holes[region[2]] = region[:2]
 
-def apply_corrections(df_anchor, corrections):
-    for correction in corrections:
-        if correction[0] in df_anchor.columns:
-            df_anchor[correction[0]] = df_anchor[
-                [correction[0], 'region_start', 'region_end']
-            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
-    return df_anchor
+    holes = defaultdict(dict)
+
+    for idx in anchor_holes.keys():
+        anchor = anchor_holes[idx]
+        row = df.loc[df['anchor'] == anchor]
+
+        if row.empty:
+            word = None
+            lemma = None
+        else:
+            row_nr = int(row.index.values)
+            word = df.at[row_nr, 'word']
+            if 'lemma' in df.columns:
+                lemma = str(df.at[row_nr, 'lemma'])
+            else:
+                lemma = None
+
+        holes['words'][idx] = word
+        holes['lemmas'][idx] = lemma
+
+    for idx in region_holes.keys():
+        region_start = region_holes[idx][0]
+        region_end = region_holes[idx][1]
+
+        row_start = df.loc[df['anchor'] == region_start]
+        row_end = df.loc[df['anchor'] == region_end]
+
+        # if both of them are empty
+        if row_start.empty and row_end.empty:
+            words = None
+            lemmas = None
+        else:
+            # if one of them is empty: start and end are the same
+            if row_start.empty:
+                row_start = row_end
+            elif row_end.empty:
+                row_end = row_start
+
+            row_start = int(row_start.index.values)
+            row_end = int(row_end.index.values)
+            region = df.loc[row_start:row_end]
+            words = " ".join(list(region['word']))
+            if 'lemma' in df.columns:
+                lemmas = " ".join(list(region['lemma']))
+            else:
+                lemmas = None
+
+        holes['words'][idx] = words
+        holes['lemmas'][idx] = lemmas
+
+    return holes

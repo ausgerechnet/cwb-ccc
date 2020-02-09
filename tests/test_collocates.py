@@ -1,5 +1,4 @@
-from ccc.cwb import CWBEngine
-from ccc.collocates import Collocates
+from ccc import Corpus
 
 import pandas as pd
 import pytest
@@ -13,13 +12,28 @@ corpus_name = "SZ_FULL"
 @pytest.mark.collocates
 @pytest.mark.collocates_default
 def test_query_default():
-    engine = CWBEngine(corpus_name, registry_path)
-    collocates = Collocates(engine)
+    corpus = Corpus(corpus_name, registry_path)
     query = (
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    collocates.query(query)
+    corpus.query(query)
+    collocates = corpus.collocates()
+    c = collocates.show(order='log_likelihood')
+    assert(type(c) == pd.DataFrame)
+    assert(len(c) > 9)
+    assert('Bundeskanzlerin' in c.index)
+
+
+@pytest.mark.logger
+def test_query_logging():
+    corpus = Corpus(corpus_name, registry_path)
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    corpus.query(query)
+    collocates = corpus.collocates(p_query='fail')
     c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -29,11 +43,10 @@ def test_query_default():
 def compare_counts(lemma, window, drop_hapaxes=False):
 
     # CCC
-    engine = CWBEngine("GERMAPARL_1114", registry_path)
-    collocates = Collocates(engine, max_window_size=window,
-                            s_break='s', p_query='lemma')
+    corpus = Corpus("GERMAPARL_1114", registry_path)
     query = '[lemma="' + lemma + '"]'
-    collocates.query(query)
+    corpus.query(query, context=window, s_break='s')
+    collocates = corpus.collocates(p_query='lemma')
     col = collocates.show(window=5, cut_off=None,
                           drop_hapaxes=drop_hapaxes)
 
@@ -52,7 +65,7 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     # (1) N_ccc + f1_ccc = N_ucs
     # (2) f1_infl_ccc = f1_infl_ucs - O11_ucs_node
     nr = {
-        'f1_ccc': int(engine.marginals([lemma], "lemma")[['freq']].values[0]),
+        'f1_ccc': int(corpus.marginals([lemma], "lemma")[['freq']].values[0]),
         'N_ccc': int(col[['N']].values[0]),
         'f1_infl_ccc': int(col[['f1']].values[0]),
         'N_ucs': int(ucs[['N']].values[0]),
@@ -89,10 +102,49 @@ def test_compare_counts_3():
 
 @pytest.mark.collocates_speed
 def test_collocates_speed_many():
-    engine = CWBEngine("GERMAPARL_1114", registry_path)
+    corpus = Corpus("GERMAPARL_1114", registry_path)
     query = '[lemma="sagen"]'
-    collocates = Collocates(engine, max_window_size=2, s_break='s',
-                            p_query='lemma')
-    collocates.query(query)
+    corpus.query(query, context=2, s_break='s')
+    collocates = corpus.collocates(p_query='lemma')
     c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
     assert(type(c2) == pd.DataFrame)
+
+
+@pytest.mark.switch_corpora
+def test_collocates_persistence():
+    corpus = Corpus(corpus_name, registry_path)
+    query_1 = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    query_2 = (
+        '[lemma="Horst"]? [lemma="Seehofer"]'
+    )
+
+    # will show collocates for query_1
+    corpus.query(query_1, s_break='s')
+    collocates = corpus.collocates()
+    line_1 = collocates.show()
+
+    # will show collocates for query_1
+    corpus.query(query_2, s_break='s')
+    line_2 = collocates.show()
+
+    # will show collocates for query_2
+    collocates = corpus.collocates()
+    line_3 = collocates.show()
+
+    assert(line_1.equals(line_2))
+    assert(not line_2.equals(line_3))
+
+
+@pytest.mark.keywords_collocates
+def test_query_keywords_collocates():
+    corpus = Corpus(corpus_name, registry_path)
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"] expand to s'
+    )
+    corpus.query(query)
+    keywords = corpus.keywords()
+    print(keywords.show().head(100))
