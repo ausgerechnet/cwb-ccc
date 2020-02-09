@@ -9,7 +9,7 @@ with open(path.join(here, 'README.md')) as fh:
 
 setuptools.setup(
     name="cwb-ccc",
-    version="0.9.5",
+    version="0.9.6",
     author="Philipp Heinrich",
     author_email="philipp.heinrich@fau.de",
     description="CWB wrapper to extract concordances and collocates",
