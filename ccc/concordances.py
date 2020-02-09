@@ -5,7 +5,7 @@ from random import sample
 from collections import defaultdict
 import json
 # part of module
-from .utils import node2cooc, preprocess_query
+from .utils import node2cooc
 from .utils import get_holes, apply_corrections
 # requirements
 from pandas import DataFrame
@@ -19,55 +19,20 @@ MAX_MATCHES = 100000            # maximum number of matches to still calculate f
 class Concordance:
     """ concordancing """
 
-    def __init__(self, engine, query, context=20, s_break=None,
-                 match_strategy='standard', breakdown=True):
+    def __init__(self, corpus, df_node, breakdown=True):
 
-        self.engine = engine
-
-        # evaluate query
-        query, s_query, anchors_query = preprocess_query(query)
-        if s_query is None:
-            if s_break is not None:
-                s_query = s_break
-                logger.warning('no "within" statement in query')
-                logger.warning('"%s" (s_break) will be used to confine query' % s_break)
-        self.query = query
-        self.s_query = s_query
-        self.anchors_query = anchors_query
-
-        # settings
-        self.settings = {
-            'query': query,
-            's_query': s_query,
-            'anchors_query': anchors_query,
-            'context': context,
-            's_break': s_break,
-            'match_strategy': match_strategy,
-            'corpus': self.engine.corpus_name,
-            'subcorpus': self.engine.subcorpus
-        }
-
-        # get df node
-        df_node = self.engine.df_node_from_query(
-            query=query,
-            s_query=s_query,
-            anchors=anchors_query,
-            s_break=self.settings['s_break'],
-            context=self.settings['context'],
-            match_strategy=self.settings['match_strategy']
-        )
-
-        self.df_node = df_node
         if len(df_node) == 0:
             logger.warning('0 query hits')
             return
 
-        # get values
-        self.size = len(df_node)
         matches = df_node.index.droplevel('matchend')
         self.meta = DataFrame(index=matches,
                               data=df_node['s_id'].values,
                               columns=['s_id'])
+
+        self.corpus = corpus
+        self.df_node = df_node
+        self.size = len(df_node)
 
         # frequency breakdown of matches
         if self.size > MAX_MATCHES:
@@ -75,7 +40,7 @@ class Concordance:
             logger.warning('skipping frequency breakdown')
             breakdown = False
         if breakdown:
-            self.breakdown = self.engine.count_matches(df_node)
+            self.breakdown = self.corpus.count_matches(df_node)
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
 
@@ -125,7 +90,7 @@ class Concordance:
             # lexicalize positions
             for p_att in ['word'] + p_show:
                 df[p_att] = df.cpos.apply(
-                    lambda x: self.engine.cpos2token(x, p_att)
+                    lambda x: self.corpus.cpos2token(x, p_att)
                 )
             df.set_index('cpos', inplace=True)
 
@@ -151,7 +116,7 @@ class Concordance:
         self.df_node = apply_corrections(self.df_node, anchors)
 
         # get concordance
-        concordance = self.lines(p_show=p_show, order='first', cut_off=None)
+        lines = self.lines(p_show=p_show, order='first', cut_off=None)
 
         # initialize output
         result = dict()
@@ -159,11 +124,12 @@ class Concordance:
         result['nr_matches'] = self.size
         result['matches'] = list()
         result['holes'] = defaultdict(list)
+        result['meta'] = self.df_meta.to_dict()
 
         # loop through concordances
-        for key in concordance.keys():
+        for key in lines.keys():
 
-            line = concordance[key]
+            line = lines[key]
 
             # fill concordance line
             entry = dict()
@@ -187,7 +153,7 @@ class Concordance:
         return result
 
 
-def process_argmin_file(engine, query_path, p_show=['lemma'],
+def process_argmin_file(corpus, query_path, p_show=['lemma'],
                         context=None, s_break='tweet', match_strategy='longest'):
 
     with open(query_path, "rt") as f:
@@ -201,7 +167,7 @@ def process_argmin_file(engine, query_path, p_show=['lemma'],
     query['query_path'] = query_path
 
     # run the query
-    concordance = Concordance(engine, query['query'], context,
+    concordance = Concordance(corpus, query['query'], context,
                               s_break, match_strategy)
     query['result'] = concordance.show_argmin(
         query['anchors'],

@@ -3,7 +3,7 @@
 
 from itertools import chain
 # part of module
-from .utils import node2cooc, preprocess_query
+from .utils import node2cooc
 # requirements
 from pandas import DataFrame
 from association_measures import measures, frequencies
@@ -12,58 +12,38 @@ logger = logging.getLogger(__name__)
 
 
 class Collocates:
-    """ calculating collocates """
+    """ calculate and format collocates """
 
-    def __init__(self, engine, query, max_window_size=20,
-                 s_break='text', p_query='lemma',
-                 match_strategy='standard'):
-
-        self.engine = engine
-
-        # evaluate query
-        query, s_query, anchors_query = preprocess_query(query)
-        if p_query not in set(self.engine.corpus_attributes.value):
-            logger.warning('specified p-attribute not annotated.')
-            logger.warning('tokens from the primary layer will be used.')
-            p_query = 'word'
-
-        # settings
-        self.settings = {
-            'query': query,
-            's_query': s_query,
-            'anchors_query': anchors_query,
-            'max_window_size': max_window_size,
-            's_break': s_break,
-            'p_query': p_query,
-            'match_strategy': match_strategy
-        }
-
-        logger.info('collecting nodes')
-        df_node = self.engine.df_node_from_query(
-            query, s_query, anchors_query, self.settings['s_break'],
-            context=self.settings['max_window_size'],
-            match_strategy=self.settings['match_strategy']
-        )
-        logger.info('collected %d nodes' % len(df_node))
+    def __init__(self, corpus, df_node, p_query):
 
         if len(df_node) == 0:
-            logger.warning('0 query hits')
+            logger.warning('cannot calculate collocates of 0 contexts')
             return
+
+        self.corpus = corpus
+        self.df_node = df_node
+        self.size = len(df_node)
+        if p_query not in self.corpus.attributes_available['value'].values:
+            logger.warning(
+                'p_att "%s" not available, falling back to primary layer' % p_query
+            )
+            p_query = 'word'
+        self.p_query = p_query
 
         logger.info('collecting cotexts')
         deflated, f1_set = df_node_to_cooc(df_node)
-        logger.info('collected %d positions' % len(deflated))
+        logger.info('collected %d token positions' % len(deflated))
 
         self.deflated = deflated
         self.f1_set = f1_set
 
     def count(self, window):
 
-        mws = self.settings['max_window_size']
+        mws = self.corpus.query_result['parameters']['context']
         if window > mws:
             logger.warning('desired window outside maximum window size')
             logger.warning('will use maximum window (%d)' % mws)
-            window = self.settings['max_window_size']
+            window = mws
 
         # slice relevant window
         relevant = self.deflated.loc[abs(self.deflated['offset']) <= window]
@@ -72,8 +52,8 @@ class Collocates:
         f1_inflated = len(relevant)
 
         # get frequency counts
-        counts = self.engine.cpos2counts(
-            relevant['cpos'], self.settings['p_query']
+        counts = self.corpus.cpos2counts(
+            relevant['cpos'], self.p_query
         )
         counts.columns = ['O11']
 
@@ -88,8 +68,13 @@ class Collocates:
                 'log_likelihood', 'mutual_information'
             ]
 
+        if len(self.f1_set) == 0:
+            logger.error("there's nothing to show")
+            return DataFrame()
+
         counts, f1_inflated = self.count(window)
         if counts.empty:
+            logger.error("there's nothing to show")
             return DataFrame()
 
         # drop hapax legomena for improved performance
@@ -97,14 +82,14 @@ class Collocates:
             counts = counts.loc[~(counts['O11'] <= 1)]
 
         # get marginals
-        f2 = self.engine.marginals(
-            counts.index, self.settings['p_query']
+        f2 = self.corpus.marginals(
+            counts.index, self.p_query
         )
         f2.columns = ['f2']
         contingencies = counts.join(f2)
 
         # add constant columns
-        contingencies['N'] = self.engine.corpus_size - len(self.f1_set)
+        contingencies['N'] = self.corpus.corpus_size - len(self.f1_set)
         contingencies['f1'] = f1_inflated
 
         # add measures
@@ -143,15 +128,22 @@ def df_node_to_cooc(df_node, context=None):
     # reset the index to be able to work with it
     df_node.reset_index(inplace=True)
 
-    if context is not None:
+    if context == 0:
+        return DataFrame(), set()
+
+    elif context is None:
+        if (df_node['match'].values == df_node['region_start'].values).all() and (df_node['matchend'].values == df_node['region_end'].values).all():
+            return DataFrame(), set()
+        else:
+            df_node['start'] = df_node['region_start']
+            df_node['end'] = df_node['region_end']
+
+    else:
         logger.info("re-confine regions by given context")
         df_node['start'] = df_node['match'] - context
         df_node['start'] = df_node[['start', 'region_start']].max(axis=1)
         df_node['end'] = df_node['matchend'] + context
         df_node['end'] = df_node[['end', 'region_end']].min(axis=1)
-    else:
-        df_node['start'] = df_node['region_start']
-        df_node['end'] = df_node['region_end']
 
     logger.info("(1a) create local cotexts")
     df = DataFrame.from_records(df_node.apply(node2cooc, axis=1).values)
