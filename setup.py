@@ -16,7 +16,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.cs.fau.de/pheinrich/ccc",
+    url="https://github.com/ausgerechnet/cwb-ccc",
     install_requires=[
         "pandas>=0.24.2",
         "cwb-python>=0.2.2",

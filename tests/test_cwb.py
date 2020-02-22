@@ -7,6 +7,7 @@ import pytest
 # global settings
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 context = 50
+cqp3 = "/home/ausgerechnet/tools/cwb-software/cwb-3.0.0/bin/cqp"
 
 # BREXIT CORPUS
 corpus_name = "BREXIT_V20190522"
@@ -34,13 +35,13 @@ anchors_2 = [0, 1, 2]
 # tests
 @pytest.mark.corpus_init
 def test_corpus_init():
-    corpus = Corpus(corpus_name, registry_path, lib_path)
+    corpus = Corpus(corpus_name, registry_path, lib_path, cqp_bin=cqp3)
     assert(corpus.corpus_size > 1000)
 
 
 @pytest.mark.corpus_init
 def test_corpus_init_alt():
-    corpus = Corpus(corpus_name_2, registry_path)
+    corpus = Corpus(corpus_name_2, registry_path, cqp_bin=cqp3)
     assert(corpus.corpus_size > 1000)
 
 

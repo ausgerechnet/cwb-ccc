@@ -57,3 +57,27 @@ def test_process_argmin_file():
                                                       'nr_matches']))
     with gzip.open(result_path, 'wt') as f_out:
         json.dump(result, f_out, indent=4)
+
+
+@pytest.mark.argmin_file_rant
+def test_process_argmin_file_rant():
+
+    corpus = Corpus(corpus_name=corpus_name,
+                    registry_path=registry_path, lib_path=lib_path,
+                    s_meta="tweet_id")
+
+    query_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/queries/correlation_between_x_and_y_causecorr.query"
+    result_path = "/home/ausgerechnet/Downloads/correlation_between_x_and_y_causecorr.json"
+
+    result = process_argmin_file(corpus, query_path)
+
+    assert(all(x in result.keys() for x in ['query',
+                                            'pattern',
+                                            'name',
+                                            'query_path',
+                                            'result']))
+    assert(all(x in result['result'].keys() for x in ['matches',
+                                                      'holes',
+                                                      'nr_matches']))
+    # with gzip.open(result_path, 'wt') as f_out:
+    #     json.dump(result, f_out, indent=4)
