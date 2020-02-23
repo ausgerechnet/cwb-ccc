@@ -26,7 +26,7 @@ def test_preprocess_anchor_query():
     )
     query_4, s_query_4, anchors_4 = preprocess_query(query)
 
-    assert(s_query_1 == s_query_2 == None)
+    assert(s_query_1 == s_query_2 is None)
     assert(s_query_3 == 'tweet')
     assert(s_query_4 == 's')
     assert(query_1 == query_2 == query_3 == query_4)

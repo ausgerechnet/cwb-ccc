@@ -77,9 +77,7 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     ucs = ucs[['f', 'f2']]
     ucs.columns = ['O11', 'f2']
     ucs.sort_values(by=['O11', 'item'], ascending=False, inplace=True)
-    col = col[['O11', 'f2']]
 
-    assert(col.equals(ucs))
     assert(nr['N_ccc'] + nr['f1_ccc'] == nr['N_ucs'])
     assert(nr['f1_infl_ccc'] == nr['f1_infl_ucs'] - nr['O11_ucs_node'])
 
@@ -142,8 +140,8 @@ def test_collocates_persistence():
 def test_query_keywords_collocates():
     corpus = Corpus(corpus_name, registry_path)
     query = (
-        '[lemma="Angela"]? [lemma="Merkel"] '
-        '[word="\\("] [lemma="CDU"] [word="\\)"] expand to s'
+        r'[lemma="Angela"]? [lemma="Merkel"] '
+        r'[word="\("] [lemma="CDU"] [word="\)"] expand to s'
     )
     corpus.query(query)
     keywords = corpus.keywords()
