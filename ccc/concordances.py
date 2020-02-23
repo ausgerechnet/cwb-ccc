@@ -169,13 +169,10 @@ def process_argmin_file(corpus, query_path, p_show=['lemma'],
     corpus.query(query['query'], s_break=s_break, context=None,
                  match_strategy='longest')
     concordance = corpus.concordance()
-    print(concordance.df_node)
     query['result'] = concordance.show_argmin(
         query['anchors'],
         query['regions'],
         p_show
     )
-    print(concordance.meta)
-    print(concordance.lines([8463210]))
 
     return query
