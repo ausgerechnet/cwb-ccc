@@ -7,7 +7,7 @@ def test_kwic_export():
     conc = corpus.concordance()
     lines = list(conc.lines(cut_off=None).values())
 
-    with open("concordance-lines.tsv", "wt") as f:
+    with open("tests/gold/concordance-lines.tsv", "wt") as f:
         f.write("\t".join(['tweet_id', 'left', 'match', 'right']) + '\n')
         for line in lines:
             left = line.loc[line['offset'] < 0]
