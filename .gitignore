@@ -1,5 +1,4 @@
 legacy/
-CCC.egg-info/
 
 *.pyc
 __pycache__/
@@ -21,5 +20,4 @@ build/
 .RData
 .Rhistory
 
-Pipfile
-Pipfile.lock
+Pipfile*
