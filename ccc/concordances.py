@@ -119,7 +119,6 @@ class Concordance:
 
         # initialize output
         result = dict()
-        result['settings'] = self.corpus.hits['parameters']
         result['nr_matches'] = self.size
         result['matches'] = list()
         result['holes'] = defaultdict(list)
@@ -153,7 +152,8 @@ class Concordance:
 
 
 def process_argmin_file(corpus, query_path, p_show=['lemma'],
-                        context=None, s_break='tweet', match_strategy='longest'):
+                        context=None, s_break='s',
+                        match_strategy='longest'):
 
     with open(query_path, "rt") as f:
         try:
@@ -166,9 +166,12 @@ def process_argmin_file(corpus, query_path, p_show=['lemma'],
     query['query_path'] = query_path
 
     # run the query
-    corpus.query(query['query'], s_break=s_break, context=None,
-                 match_strategy='longest')
-    concordance = corpus.concordance()
+    result, info = corpus.query(query['query'], s_break=s_break,
+                                context=context,
+                                match_strategy=match_strategy,
+                                info=True)
+    query['info'] = info
+    concordance = corpus.concordance(result)
     query['result'] = concordance.show_argmin(
         query['anchors'],
         query['regions'],

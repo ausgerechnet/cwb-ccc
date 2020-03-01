@@ -74,8 +74,8 @@ Before you can display concordances, you have to run a query with the
 `corpus.query()` method, which accepts valid CQP queries such as
 
 ```python
-query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
-corpus.query(query)
+query = '[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
+result = corpus.query(query)
 ```
 
 The default context window is 20 tokens to the left and 20 tokens to
@@ -92,7 +92,7 @@ are within the `s_meta` regions.
 Now you are set up to get the query concordance:
 
 ```
-concordance = corpus.concordance()
+concordance = corpus.concordance(result)
 ```
 
 You can access the query frequency breakdown via
@@ -154,9 +154,10 @@ The concordancer detects anchored queries automatically. The following
 query
 
 ```python
-concordance.query(
-	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\\("] @2[lemma="CDU"] [word="\\)"]'
+result = corpus.query(
+	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]',
 )
+concordance = corpus.concordance(result)
 ```
 
 thus returns `DataFrame`s with appropriate anchors in the anchor
@@ -186,8 +187,8 @@ around the corpus matches):
 
 ```python
 query = '[lemma="Angela"] [lemma="Merkel"]'
-corpus.query(query, s_break='s', context=20)
-collocates = corpus.collocates()
+result = corpus.query(query, s_break='s', context=20)
+collocates = corpus.collocates(result)
 ```
 
 `collocates()` will create a dataframe of the context of the query
@@ -305,7 +306,7 @@ table of regions, respectively, should not overlap.
 It is customary to store these queries in json objects (see an
 [example](tests/gold/query-example.json) in the repository). 
 
-You can use the `concordancer` to process argument queries and display
+You can use the concordancer to process argument queries and display
 the results:
 
 ```python
@@ -316,8 +317,13 @@ with open(query_path, "rt") as f:
 	query = json.loads(f.read())
 
 # query the corpus and initialize the concordancer
-corpus.query(query['query'], context=None, s_break='tweet', match_strategy='longest')
-concordance = corpus.concordance()
+query_result = corpus.query(
+	query['query'],
+	context=None,
+	s_break='tweet',
+	match_strategy='longest'
+)
+concordance = corpus.concordance(query_result)
 
 # show results
 concordance.show_argmin(query['anchors'], query['regions'])

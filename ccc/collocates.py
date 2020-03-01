@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ calculate and format collocates """
 
-    def __init__(self, corpus, df_node, p_query, mws=10):
+    def __init__(self, corpus, df_node, p_query, context=None, mws=10):
 
         if len(df_node) == 0:
             logger.warning('cannot calculate collocates of 0 contexts')
@@ -23,7 +23,6 @@ class Collocates:
         self.corpus = corpus
         self.df_node = df_node
         self.size = len(df_node)
-        context = self.corpus.hits['parameters']['context']
         if context is not None:
             if mws > context:
                 logger.warning(

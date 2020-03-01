@@ -17,8 +17,8 @@ def test_query_default():
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    corpus.query(query)
-    collocates = corpus.collocates()
+    result = corpus.query(query)
+    collocates = corpus.collocates(result)
     c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -32,8 +32,8 @@ def test_query_logging():
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    corpus.query(query)
-    collocates = corpus.collocates(p_query='fail')
+    result = corpus.query(query)
+    collocates = corpus.collocates(result, p_query='fail')
     c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -45,8 +45,8 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     # CCC
     corpus = Corpus("GERMAPARL_1114", registry_path)
     query = '[lemma="' + lemma + '"]'
-    corpus.query(query, context=window, s_break='s')
-    collocates = corpus.collocates(p_query='lemma')
+    result = corpus.query(query, context=window, s_break='s')
+    collocates = corpus.collocates(result, p_query='lemma')
     col = collocates.show(window=5, cut_off=None,
                           drop_hapaxes=drop_hapaxes)
 
@@ -102,8 +102,8 @@ def test_compare_counts_3():
 def test_collocates_speed_many():
     corpus = Corpus("GERMAPARL_1114", registry_path)
     query = '[lemma="sagen"]'
-    corpus.query(query, context=2, s_break='s')
-    collocates = corpus.collocates(p_query='lemma')
+    result = corpus.query(query, context=2, s_break='s')
+    collocates = corpus.collocates(result, p_query='lemma')
     c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
     assert(type(c2) == pd.DataFrame)
 
@@ -120,16 +120,16 @@ def test_collocates_persistence():
     )
 
     # will show collocates for query_1
-    corpus.query(query_1, s_break='s')
-    collocates = corpus.collocates()
+    result = corpus.query(query_1, s_break='s')
+    collocates = corpus.collocates(result)
     line_1 = collocates.show()
 
     # will show collocates for query_1
-    corpus.query(query_2, s_break='s')
+    result = corpus.query(query_2, s_break='s')
     line_2 = collocates.show()
 
     # will show collocates for query_2
-    collocates = corpus.collocates()
+    collocates = corpus.collocates(result)
     line_3 = collocates.show()
 
     assert(line_1.equals(line_2))
@@ -143,6 +143,6 @@ def test_query_keywords_collocates():
         r'[lemma="Angela"]? [lemma="Merkel"] '
         r'[word="\("] [lemma="CDU"] [word="\)"] expand to s'
     )
-    corpus.query(query)
-    keywords = corpus.keywords()
-    print(keywords.show().head(100))
+    result = corpus.query(query)
+    keywords = corpus.keywords(df_node=result)
+    assert(list("(" == keywords.show().head(1).index)[0])

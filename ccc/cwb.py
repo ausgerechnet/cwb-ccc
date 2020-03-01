@@ -70,7 +70,7 @@ class Corpus:
         # get corpus attributes
         self.attributes_available = read_csv(
             StringIO(self.cqp.Exec('show cd;')),
-            sep='\t', names=['att', 'value', 'annotation']
+            sep='\t', names=['att', 'value', 'annotation', 'active']
         )
 
         # get corpus size
@@ -103,6 +103,11 @@ class Corpus:
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             self.cqp.Exec(cqp_exec)
+
+        # execute each macro once (avoid CQP bug for nested macros)
+        macros = self.cqp.Exec("show macro;")
+        for macro in macros:
+            self.cqp.Exec(macro)
 
     def get_meta_regions(self, ids=None):
         """Maps self.s_meta to corresponding regions, returns DataFrame."""
@@ -189,13 +194,16 @@ class Corpus:
             }
             df_node = self.cqp.Dump(name)
 
+        subcorpus_info = {
+            'name': name,
+            'parameters': parameters,
+            'df_node': df_node
+        }
         if activate:
-            self.hits = {
-                'name': name,
-                'parameters': parameters,
-                'df_node': df_node
-            }
+            self.subcorpus_info = subcorpus_info
             self.activate_subcorpus(name)
+        else:
+            return subcorpus_info
 
     def subcorpus_from_ids(self, ids, name='tmp_keywords'):
         """ defines a subcorpus by provided s_meta ids. """
@@ -495,7 +503,7 @@ class Corpus:
         return tokens
 
     def query(self, query, context=20, s_break=None,
-              match_strategy='standard', name='tmp_query'):
+              match_strategy='standard', name='tmp_query', info=False):
         """Query the corpus, cache the result."""
 
         query, s_query, anchors_query = preprocess_query(query)
@@ -519,7 +527,10 @@ class Corpus:
 
         # cache
         df_node = self.cache.get(list(parameters.values()))
-        if df_node is None:
+        if df_node is not None:
+            logger.info("retrieved df_node from cache")
+        else:
+            # retrieve
             logger.info("running query to get df_node")
             df_node = self.df_node_from_query(
                 query=query,
@@ -532,39 +543,37 @@ class Corpus:
             )
             # put in cache
             self.cache.set(list(parameters.values()), df_node)
-        else:
-            logger.info("retrieved df_node from cache")
 
+        # logging
         if len(df_node) == 0:
             logger.warning('0 query hits')
             return
         else:
             logger.info("df_node has %d matches" % len(df_node))
 
-        self.hits = {
-            'parameters': parameters,
-            'name': name,
-            'df_node': df_node
-        }
+        if info:
+            return df_node, parameters
 
-    def concordance(self, breakdown=True):
+        return df_node
+
+    def concordance(self, df_node, breakdown=True):
         return Concordance(
             self,
-            df_node=self.hits['df_node'],
+            df_node=df_node,
             breakdown=breakdown
         )
 
-    def collocates(self, p_query='lemma'):
+    def collocates(self, df_node, p_query='lemma'):
         return Collocates(
             self,
-            df_node=self.hits['df_node'],
+            df_node=df_node,
             p_query=p_query
         )
 
-    def keywords(self, p_query='lemma'):
+    def keywords(self, name=None, df_node=None, p_query='lemma'):
         return Keywords(
             self,
-            name=self.hits['name'],
-            df_node=self.hits['df_node'],
+            name=name,
+            df_node=df_node,
             p_query=p_query
         )

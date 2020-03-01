@@ -34,6 +34,12 @@ anchors_2 = [0, 1, 2]
 
 # tests
 @pytest.mark.corpus_init
+def test_corpus():
+    corpus = Corpus(corpus_name, registry_path, lib_path)
+    assert(corpus.corpus_size > 1000)
+
+
+@pytest.mark.corpus_init
 def test_corpus_init():
     corpus = Corpus(corpus_name, registry_path, lib_path, cqp_bin=cqp3)
     assert(corpus.corpus_size > 1000)
@@ -45,7 +51,7 @@ def test_corpus_init_alt():
     assert(corpus.corpus_size > 1000)
 
 
-@pytest.mark.corpus_descriptor
+@pytest.mark.corpus_init
 def test_corpus_descriptor():
     corpus = Corpus(corpus_name_2, registry_path)
     assert(type(corpus.attributes_available) == pd.DataFrame)
