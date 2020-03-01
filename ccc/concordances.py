@@ -166,16 +166,20 @@ def process_argmin_file(corpus, query_path, p_show=['lemma'],
     query['query_path'] = query_path
 
     # run the query
-    result, info = corpus.query(query['query'], s_break=s_break,
-                                context=context,
-                                match_strategy=match_strategy,
-                                info=True)
-    query['info'] = info
-    concordance = corpus.concordance(result)
-    query['result'] = concordance.show_argmin(
-        query['anchors'],
-        query['regions'],
-        p_show
-    )
+    try:
+        result, info = corpus.query(query['query'], s_break=s_break,
+                                    context=context,
+                                    match_strategy=match_strategy,
+                                    info=True)
+        query['info'] = info
+        concordance = corpus.concordance(result)
+        query['result'] = concordance.show_argmin(
+            query['anchors'],
+            query['regions'],
+            p_show
+        )
+    except TypeError:
+        print("NO RESULTS")
+        print(query_path)
 
     return query
