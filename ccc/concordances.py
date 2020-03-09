@@ -179,7 +179,6 @@ def process_argmin_file(corpus, query_path, p_show=['lemma'],
             p_show
         )
     except TypeError:
-        print("NO RESULTS")
-        print(query_path)
+        logger.warning("no results for path %s" % query_path)
 
     return query
