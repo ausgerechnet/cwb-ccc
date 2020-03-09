@@ -3,8 +3,11 @@ from ccc import Corpus
 
 def test_kwic_export():
     corpus = Corpus('BREXIT_EUROPA_DE', s_meta='tweet_id')
-    corpus.query('[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]', context=None, s_break='tweet')
-    conc = corpus.concordance()
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_break='tweet'
+    )
+    conc = corpus.concordance(result)
     lines = list(conc.lines(cut_off=None).values())
 
     with open("tests/gold/concordance-lines.tsv", "wt") as f:

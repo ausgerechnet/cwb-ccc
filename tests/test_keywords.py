@@ -6,7 +6,7 @@ registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 lib_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/lib/"
 corpus_name = "BREXIT_V20190522"
 s_meta = "tweet_id"
-meta_path = "/home/ausgerechnet/corpora/cwb/upload/brexit/rant/brexit_v20190522.tsv.gz"
+meta_path = "/home/ausgerechnet/corpora/cwb/upload/brexit/brexit-preref-rant/brexit_v20190522.tsv.gz"
 
 
 @pytest.mark.skip
@@ -27,15 +27,37 @@ def test_keywords():
     df_dup[cols] = df_dup[cols].apply(to_numeric, downcast='integer')
     df_dup = df_dup.set_index(['match', 'matchend'])
     df_1 = df_dup.head(5000)
-    df_2 = df_dup.tail(5000)
     # init corpus
     corpus = Corpus(corpus_name=corpus_name,
-                    registry_path=registry_path, lib_path=lib_path,
+                    registry_path=registry_path,
+                    lib_path=lib_path,
                     s_meta=s_meta)
 
     # will show keywords for df_1
     corpus.define_subcorpus(df_node=df_1, name='test_keywords', activate=True)
-    keywords = corpus.keywords()
+    keywords = corpus.keywords(name='test_keywords')
+    line_1 = keywords.show(order='log_likelihood')
+    assert('cute' in set(line_1.index))
+
+
+def test_keywords_2():
+
+    # get some regions
+    df_dup = read_csv('tests/gold/test_dump.tsv', sep="\t", dtype=str)
+    cols = ['match', 'matchend', 'region_start', 'region_end']
+    df_dup[cols] = df_dup[cols].apply(to_numeric, downcast='integer')
+    df_dup = df_dup.set_index(['match', 'matchend'])
+    df_1 = df_dup.head(5000)
+    df_2 = df_dup.tail(5000)
+    # init corpus
+    corpus = Corpus(corpus_name=corpus_name,
+                    registry_path=registry_path,
+                    lib_path=lib_path,
+                    s_meta=s_meta)
+
+    # will show keywords for df_1
+    corpus.define_subcorpus(df_node=df_1, name='test_keywords', activate=True)
+    keywords = corpus.keywords(name='test_keywords')
     line_1 = keywords.show(order='log_likelihood')
 
     # will show collocates for query_1
@@ -43,7 +65,7 @@ def test_keywords():
     line_2 = keywords.show(order='log_likelihood')
 
     # will show collocates for query_2
-    keywords = corpus.keywords()
+    keywords = corpus.keywords(name='test_keywords')
     line_3 = keywords.show(order='log_likelihood')
 
     assert(line_1.equals(line_2))
@@ -66,7 +88,7 @@ def test_keywords_ids():
 
     # will show keywords for ids_1
     corpus.subcorpus_from_ids(ids_1)
-    keywords = corpus.keywords()
+    keywords = corpus.keywords('tmp_keywords')
     line_1 = keywords.show(order='log_likelihood')
 
     # will show keywords for ids_1
@@ -74,13 +96,14 @@ def test_keywords_ids():
     line_2 = keywords.show(order='log_likelihood')
 
     # will show keywords for ids_2
-    keywords = corpus.keywords()
+    keywords = corpus.keywords('tmp_keywords')
     line_3 = keywords.show(order='log_likelihood')
 
     assert(line_1.equals(line_2))
     assert(not line_2.equals(line_3))
 
 
+@pytest.mark.now
 def test_collocates_error():
 
     # get some regions
@@ -94,13 +117,13 @@ def test_collocates_error():
                     s_meta=s_meta)
 
     corpus.define_subcorpus(df_node=df_1, name='test_keywords', activate=True)
-    keywords = corpus.collocates()
+    keywords = corpus.collocates(corpus.subcorpus_info['df_node'])
     line_1 = keywords.show(order='log_likelihood')
 
     corpus.define_subcorpus(df_node=df_2, name='test_keywords', activate=True)
     line_2 = keywords.show(order='log_likelihood')
 
-    keywords = corpus.collocates()
+    keywords = corpus.collocates(corpus.subcorpus_info['df_node'])
     line_3 = keywords.show(order='log_likelihood')
 
     assert(line_1.empty and line_2.empty and line_3.empty)

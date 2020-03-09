@@ -21,7 +21,7 @@ from six.moves import _thread as thread
 
 # GLOBAL CONSTANTS OF MODULE:
 cProgressControlCycle = 30  # secs between each progress control cycle
-cMaxRequestProcTime = 300   # max secs for processing a user request
+cMaxRequestProcTime = 500   # max secs for processing a user request
 
 
 # ERROR MESSAGE TYPES:

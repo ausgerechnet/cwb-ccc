@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class Keywords:
     """ calculating collocates """
 
-    def __init__(self, corpus, name=None, df_node=None, p_query='word'):
+    def __init__(self, corpus, name, df_node, p_query):
 
         if df_node is not None:
             self.df_node = df_node
@@ -30,7 +30,9 @@ class Keywords:
             )
             p_query = 'word'
         self.p_query = p_query
+
         self.corpus = corpus
+        df_node = corpus.subcorpus_info['df_node']
 
         logger.info('collecting token counts of subcorpus')
         counts = corpus.count_matches(df=df_node, p_att=p_query, split=True)

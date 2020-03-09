@@ -30,9 +30,9 @@ def test_argconc():
             print("WARNING: not a valid json file")
             return
 
-    corpus.query(query['query'], context=None, s_break='tweet',
-                 match_strategy='longest')
-    conc = corpus.concordance()
+    result = corpus.query(query['query'], context=None, s_break='tweet',
+                          match_strategy='longest')
+    conc = corpus.concordance(result)
     result = conc.show_argmin(query['anchors'], query['regions'])
     assert('test' in result['holes'].keys())
     assert(type(result['matches']) == list)
@@ -46,7 +46,7 @@ def test_process_argmin_file():
                     s_meta="tweet_id")
     corpus.define_subcorpus(query=subcorpus_query,
                             name=subcorpus_name, activate=True)
-    result = process_argmin_file(corpus, query_path)
+    result = process_argmin_file(corpus, query_path, s_break='tweet')
     assert(all(x in result.keys() for x in ['query',
                                             'pattern',
                                             'name',
@@ -67,17 +67,18 @@ def test_process_argmin_file_rant():
                     s_meta="tweet_id")
 
     query_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/queries/correlation_between_x_and_y_causecorr.query"
-    result_path = "/home/ausgerechnet/Downloads/correlation_between_x_and_y_causecorr.json"
 
-    result = process_argmin_file(corpus, query_path)
+    result = process_argmin_file(corpus, query_path, s_break='tweet')
 
     assert(all(x in result.keys() for x in ['query',
                                             'pattern',
+                                            'info',
                                             'name',
                                             'query_path',
                                             'result']))
     assert(all(x in result['result'].keys() for x in ['matches',
                                                       'holes',
                                                       'nr_matches']))
+    # result_path = "/home/ausgerechnet/Downloads/correlation_between_x_and_y_causecorr.json"
     # with gzip.open(result_path, 'wt') as f_out:
     #     json.dump(result, f_out, indent=4)
