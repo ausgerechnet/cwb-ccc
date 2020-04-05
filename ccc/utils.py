@@ -1,5 +1,6 @@
 import shelve
 import re
+from pandas import DataFrame
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
@@ -66,7 +67,7 @@ def cqp_escape(token):
     return escaped
 
 
-def formulate_cqp_query(items, p_query, s_query=None):
+def formulate_cqp_query(items, p_query='word', s_query=None, flags=None):
     """ wrapper for easy queries """
 
     mwu_queries = list()
@@ -75,7 +76,14 @@ def formulate_cqp_query(items, p_query, s_query=None):
         tokens = item.split(" ")
         mwu_query = ""
         for token in tokens:
-            mwu_query += '[{p_query}="{token}"]'.format(p_query=p_query, token=token)
+            if flags is None:
+                mwu_query += '[{p_query}="{token}"]'.format(
+                    p_query=p_query, token=token
+                )
+            else:
+                mwu_query += '[{p_query}="{token}" {flags}]'.format(
+                    p_query=p_query, token=token, flags=flags
+                )
         mwu_queries.append("(" + mwu_query + ")")
     query = '|'.join(mwu_queries)
     if s_query is not None:
@@ -86,7 +94,7 @@ def formulate_cqp_query(items, p_query, s_query=None):
 
 
 def preprocess_query(query):
-    """get anchors present in query"""
+    """parse anchors and within statement from query"""
 
     # get s_query and strip within statement
     s_query = None
@@ -216,3 +224,90 @@ def get_holes(df, anchors, regions):
         holes['lemmas'][idx] = lemmas
 
     return holes
+
+
+# s-att handling
+def merge_s_atts(s_query, s_break, s_meta):
+        # s_query < s_break < s_meta
+
+        # case 1.1: only s_query
+        if s_break is None and s_meta is None:
+            s_break = s_meta = s_query
+
+        # case 1.2: only s_break
+        elif s_query is None and s_meta is None:
+            s_query = s_meta = s_break
+
+        # case 1.3: only s_meta
+        elif s_query is None and s_break is None:
+            s_query = s_break = s_query
+
+        # case 2.1: s_query and s_break
+        elif s_meta is None:
+            s_meta = s_break
+
+        # case 2.2: s_query and s_meta
+        elif s_break is None:
+            s_break = s_meta
+
+        # useless cases
+        # case 2.3: s_break and s_meta
+        # case 3: all given
+
+        if s_meta is not None and not s_meta.endswith("_id"):
+            s_meta = s_meta + "_id"
+
+        logger.info("s_query: %s - s_break: %s - s_meta: %s" % (
+            str(s_query), str(s_break), str(s_meta)
+        ))
+        return s_query, s_break, s_meta
+
+
+def lines2df(lines, meta=None, kwic=True):
+
+    # lines
+
+    match_ids = list()
+    meta_ids = list()
+    left_contexts = list()
+    matches = list()
+    right_contexts = list()
+
+    for line in list(lines.values()):
+
+        left = line.loc[line['offset'] < 0]
+        match = line.loc[line['offset'] == 0]
+        right = line.loc[line['offset'] > 0]
+
+        left_contexts.append(" ".join(list(left['word'].values)))
+        matches.append(" ".join(list(match['word'].values)))
+        right_contexts.append(" ".join(list(right['word'].values)))
+
+        match_ids.append(match.index[0])
+        if meta is not None:
+            meta_ids.append(meta.loc[match.index[0]]['s_id'])
+        else:
+            meta_ids.append(None)
+
+    df = DataFrame(
+        index=match_ids,
+        data={
+            'meta_id': meta_ids,
+            'left': left_contexts,
+            'match': matches,
+            'right': right_contexts
+        }
+    )
+    df.index.name = 'match_id'
+
+    if not kwic:
+        df['text'] = " ".join([
+            df['left'], df['match'], df['right']
+        ])
+        df = df[['meta_id', 'text']]
+    else:
+        df = df[['meta_id', 'left', 'match', 'right']]
+    if meta is None:
+        df.drop('meta_id', inplace=True, axis=1)
+
+    return df
