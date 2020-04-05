@@ -6,7 +6,7 @@ from itertools import chain
 from .utils import node2cooc
 # requirements
 from pandas import DataFrame
-from association_measures import measures, frequencies
+from association_measures.measures import calculate_measures
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class Collocates:
             return
 
         self.corpus = corpus
-        self.df_node = df_node
+        self.df_node = df_node.copy()
         self.size = len(df_node)
         if context is not None:
             if mws > context:
@@ -38,7 +38,7 @@ class Collocates:
         self.p_query = p_query
 
         logger.info('collecting contexts')
-        deflated, f1_set = df_node_to_cooc(df_node)
+        deflated, f1_set = df_node_to_cooc(self.df_node)
         logger.info('collected %d token positions' % len(deflated))
 
         self.deflated = deflated
@@ -92,7 +92,17 @@ class Collocates:
         f2 = self.corpus.marginals(
             counts.index, self.p_query
         )
-        f2.columns = ['f2']
+        f2.columns = ['marginal']
+
+        # deduct node frequencies from marginals
+        node_freq = self.corpus.cpos2counts(self.f1_set, self.p_query)
+        node_freq.columns = ['in_nodes']
+        f2 = f2.join(node_freq)
+        f2.fillna(0, inplace=True)
+        f2['in_nodes'] = f2['in_nodes'].astype(int)
+        f2['f2'] = f2['marginal'] - f2['in_nodes']
+
+        # join to contingency table
         contingencies = counts.join(f2)
 
         # add constant columns
@@ -100,7 +110,8 @@ class Collocates:
         contingencies['f1'] = f1_inflated
 
         # add measures
-        collocates = add_ams(contingencies, ams)
+        collocates = calculate_measures(contingencies, ams)
+        collocates.index.name = 'item'
 
         # sort dataframe
         collocates.sort_values(
@@ -176,28 +187,3 @@ def df_node_to_cooc(df_node, context=None):
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
-
-
-def add_ams(df, am_names):
-    """ annotates a contingency table with AMs """
-
-    # select relevant association measures
-    ams_all = {
-        'z_score': measures.z_score,
-        't_score': measures.t_score,
-        'dice': measures.dice,
-        'log_likelihood': measures.log_likelihood,
-        'mutual_information': measures.mutual_information
-    }
-    ams = [ams_all[k] for k in am_names if k in ams_all.keys()]
-
-    # create contigency table with observed frequencies
-    df['O11'], df['O12'], df['O21'], df['O22'] = frequencies.observed_frequencies(df)
-    # create indifference table with expected frequencies
-    df['E11'], df['E12'], df['E21'], df['E22'] = frequencies.expected_frequencies(df)
-
-    # calculate association measures
-    df = measures.calculate_measures(df, measures=ams)
-    df.index.name = 'item'
-
-    return df
