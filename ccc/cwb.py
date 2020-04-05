@@ -203,8 +203,8 @@ class Corpus:
         """Defines a subcorpus via a query. If the query is a dataframe,
         undumps the corpus positions"""
 
-        if query is None and df_node is None:
-            logger.error("cannot define subcorpus without query or df_node")
+        if query is None and df_node is None and name is None:
+            logger.error("cannot define subcorpus without query *or* df_node")
             return
 
         elif query is not None and df_node is not None:
