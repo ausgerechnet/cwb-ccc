@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from .collocates import add_ams
 from pandas import DataFrame
+from association_measures.measures import calculate_measures
 import logging
 logger = logging.getLogger(__name__)
 
@@ -12,12 +12,14 @@ class Keywords:
 
     def __init__(self, corpus, name, df_node, p_query):
 
+        self.corpus = corpus
+
         if df_node is not None:
             self.df_node = df_node
             self.size = len(df_node)
-
         elif name is not None:
             self.name = name
+            self.df_node = corpus.cqp.Dump(name)
             self.size = int(corpus.cqp.Exec("size %s" % name))
 
         if self.size == 0:
@@ -31,11 +33,8 @@ class Keywords:
             p_query = 'word'
         self.p_query = p_query
 
-        self.corpus = corpus
-        df_node = corpus.subcorpus_info['df_node']
-
         logger.info('collecting token counts of subcorpus')
-        counts = corpus.count_matches(df=df_node, p_att=p_query, split=True)
+        counts = corpus.count_matches(df=self.df_node, p_att=p_query, split=True)
         counts.columns = ['O11']
 
         self.counts = counts
@@ -70,7 +69,8 @@ class Keywords:
         contingencies['f1'] = f1
 
         # add measures
-        keywords = add_ams(contingencies, ams)
+        keywords = calculate_measures(contingencies, ams)
+        keywords.index.name = 'item'
 
         # sort dataframe
         keywords.sort_values(
