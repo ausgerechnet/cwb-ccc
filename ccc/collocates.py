@@ -136,7 +136,7 @@ def df_node_to_cooc(df_node, context=None):
     deduplication strategy:
     (1) create overlapping contexts with nodes
     (2) sort by abs(offset)
-    (3) deduplicate by offset, keep first occurrences
+    (3) deduplicate by cpos, keep first occurrences (=smallest offset)
     (4) f1_set = (cpos where offset == 0)
     (5) remove rows where cpos in f1_set
 
@@ -183,6 +183,7 @@ def df_node_to_cooc(df_node, context=None):
 
     logger.info("(4) identify matches")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
+
     logger.info("(5) remove matches")
     df_defl = df_defl[df_defl['offset'] != 0]
 
