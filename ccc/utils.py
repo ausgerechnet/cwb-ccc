@@ -301,9 +301,7 @@ def lines2df(lines, meta=None, kwic=True):
     df.index.name = 'match_id'
 
     if not kwic:
-        df['text'] = " ".join([
-            df['left'], df['match'], df['right']
-        ])
+        df['text'] = df[['left', 'match', 'right']].apply(lambda x: ' '.join(x), axis=1)
         df = df[['meta_id', 'text']]
     else:
         df = df[['meta_id', 'left', 'match', 'right']]
