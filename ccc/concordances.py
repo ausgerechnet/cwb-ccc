@@ -7,6 +7,7 @@ import json
 # part of module
 from .utils import node2cooc
 from .utils import get_holes, apply_corrections
+from .utils import lines2df
 # requirements
 from pandas import DataFrame
 import logging
@@ -43,7 +44,7 @@ class Concordance:
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
 
-    def lines(self, matches=None, p_show=[], order='first', cut_off=100):
+    def lines(self, matches=None, p_show=[], order='first', cut_off=100, simplify=False):
         """ creates concordance lines from self.df_node """
 
         # take appropriate sub-set of matches
@@ -105,6 +106,12 @@ class Concordance:
 
             # save concordance line
             concordance[match] = df
+
+        if simplify:
+            if self.corpus.s_meta is None:
+                concordance = lines2df(concordance, kwic=False)
+            else:
+                concordance = lines2df(concordance, self.meta, kwic=False)
 
         return concordance
 
