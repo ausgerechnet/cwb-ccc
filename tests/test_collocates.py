@@ -6,7 +6,7 @@ import pytest
 
 # registry path
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
-corpus_name = "SZ_FULL"
+corpus_name = "SZ_2009_14"
 
 
 @pytest.mark.collocates
@@ -145,4 +145,20 @@ def test_query_keywords_collocates():
     )
     result = corpus.query(query)
     keywords = corpus.keywords(df_node=result)
-    assert(list("(" == keywords.show().head(1).index)[0])
+    assert('Angela' == keywords.show(order='log_likelihood').head(1).index[0])
+
+
+@pytest.mark.collocates
+@pytest.mark.collocates_mwu_marginals
+def test_collactes_mwu():
+    corpus = Corpus(corpus_name, registry_path, data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    result = corpus.query(query)
+    collocates = corpus.collocates(result)
+    c = collocates.show(order='log_likelihood', cut_off=None)
+    assert(type(c) == pd.DataFrame)
+    assert(len(c) > 9)
+    assert('Bundeskanzler' in c.index)
+    print(c.loc[['Gerhard', 'in']])

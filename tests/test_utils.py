@@ -1,4 +1,5 @@
-from ccc.utils import preprocess_query
+from ccc.utils import preprocess_query, lines2df
+from ccc.cwb import Corpus
 
 
 def test_preprocess_anchor_query():
@@ -31,3 +32,10 @@ def test_preprocess_anchor_query():
     assert(s_query_4 == 's')
     assert(query_1 == query_2 == query_3 == query_4)
     assert(anchors_1 == anchors_2 == anchors_3 == anchors_4)
+
+
+def test_lines2df():
+    corpus = Corpus('SZ_2009_14', s_meta='text_id')
+    result = corpus.query('"selten"', s_break='s', context=2)
+    conc = corpus.concordance(result)
+    print(lines2df(conc.lines(), meta=conc.meta))

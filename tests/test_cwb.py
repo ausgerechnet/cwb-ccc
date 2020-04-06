@@ -21,7 +21,7 @@ query_wordlist = (
 )
 
 # SZ CORPUS
-corpus_name_2 = 'SZ_FULL'
+corpus_name_2 = 'SZ_2009_14'
 s_query_2 = 's'
 s_break_2 = 'text'
 query_2 = '[lemma="Angela"] [lemma="Merkel"] | [lemma="CDU"]'
@@ -59,7 +59,7 @@ def test_corpus_descriptor():
 
 @pytest.mark.corpus_node
 def test_df_node_from_query():
-    corpus = Corpus(corpus_name, registry_path, lib_path, cache_path=None)
+    corpus = Corpus(corpus_name, registry_path, lib_path, data_path=None)
     df_node = corpus.df_node_from_query(
         query=query,
         s_query=s_query,
@@ -75,7 +75,7 @@ def test_df_node_from_query():
 
 @pytest.mark.corpus_anchor
 def test_df_anchor_from_query():
-    corpus = Corpus(corpus_name_2, registry_path, cache_path=None)
+    corpus = Corpus(corpus_name_2, registry_path, data_path=None)
     df_node = corpus.df_node_from_query(
         query=anchor_query_2,
         s_query=s_query_2,
