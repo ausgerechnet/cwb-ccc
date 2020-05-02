@@ -11,5 +11,5 @@ def test_discourseme_concordance():
 
     df = discourseme_concordance(corpus_name, topic_query, query1,
                                  s_break, s_meta, cut_off=None,
-                                 simplify=True)
+                                 form='simple')
     print(df)

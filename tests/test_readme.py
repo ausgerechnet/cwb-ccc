@@ -57,7 +57,7 @@ def test_keywords():
     meta = read_csv("/home/ausgerechnet/corpora/cwb/upload/efe/sz-2009-14.tsv.gz",
                     sep="\t", index_col=0, dtype=str)
     ids = set(meta.loc[
-        (meta['ressort'] == "Panorama") & (meta['month'] == '032011')
+        (meta['ressort'] == "Panorama") & (meta['month'] == '201103')
     ].index.values)
     meta['s_id'] = meta.index
 

@@ -1,5 +1,8 @@
-from ccc.utils import preprocess_query, lines2df
+from ccc.utils import preprocess_query
+from ccc.utils import concordance_lines2df
+from ccc.utils import fold_item
 from ccc.cwb import Corpus
+import pytest
 
 
 def test_preprocess_anchor_query():
@@ -38,4 +41,23 @@ def test_lines2df():
     corpus = Corpus('SZ_2009_14', s_meta='text_id')
     result = corpus.query('"selten"', s_break='s', context=2)
     conc = corpus.concordance(result)
-    print(lines2df(conc.lines(), meta=conc.meta))
+    assert(concordance_lines2df(conc.lines(), meta=conc.meta).shape == (100, 4))
+
+
+@pytest.mark.fold
+def test_fold_items():
+    items_aber = ['aber', 'äber', 'AbEr', 'ÄBER']
+    items_francais = ['français', 'Fráncàis', 'FRA¢aiş']
+    print([fold_item(item) for item in items_aber])
+    print([fold_item(item) for item in items_francais])
+
+
+def test_kwic_export():
+    corpus = Corpus('SZ_2009_14', s_meta='text_id')
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_break='s'
+    )
+    conc = corpus.concordance(result)
+    df_lines = conc.lines(form='simple')
+    print(df_lines)
