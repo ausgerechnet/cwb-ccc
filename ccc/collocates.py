@@ -3,10 +3,12 @@
 
 from itertools import chain
 # part of module
-from .utils import node2cooc
+from .utils import node2cooc, fold_df
 # requirements
 from pandas import DataFrame
 from association_measures.measures import calculate_measures
+import association_measures.frequencies as fq
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
@@ -62,18 +64,12 @@ class Collocates:
         counts = self.corpus.cpos2counts(
             relevant['cpos'], self.p_query
         )
-        counts.columns = ['O11']
+        counts.columns = ['f']
 
         return counts, f1_inflated
 
-    def show(self, window=5, order='O11', cut_off=100, ams=None,
-             drop_hapaxes=True):
-
-        if ams is None:
-            ams = [
-                'z_score', 't_score', 'dice',
-                'log_likelihood', 'mutual_information'
-            ]
+    def show(self, window=5, order='f', cut_off=100, ams=None,
+             min_freq=2, frequencies=True, flags=None):
 
         if len(self.f1_set) == 0:
             logger.error("there's nothing to show")
@@ -84,13 +80,12 @@ class Collocates:
             logger.error("there's nothing to show")
             return DataFrame()
 
-        # drop hapax legomena for improved performance
-        if drop_hapaxes:
-            counts = counts.loc[~(counts['O11'] <= 1)]
+        # drop items that occur less than min-freq
+        counts = counts.loc[~(counts['f'] < min_freq)]
 
         # get marginals
         f2 = self.corpus.marginals(
-            counts.index, self.p_query
+            counts.index, self.p_query, flags=0
         )
         f2.columns = ['marginal']
 
@@ -105,12 +100,21 @@ class Collocates:
         # join to contingency table
         contingencies = counts.join(f2)
 
+        # post-processing: fold items
+        contingencies = fold_df(contingencies, flags)
+
         # add constant columns
         contingencies['N'] = self.corpus.corpus_size - len(self.f1_set)
         contingencies['f1'] = f1_inflated
+        # NB: frequency signature notation (Evert 2004: 36)
 
         # add measures
-        collocates = calculate_measures(contingencies, ams)
+        if frequencies:
+            collocates = contingencies.join(fq.observed_frequencies(contingencies))
+            collocates = collocates.join(fq.expected_frequencies(collocates))
+            collocates = collocates.join(calculate_measures(contingencies, ams))
+        else:
+            collocates = contingencies.join(calculate_measures(contingencies, ams))
         collocates.index.name = 'item'
 
         # sort dataframe
