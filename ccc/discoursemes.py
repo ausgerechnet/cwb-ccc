@@ -5,7 +5,7 @@ from pandas import merge
 
 def discourseme_concordance(corpus_name, topic_query, query1, s_break,
                             s_meta=None, context=20, order='first',
-                            cut_off=100, simplify=True):
+                            cut_off=100, form='simple'):
 
     # init corpus
     corpus = Corpus(corpus_name, data_path=None, s_meta=s_meta)
@@ -60,7 +60,7 @@ def discourseme_concordance(corpus_name, topic_query, query1, s_break,
 
     df_nodes.drop('offset', axis=1, inplace=True)
     conc = corpus.concordance(df_nodes)
-    df = conc.lines(order=order, cut_off=cut_off, simplify=simplify)
+    df = conc.lines(order=order, cut_off=cut_off, form=form)
     return df
 
 
