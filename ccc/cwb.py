@@ -600,11 +600,11 @@ class Corpus:
 
         return df_node
 
-    def concordance(self, df_node, breakdown=True):
+    def concordance(self, df_node, max_matches=None):
         return Concordance(
             self,
             df_node=df_node,
-            breakdown=breakdown
+            max_matches=max_matches
         )
 
     def collocates(self, df_node, p_query='lemma'):
