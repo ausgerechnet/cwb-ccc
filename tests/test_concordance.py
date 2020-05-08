@@ -5,7 +5,7 @@ import pandas as pd
 
 # registry path
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
-corpus_name = "SZ_FULL"
+corpus_name = "SZ_2009_14"
 
 
 def test_concordance_new():
@@ -24,7 +24,7 @@ def test_concordance_new():
 
 @pytest.mark.concordance_simple
 def test_query_default():
-    corpus = Corpus(corpus_name, registry_path, s_meta='text_id', cache_path=None)
+    corpus = Corpus(corpus_name, registry_path, s_meta='text_id', data_path=None)
     query = (
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
@@ -49,7 +49,7 @@ def test_anchor_query_default():
     concordance = corpus.concordance(result)
     lines = concordance.lines()
     for df in lines.values():
-        assert(all(x in set(df['anchor']) for x in [0, 1, 2]))
+        assert(all(x in set(df['anchor']) for x in [1, 2]))
 
 
 @pytest.mark.skip

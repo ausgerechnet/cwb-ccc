@@ -3,10 +3,12 @@
 
 from itertools import chain
 # part of module
-from .utils import node2cooc
+from .utils import node2cooc, fold_df
 # requirements
 from pandas import DataFrame
-from association_measures import measures, frequencies
+from association_measures.measures import calculate_measures
+import association_measures.frequencies as fq
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class Collocates:
             return
 
         self.corpus = corpus
-        self.df_node = df_node
+        self.df_node = df_node.copy()
         self.size = len(df_node)
         if context is not None:
             if mws > context:
@@ -38,7 +40,7 @@ class Collocates:
         self.p_query = p_query
 
         logger.info('collecting contexts')
-        deflated, f1_set = df_node_to_cooc(df_node)
+        deflated, f1_set = df_node_to_cooc(self.df_node)
         logger.info('collected %d token positions' % len(deflated))
 
         self.deflated = deflated
@@ -62,18 +64,12 @@ class Collocates:
         counts = self.corpus.cpos2counts(
             relevant['cpos'], self.p_query
         )
-        counts.columns = ['O11']
+        counts.columns = ['f']
 
         return counts, f1_inflated
 
-    def show(self, window=5, order='O11', cut_off=100, ams=None,
-             drop_hapaxes=True):
-
-        if ams is None:
-            ams = [
-                'z_score', 't_score', 'dice',
-                'log_likelihood', 'mutual_information'
-            ]
+    def show(self, window=5, order='f', cut_off=100, ams=None,
+             min_freq=2, frequencies=True, flags=None):
 
         if len(self.f1_set) == 0:
             logger.error("there's nothing to show")
@@ -84,23 +80,42 @@ class Collocates:
             logger.error("there's nothing to show")
             return DataFrame()
 
-        # drop hapax legomena for improved performance
-        if drop_hapaxes:
-            counts = counts.loc[~(counts['O11'] <= 1)]
+        # drop items that occur less than min-freq
+        counts = counts.loc[~(counts['f'] < min_freq)]
 
         # get marginals
         f2 = self.corpus.marginals(
-            counts.index, self.p_query
+            counts.index, self.p_query, flags=0
         )
-        f2.columns = ['f2']
+        f2.columns = ['marginal']
+
+        # deduct node frequencies from marginals
+        node_freq = self.corpus.cpos2counts(self.f1_set, self.p_query)
+        node_freq.columns = ['in_nodes']
+        f2 = f2.join(node_freq)
+        f2.fillna(0, inplace=True)
+        f2['in_nodes'] = f2['in_nodes'].astype(int)
+        f2['f2'] = f2['marginal'] - f2['in_nodes']
+
+        # join to contingency table
         contingencies = counts.join(f2)
+
+        # post-processing: fold items
+        contingencies = fold_df(contingencies, flags)
 
         # add constant columns
         contingencies['N'] = self.corpus.corpus_size - len(self.f1_set)
         contingencies['f1'] = f1_inflated
+        # NB: frequency signature notation (Evert 2004: 36)
 
         # add measures
-        collocates = add_ams(contingencies, ams)
+        if frequencies:
+            collocates = contingencies.join(fq.observed_frequencies(contingencies))
+            collocates = collocates.join(fq.expected_frequencies(collocates))
+            collocates = collocates.join(calculate_measures(contingencies, ams))
+        else:
+            collocates = contingencies.join(calculate_measures(contingencies, ams))
+        collocates.index.name = 'item'
 
         # sort dataframe
         collocates.sort_values(
@@ -125,7 +140,7 @@ def df_node_to_cooc(df_node, context=None):
     deduplication strategy:
     (1) create overlapping contexts with nodes
     (2) sort by abs(offset)
-    (3) deduplicate by offset, keep first occurrences
+    (3) deduplicate by cpos, keep first occurrences (=smallest offset)
     (4) f1_set = (cpos where offset == 0)
     (5) remove rows where cpos in f1_set
 
@@ -172,32 +187,8 @@ def df_node_to_cooc(df_node, context=None):
 
     logger.info("(4) identify matches")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
+
     logger.info("(5) remove matches")
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
-
-
-def add_ams(df, am_names):
-    """ annotates a contingency table with AMs """
-
-    # select relevant association measures
-    ams_all = {
-        'z_score': measures.z_score,
-        't_score': measures.t_score,
-        'dice': measures.dice,
-        'log_likelihood': measures.log_likelihood,
-        'mutual_information': measures.mutual_information
-    }
-    ams = [ams_all[k] for k in am_names if k in ams_all.keys()]
-
-    # create contigency table with observed frequencies
-    df['O11'], df['O12'], df['O21'], df['O22'] = frequencies.observed_frequencies(df)
-    # create indifference table with expected frequencies
-    df['E11'], df['E12'], df['E21'], df['E22'] = frequencies.expected_frequencies(df)
-
-    # calculate association measures
-    df = measures.calculate_measures(df, measures=ams)
-    df.index.name = 'item'
-
-    return df

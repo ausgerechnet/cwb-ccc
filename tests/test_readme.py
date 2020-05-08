@@ -7,8 +7,7 @@ import pytest
 @pytest.mark.readme_concordancing
 def test_concordancing():
     corpus = Corpus(
-        corpus_name="SZ_FULL",
-        registry_path="/home/ausgerechnet/corpora/cwb/registry/",
+        corpus_name="SZ_2009_14",
         s_meta="text_id"
     )
 
@@ -19,14 +18,13 @@ def test_concordancing():
     print(concordance.breakdown)
     print(concordance.size)
     print(concordance.meta.head())
-    print(concordance.lines([48349]))
+    print(concordance.lines([567792]))
 
 
 @pytest.mark.readme_anchor
 def test_anchor():
     corpus = Corpus(
-        corpus_name="SZ_FULL",
-        registry_path="/home/ausgerechnet/corpora/cwb/registry/",
+        corpus_name="SZ_2009_14",
         s_meta="text_id"
     )
 
@@ -37,14 +35,13 @@ def test_anchor():
     print(concordance.breakdown)
     print(concordance.size)
     print(concordance.meta.head())
-    print(concordance.lines([48349]))
+    print(concordance.lines([567792]))
 
 
 @pytest.mark.readme_collocates
 def test_collocates():
     corpus = Corpus(
-        corpus_name="SZ_FULL",
-        registry_path="/home/ausgerechnet/corpora/cwb/registry/",
+        corpus_name="SZ_2009_14",
         s_meta="text_id"
     )
 
@@ -52,20 +49,20 @@ def test_collocates():
     result = corpus.query(query, s_break='s')
     collocates = corpus.collocates(result)
 
-    print(collocates.show(window=5).head())
+    print(collocates.show(window=5, order="log_likelihood").head())
 
 
 @pytest.mark.readme_keywords
 def test_keywords():
-    meta = read_csv("/home/ausgerechnet/corpora/cwb/upload/efe/sz-full.tsv.gz",
+    meta = read_csv("/home/ausgerechnet/corpora/cwb/upload/efe/sz-2009-14.tsv.gz",
                     sep="\t", index_col=0, dtype=str)
     ids = set(meta.loc[
-        (meta['ressort'] == "Panorama") & (meta['month'] == '032011')
+        (meta['ressort'] == "Panorama") & (meta['month'] == '201103')
     ].index.values)
+    meta['s_id'] = meta.index
 
     corpus = Corpus(
-        corpus_name="SZ_FULL",
-        registry_path="/home/ausgerechnet/corpora/cwb/registry/",
+        corpus_name="SZ_2009_14",
         s_meta="text_id"
     )
     corpus.subcorpus_from_ids(ids, name='tmp_keywords')

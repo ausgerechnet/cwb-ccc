@@ -1,5 +1,8 @@
 import shelve
 import re
+import numpy as np
+from unidecode import unidecode
+from pandas import DataFrame
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
@@ -36,7 +39,7 @@ class Cache:
                 db[key] = value
 
 
-# dataframe corrections
+# anchor corrections
 def apply_correction(row, correction):
     value, lower_bound, upper_bound = row
     value += correction
@@ -56,6 +59,8 @@ def apply_corrections(df_anchor, corrections):
 
 # query processing
 def cqp_escape(token):
+    """ escape CQP meta-characters """
+
     escaped = token.translate(str.maketrans({".": r"\.", "?": r"\?",
                                              "*": r"\*", "+": r"\+",
                                              "|": r"\|", "(": r"\(",
@@ -66,27 +71,46 @@ def cqp_escape(token):
     return escaped
 
 
-def formulate_cqp_query(items, p_query, s_query=None):
+def formulate_cqp_query(items, p_query='word', s_query=None,
+                        flags="", escape=True):
     """ wrapper for easy queries """
 
+    # gather all MWUs
     mwu_queries = list()
     for item in items:
-        item = cqp_escape(item)
+
+        # escape item (optional)
+        if escape:
+            item = cqp_escape(item)
+
+        # split items on white-space
         tokens = item.split(" ")
         mwu_query = ""
+
+        # convert to CQP syntax considering p-att and flags
         for token in tokens:
-            mwu_query += '[{p_query}="{token}"]'.format(p_query=p_query, token=token)
+            mwu_query += '[{p_query}="{token}"{flags}]'.format(
+                p_query=p_query, token=token, flags=flags
+            )
+
+        # add MWU item to list
         mwu_queries.append("(" + mwu_query + ")")
-    query = '|'.join(mwu_queries)
+
+    # disjunctive join
+    query = ' | '.join(mwu_queries)
+
+    # add s_query (optional)
     if s_query is not None:
-        cqp_exec = '({query}) within {s_query};'.format(query=query, s_query=s_query)
-    else:
-        cqp_exec = query
-    return cqp_exec
+        query = '({query}) within {s_query};'.format(
+            query=query, s_query=s_query
+        )
+
+    # return
+    return query
 
 
 def preprocess_query(query):
-    """get anchors present in query"""
+    """ parse anchors and within statement from query """
 
     # get s_query and strip within statement
     s_query = None
@@ -123,6 +147,7 @@ def time_it(func):
 
 
 def node2cooc(row):
+    """ convert one row of df_node to info for df_cooc """
 
     # take values from row
     match = row['match']
@@ -144,6 +169,7 @@ def node2cooc(row):
         else:
             offset_list.append(0)
 
+    # return object
     result = {
         'match_list': match_list,
         'cpos_list': cpos_list,
@@ -216,3 +242,123 @@ def get_holes(df, anchors, regions):
         holes['lemmas'][idx] = lemmas
 
     return holes
+
+
+# s-att handling
+def merge_s_atts(s_query, s_break, s_meta):
+    """ consistencize s-atts """
+    # s_query < s_break < s_meta
+
+    # case 1.1: only s_query
+    if s_break is None and s_meta is None:
+        s_break = s_meta = s_query
+
+    # case 1.2: only s_break
+    elif s_query is None and s_meta is None:
+        s_query = s_meta = s_break
+
+    # case 1.3: only s_meta
+    elif s_query is None and s_break is None:
+        s_query = s_break = s_query
+
+    # case 2.1: s_query and s_break
+    elif s_meta is None:
+        s_meta = s_break
+
+    # case 2.2: s_query and s_meta
+    elif s_break is None:
+        s_break = s_meta
+
+    # useless cases
+    # case 2.3: s_break and s_meta
+    # case 3: all given
+
+    if s_meta is not None and not s_meta.endswith("_id"):
+        s_meta = s_meta + "_id"
+
+    logger.info("s_query: %s - s_break: %s - s_meta: %s" % (
+        str(s_query), str(s_break), str(s_meta)
+    ))
+    return s_query, s_break, s_meta
+
+
+def concordance_lines2df(lines, meta=None, kwic=True):
+    """ convert dict of concordance lines to one dataframe """
+
+    # init variables
+    match_ids = list()
+    meta_ids = list()
+    left_contexts = list()
+    matches = list()
+    right_contexts = list()
+
+    # loop through lines
+    for line in list(lines.values()):
+
+        # get and append left / match / right
+        left = line.loc[line['offset'] < 0]
+        match = line.loc[line['offset'] == 0]
+        right = line.loc[line['offset'] > 0]
+        left_contexts.append(" ".join(list(left['word'].values)))
+        matches.append(" ".join(list(match['word'].values)))
+        right_contexts.append(" ".join(list(right['word'].values)))
+
+        # append match id
+        match_ids.append(match.index[0])
+
+        # append meta id
+        if meta is not None:
+            meta_ids.append(meta.loc[match.index[0]]['s_id'])
+        else:
+            meta_ids.append(None)
+
+    # convert to DataFrame
+    df = DataFrame(
+        index=match_ids,
+        data={
+            'meta_id': meta_ids,
+            'left': left_contexts,
+            'match': matches,
+            'right': right_contexts
+        }
+    )
+    df.index.name = 'match_id'
+
+    # convert to KWIC (optional) and bring columns in order
+    if not kwic:
+        df['text'] = df[['left', 'match', 'right']].apply(
+            lambda x: ' '.join(x), axis=1
+        )
+        df = df[['meta_id', 'text']]
+    else:
+        df = df[['meta_id', 'left', 'match', 'right']]
+
+    # drop meta column if meta is None
+    if meta is None:
+        df.drop('meta_id', inplace=True, axis=1)
+
+    return df
+
+
+# word post-processing
+def fold_item(item, flags="%cd"):
+
+    if flags is None:
+        return item
+
+    if "d" in flags:
+        # remove diacritica
+        item = unidecode(item)
+
+    if "c" in flags:
+        # lower-case
+        item = item.lower()
+
+    return item
+
+
+def fold_df(df, flags="%cd"):
+    df.index = df.index.map(lambda x: fold_item(x, flags))
+    grouped = df.groupby(df.index)
+    df = grouped.aggregate(np.sum)
+    return df

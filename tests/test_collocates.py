@@ -6,7 +6,7 @@ import pytest
 
 # registry path
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
-corpus_name = "SZ_FULL"
+corpus_name = "SZ_2009_14"
 
 
 @pytest.mark.collocates
@@ -40,7 +40,7 @@ def test_query_logging():
     assert('Bundeskanzlerin' in c.index)
 
 
-def compare_counts(lemma, window, drop_hapaxes=False):
+def compare_counts(lemma, window, min_freq=0):
 
     # CCC
     corpus = Corpus("GERMAPARL_1114", registry_path)
@@ -48,7 +48,7 @@ def compare_counts(lemma, window, drop_hapaxes=False):
     result = corpus.query(query, context=window, s_break='s')
     collocates = corpus.collocates(result, p_query='lemma')
     col = collocates.show(window=5, cut_off=None,
-                          drop_hapaxes=drop_hapaxes)
+                          min_freq=min_freq)
 
     # UCS
     ucs = pd.read_csv("tests/gold/ucs-germaparl1114-" + lemma +
@@ -95,7 +95,7 @@ def test_compare_counts_2():
 @pytest.mark.collocates_speed
 @pytest.mark.skip
 def test_compare_counts_3():
-    compare_counts('und', 2, drop_hapaxes=True)
+    compare_counts('und', 2)
 
 
 @pytest.mark.collocates_speed
@@ -104,7 +104,7 @@ def test_collocates_speed_many():
     query = '[lemma="sagen"]'
     result = corpus.query(query, context=2, s_break='s')
     collocates = corpus.collocates(result, p_query='lemma')
-    c2 = collocates.show(window=2, cut_off=50, drop_hapaxes=True)
+    c2 = collocates.show(window=2, cut_off=50)
     assert(type(c2) == pd.DataFrame)
 
 
@@ -145,4 +145,34 @@ def test_query_keywords_collocates():
     )
     result = corpus.query(query)
     keywords = corpus.keywords(df_node=result)
-    assert(list("(" == keywords.show().head(1).index)[0])
+    assert('Angela' == keywords.show(order='log_likelihood').head(1).index[0])
+
+
+@pytest.mark.collocates
+@pytest.mark.collocates_mwu_marginals
+def test_collactes_mwu():
+    corpus = Corpus(corpus_name, registry_path, data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    result = corpus.query(query)
+    collocates = corpus.collocates(result)
+    c = collocates.show(order='log_likelihood', cut_off=None)
+    assert(type(c) == pd.DataFrame)
+    assert(len(c) > 9)
+    assert('Bundeskanzler' in c.index)
+    print(c.loc[['Gerhard', 'in']])
+
+
+@pytest.mark.fold_items
+def test_collocates_pp():
+    corpus = Corpus(corpus_name, registry_path, data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    result = corpus.query(query)
+    collocates = corpus.collocates(result, p_query='word')
+    c = collocates.show(order='log_likelihood', cut_off=None)
+    print(c.loc[['In', 'in']][['O11', 'O12', 'O21', 'O22']])
+    c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
+    print(c.loc[['in']][['O11', 'O12', 'O21', 'O22']])

@@ -7,16 +7,40 @@ from glob import glob
 from collections import Counter
 # part of module
 from .cqp_interface import CQP
-from .utils import Cache, formulate_cqp_query, preprocess_query
+from .utils import Cache, formulate_cqp_query, preprocess_query, merge_s_atts
 from .concordances import Concordance
 from .collocates import Collocates
 from .keywords import Keywords
 from .utils import time_it
 # requirements
 from pandas import DataFrame, read_csv, to_numeric
+from pandas.errors import EmptyDataError
 from CWB.CL import Corpus as Crps
+# logging
 import logging
 logger = logging.getLogger(__name__)
+
+
+class Engine:
+    """ interface to CQP """
+
+    def __init__(self,
+                 registry_path='/usr/local/share/cwb/registry/',
+                 cqp_bin='cqp'):
+
+        self.registry_path = registry_path
+        self.cqp_bin = cqp_bin
+
+    def start_cqp(self):
+        return CQP(
+            bin=self.cqp_bin,
+            options='-c -r ' + self.registry_path
+        )
+
+    def show_corpora(self):
+        cqp = self.start_cqp()
+        corpora = cqp.Exec("show corpora;").split("\n")
+        return corpora
 
 
 class Corpus:
@@ -27,22 +51,30 @@ class Corpus:
                  registry_path='/usr/local/share/cwb/registry/',
                  lib_path=None,
                  s_meta=None,
+                 s_break=None,
                  cqp_bin='cqp',
-                 cache_path='/tmp/ccc-cache'):
+                 data_path="/tmp/ccc-data/"):
         """Establishes connection to indexed corpus. Raises KeyError if corpus
         not in registry.
 
         :param str corpus_name: name of the corpus in CWB registry
         :param str registry_path: path/to/your/cwb/registry/
         :param str lib_path: path to macros and wordlists
-        :param str s_meta: s-attribute (usually text_id) referencing meta data rows
+        :param str s_meta: s-att referencing meta data rows ([text_id])
+        :param str s_break: s-att to break queries and contexts ([s])
         :param str cqp_bin: cqp binary
         :param str cache_path: path/to/store/cache
 
         """
 
         # set cache
-        self.cache = Cache(corpus_name, cache_path)
+        self.data = data_path
+        if self.data is not None:
+            if not os.path.isdir(self.data):
+                os.makedirs(data_path)
+            self.cache = Cache(corpus_name, os.path.join(data_path, "cache"))
+        else:
+            self.cache = None
 
         # registry path
         self.registry_path = registry_path
@@ -60,12 +92,16 @@ class Corpus:
             bin=cqp_bin,
             options='-c -r ' + self.registry_path
         )
+        if self.data is not None:
+            self.cqp.Exec('set DataDirectory "%s"' % self.data)
         self.cqp.Exec(self.corpus_name)
 
-        # meta regions
+        # important s-attributes
         self.s_meta = s_meta
-        if s_meta is not None:
-            self.meta = self.get_meta_regions()
+        self.s_break = s_break
+        # ToDo: load meta data when necessary (AFTER querying: s_break)
+        # if s_meta is not None:
+        #     self.meta = self.get_meta_regions()
 
         # get corpus attributes
         self.attributes_available = read_csv(
@@ -136,15 +172,17 @@ class Corpus:
     def show_subcorpora(self):
         """Returns subcorpora defined in CQP as DataFrame."""
         cqp_return = self.cqp.Exec("show named;")
-        df = read_csv(StringIO(cqp_return), sep="\t", header=None)
-        if not df.empty:
+        try:
+            df = read_csv(StringIO(cqp_return), sep="\t", header=None)
             df.columns = ["storage", "corpus:subcorpus", "size"]
             crpssbcrps = df["corpus:subcorpus"].str.split(":", 1).str
             df['corpus'] = crpssbcrps[0]
             df['subcorpus'] = crpssbcrps[1]
             df.drop('corpus:subcorpus', axis=1, inplace=True)
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
-        return df
+            return df
+        except EmptyDataError:
+            logger.warning("no subcorpora defined")
 
     def activate_subcorpus(self, subcorpus=None):
         """Activates subcorpus or switches to corpus."""
@@ -157,13 +195,16 @@ class Corpus:
             self.subcorpus = self.corpus_name
             logger.info('CQP switched to corpus "%s"' % self.corpus_name)
 
+    def save_subcorpus(self, name='Last', df_node=None):
+        self.cqp.Exec("save %s;" % name)
+
     def define_subcorpus(self, query=None, df_node=None, name='Last',
                          match_strategy='longest', activate=False):
         """Defines a subcorpus via a query. If the query is a dataframe,
         undumps the corpus positions"""
 
-        if query is None and df_node is None:
-            logger.error("cannot define subcorpus without query or df_node")
+        if query is None and df_node is None and name is None:
+            logger.error("cannot define subcorpus without query *or* df_node")
             return
 
         elif query is not None and df_node is not None:
@@ -246,7 +287,6 @@ class Corpus:
             start_query = query + ' within ' + s_query
 
         # first run: 0 and 1 (considering within statement)
-        logger.info("running query for anchor pair (0, 1)")
         self.cqp.Exec('set ant 0; ank 1;')
         # find matches and dump result
         self.define_subcorpus(query=start_query, name=name, activate=False)
@@ -267,7 +307,7 @@ class Corpus:
 
             for pair in [(2, 3), (4, 5), (6, 7), (8, 9)]:
                 if pair[0] in anchors or pair[1] in anchors:
-                    logger.info("running query for anchor pair %s" % str(pair))
+                    logger.info(".. running query for anchor pair %s" % str(pair))
                     # set appropriate anchors
                     self.cqp.Exec('set ant %d; set ank %d;' % pair)
                     # dump new anchors
@@ -508,11 +548,11 @@ class Corpus:
 
         query, s_query, anchors_query = preprocess_query(query)
 
-        if s_query is None:
-            if s_break is not None:
-                s_query = s_break
-                logger.warning('no "within" statement in query')
-                logger.warning('"%s" (s_break) will be used to confine query' % s_break)
+        # get default s_break
+        if s_break is None:
+            s_break = self.s_break
+
+        s_query, s_break, s_meta = merge_s_atts(s_query, s_break, self.s_meta)
 
         parameters = {
             'query': query,
@@ -526,7 +566,10 @@ class Corpus:
         }
 
         # cache
-        df_node = self.cache.get(list(parameters.values()))
+        if self.cache is not None:
+            df_node = self.cache.get(list(parameters.values()))
+        else:
+            df_node = None
         if df_node is not None:
             logger.info("retrieved df_node from cache")
         else:
@@ -542,7 +585,8 @@ class Corpus:
                 name=name
             )
             # put in cache
-            self.cache.set(list(parameters.values()), df_node)
+            if self.cache is not None:
+                self.cache.set(list(parameters.values()), df_node)
 
         # logging
         if len(df_node) == 0:
@@ -556,11 +600,11 @@ class Corpus:
 
         return df_node
 
-    def concordance(self, df_node, breakdown=True):
+    def concordance(self, df_node, max_matches=None):
         return Concordance(
             self,
             df_node=df_node,
-            breakdown=breakdown
+            max_matches=max_matches
         )
 
     def collocates(self, df_node, p_query='lemma'):

@@ -7,19 +7,17 @@ import json
 # part of module
 from .utils import node2cooc
 from .utils import get_holes, apply_corrections
+from .utils import concordance_lines2df
 # requirements
 from pandas import DataFrame
 import logging
 logger = logging.getLogger(__name__)
 
 
-MAX_MATCHES = 100000            # maximum number of matches to still calculate frequency breakdown
-
-
 class Concordance:
     """ concordancing """
 
-    def __init__(self, corpus, df_node, breakdown=True):
+    def __init__(self, corpus, df_node, max_matches=None):
 
         if len(df_node) == 0:
             logger.warning('0 query hits')
@@ -34,16 +32,22 @@ class Concordance:
         self.size = len(df_node)
 
         # frequency breakdown of matches
-        if self.size > MAX_MATCHES:
-            logger.warning('found %d matches (more than %d)' % (self.size, MAX_MATCHES))
-            logger.warning('skipping frequency breakdown')
-            breakdown = False
+        breakdown = True
+        if max_matches is not None:
+            if self.size > max_matches:
+                logger.warning(
+                    'found %d matches (more than %d)' % (self.size, max_matches)
+                )
+                logger.warning('skipping frequency breakdown')
+                self.breakdown = None
+                breakdown = False
         if breakdown:
             self.breakdown = self.corpus.count_matches(df=df_node)
             self.breakdown.index.name = 'type'
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
 
-    def lines(self, matches=None, p_show=[], order='first', cut_off=100):
+    def lines(self, matches=None, p_show=[], order='first',
+              cut_off=100, form='dictionary'):
         """ creates concordance lines from self.df_node """
 
         # take appropriate sub-set of matches
@@ -105,6 +109,24 @@ class Concordance:
 
             # save concordance line
             concordance[match] = df
+
+        if form == 'dictionary':
+            return concordance
+        elif form == 'simple-kwic':
+            kwic = True
+        elif form == 'simple':
+            kwic = False
+        else:
+            raise NotImplementedError("format type (%s) not implemented" % form)
+
+        if self.corpus.s_meta is None:
+            concordance = concordance_lines2df(
+                concordance, kwic=kwic
+            )
+        else:
+            concordance = concordance_lines2df(
+                concordance, self.meta, kwic=kwic
+            )
 
         return concordance
 
