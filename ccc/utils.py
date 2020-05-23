@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Cache:
+
     def __init__(self, corpus_name, path=None):
         self.path = path
         self.corpus = corpus_name
@@ -19,10 +20,11 @@ class Cache:
     def generate_idx(self, identifiers):
         string = ''.join([str(idx) for idx in identifiers])
         string += self.corpus
-        return sha256(str(string).encode()).hexdigest()
+        h = sha256(str(string).encode()).hexdigest()
+        return 'CACHE_' + h[:10]
 
-    def get(self, identifiers, subcorpus=None):
-        key = self.generate_idx(identifiers + [subcorpus])
+    def get(self, identifiers):
+        key = self.generate_idx(identifiers)
         if self.path is not None:
             with shelve.open(self.path) as db:
                 try:
@@ -32,11 +34,19 @@ class Cache:
         else:
             return None
 
-    def set(self, identifiers, value, subcorpus=None):
+    def set(self, identifiers, value):
         if self.path is not None:
-            key = self.generate_idx(identifiers + [subcorpus])
+            key = self.generate_idx(identifiers)
             with shelve.open(self.path) as db:
                 db[key] = value
+
+
+# split list in tuples (for anchor queris)
+def chunk_anchors(lst, n, exclude={0, 1}):
+    """yields n-sized chunks from lst without excluded values"""
+    lst_rm = [i for i in lst if i not in exclude]
+    for i in range(0, len(lst_rm), n):
+        yield lst_rm[i:i + n]
 
 
 # anchor corrections
