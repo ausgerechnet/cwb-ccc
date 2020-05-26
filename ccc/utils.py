@@ -23,8 +23,11 @@ class Cache:
         h = sha256(str(string).encode()).hexdigest()
         return 'CACHE_' + h[:10]
 
-    def get(self, identifiers):
-        key = self.generate_idx(identifiers)
+    def get(self, name, create_idx=True):
+        if create_idx:
+            key = self.generate_idx(name)
+        else:
+            key = name
         if self.path is not None:
             with shelve.open(self.path) as db:
                 try:
@@ -34,9 +37,12 @@ class Cache:
         else:
             return None
 
-    def set(self, identifiers, value):
+    def set(self, name, value, create_idx):
+        if create_idx:
+            key = self.generate_idx(name)
+        else:
+            key = name
         if self.path is not None:
-            key = self.generate_idx(identifiers)
             with shelve.open(self.path) as db:
                 db[key] = value
 
@@ -156,14 +162,18 @@ def time_it(func):
     return wrapper
 
 
+def inflate(df, ):
+    pass
+
+
 def node2cooc(row):
     """ convert one row of df_node to info for df_cooc """
 
     # take values from row
     match = row['match']
     matchend = row['matchend']
-    start = row['start']
-    end = row['end']
+    start = row['context']
+    end = row['contextend']
 
     # get lists
     cpos_list = list(range(start, end + 1))

@@ -22,6 +22,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# TODO: item_freq
+# TODO: save subcopora independently from post-processing
+# TODO: result object (cache-key, concordance, collocates, etc.)
+
 class Engine:
     """ interface to CQP """
 
@@ -66,7 +70,7 @@ class Corpus:
         if self.data is not None:
             if not os.path.isdir(self.data):
                 os.makedirs(data_path)
-            cache_path = os.path.join(data_path, 'cache-' + corpus_name)
+            cache_path = os.path.join(data_path, corpus_name + ":CACHE_dataframes")
         else:
             cache_path = None
         self.cache = Cache(
@@ -446,7 +450,7 @@ class Corpus:
         """Creates a frequency table for the p_att-values of the cpos-list.
 
         :param list cpos_list: corpus positions to fill
-        :param list p_att: p-attribute (combinations) to count
+        :param list p_atts: p-attribute (combinations) to count
 
         :return: counts of the p_attribute (combinations) of the positions
         :rtype: DataFrame
@@ -456,6 +460,43 @@ class Corpus:
         counts = Counter(lex_items)
         df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
         df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
+        return df_counts
+
+    @time_it
+    def df_dump2counts(self, df_dump, start, end, p_atts=['word'], split=False):
+        """counts tokens in [start .. end] where start and end are columns in
+        df_dump.
+
+        :param list df_dump: corpus positions to fill
+        :param str start: column name where to start counting
+        :param str end: column name where to end counting
+        :param list p_atts: p-attribute (combinations) to count
+        :param bool split: token-based count? (default: MWU)
+
+        :return: counts of the p_attribute (combinations) of the positions
+        :rtype: DataFrame
+        """
+
+        logger.info("extracting tokens in each region")
+        df_dump = df_dump.reset_index()  # for working with match, matchend
+        ls = df_dump.apply(
+            lambda x: [
+                self.cpos2patts(cpos, p_atts) for cpos in range(
+                    x[start], x[end] + 1
+                )
+            ],
+            axis=1
+        ).values
+
+        logger.info("counting ...")
+        if split:
+            counts = Counter([token for tokens in ls for token in tokens])
+            df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
+            df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
+        else:
+            counts = Counter([" ".join(["_".join(t) for t in tokens]) for tokens in ls])
+            df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
+            df_counts.index.name = " ".join(p_atts)
         return df_counts
 
     def marginals(self, items, p_att='word', flags=3, pattern=False):
@@ -553,54 +594,19 @@ class Corpus:
         return df
 
     @time_it
-    def item_freq(self, items, p_att='word', s_query='text'):
-        """Calculates item frequencies."""
-
-        freqs = list()
-        # run query for each item
-        for item in items:
-            query = formulate_cqp_query([item], p_att, s_query)
-            freq = self.cqp.Exec('tmp_freq=%s; size tmp_freq;' % query)
-            if freq is None:
-                freq = 0
-            else:
-                freq = int(freq)
-            freqs.append(freq)
-
-        # convert to dataframe
-        df = DataFrame(data=freqs, index=items, columns=['freq'])
-
-        return df
-
-    @time_it
-    def item_freq_2(self, items, p_att='word', s_query='text'):
-        """Calculates item frequencies."""
-
-        query = "tmp_query=" + formulate_cqp_query(items, p_att)
-        self.cqp.Exec(query)
-        df_node = self.cqp.Dump("tmp_query")
-        df = self.count_matches(df=df_node, p_att=p_att)
-        # fill missing values
-        missing = set(items) - set(df.index)
-        df_missing = DataFrame(data=0, index=missing, columns=['freq'])
-        df = df.append(df_missing)
-
-        return df
-
-    @time_it
-    def count_matches(self, name=None, df=None, p_att="word", split=False):
+    def count_matches(self, name=None, df_dump=None, p_att="word", split=False):
         """counts strings or tokens ([match .. matchend] for df)"""
 
-        # undump the dump
-        if name is not None and df is not None:
+        # undump the dump if it
+        if name is not None and df_dump is not None:
             logger.error("cannot count name *and* df")
             return DataFrame()
-        elif name is None and df is None:
+        elif name is None and df_dump is None:
             logger.error("cannot count *nothing*")
             return DataFrame()
         elif name is None:
             name = "tmp_counts"
-            self.subcorpus_from_dump(df, name=name)
+            self.subcorpus_from_dump(df_dump, name=name)
 
         # tabulate matches
         logger.info("tabulating ...")
@@ -621,26 +627,40 @@ class Corpus:
 
         return df_counts
 
-    @time_it
-    def count_matches_2(self, df_node, p_att="word", split=False):
-        """counts tokens in [region_start .. region_end]"""
+    # @time_it
+    # def item_freq(self, items, p_att='word', s_query='text'):
+    #     """Calculates item frequencies."""
 
-        logger.info("count tokens in each region")
-        ls = df_node.apply(lambda x: self.node2regions(x, p_att), axis=1).values
-        logger.info("counting")
-        counts = Counter([token for tokens in ls for token in tokens])
-        df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
-        logger.info("... done counting")
+    #     freqs = list()
+    #     # run query for each item
+    #     for item in items:
+    #         query = formulate_cqp_query([item], p_att, s_query)
+    #         freq = self.cqp.Exec('tmp_freq=%s; size tmp_freq;' % query)
+    #         if freq is None:
+    #             freq = 0
+    #         else:
+    #             freq = int(freq)
+    #         freqs.append(freq)
 
-        return df_counts
+    #     # convert to dataframe
+    #     df = DataFrame(data=freqs, index=items, columns=['freq'])
 
-    def node2regions(self, row, p_att):
-        start = row['region_start']
-        end = row['region_end']
-        tokens = [
-            self.attributes.attribute(p_att, 'p')[pos] for pos in range(start, end + 1)
-        ]
-        return tokens
+    #     return df
+
+    # @time_it
+    # def item_freq_2(self, items, p_att='word', s_query='text'):
+    #     """Calculates item frequencies."""
+
+    #     query = "tmp_query=" + formulate_cqp_query(items, p_att)
+    #     self.cqp.Exec(query)
+    #     df_node = self.cqp.Dump("tmp_query")
+    #     df = self.count_matches(df=df_node, p_att=p_att)
+    #     # fill missing values
+    #     missing = set(items) - set(df.index)
+    #     df_missing = DataFrame(data=0, index=missing, columns=['freq'])
+    #     df = df.append(df_missing)
+
+    #     return df
 
     # high-level methods
     def query_cache(self, query, context=20, context_left=None,
@@ -661,25 +681,25 @@ class Corpus:
         parameters = ['df_dump', query, context, context_left,
                       context_right, s_context, s_meta, match_strategy,
                       subcorpus]
-        name = self.cache.generate_idx(parameters)
+        name_cache = self.cache.generate_idx(parameters)
 
         # retrieve from cache
         if self.data is not None:
-            df_dump = self.cache.get(parameters)
+            df_dump = self.cache.get(name_cache, create_idx=False)
             if df_dump is not None:
-                logger.info('using version "%s" of df_dump' % name)
+                logger.info('using version "%s" of df_dump' % name_cache)
                 logger.info('df_dump has %d matches' % len(df_dump))
-                return df_dump
+                return df_dump, name_cache
 
         # compute
         df_dump = self.query(query, context, context_left,
                              context_right, s_context, s_meta,
-                             match_strategy, name)
+                             match_strategy, name_cache)
 
         # put into cache
-        self.cache.set(parameters, df_dump)
+        self.cache.set(name_cache, df_dump, create_idx=False)
 
-        return df_dump
+        return df_dump, name_cache
 
     def query(self, query, context=20, context_left=None,
               context_right=None, s_context=None, s_meta=[],
@@ -705,9 +725,13 @@ class Corpus:
 
         # use cached version
         if name == 'mnemosyne':
-            return self.query_cache(query, context, context_left,
-                                    context_right, s_context, s_meta,
-                                    match_strategy)
+
+            df_dump, name_cache = self.query_cache(query, context, context_left,
+                                                   context_right, s_context,
+                                                   s_meta, match_strategy)
+            self.cqp.Exec("%s = %s;" % (name, name_cache))
+            self.cqp.Exec("save %s;" % name_cache)
+            return df_dump
 
         # get df_dump
         logger.info("running query to get df_dump")
@@ -740,24 +764,24 @@ class Corpus:
 
         return df_dump
 
-    def concordance(self, df_node, max_matches=None):
+    def concordance(self, df_dump, max_matches=None):
         return Concordance(
             self,
-            df_node=df_node,
+            df_dump=df_dump,
             max_matches=max_matches
         )
 
-    def collocates(self, df_node, p_query='lemma'):
+    def collocates(self, df_dump, p_query='lemma'):
         return Collocates(
             self,
-            df_node=df_node,
+            df_dump=df_dump,
             p_query=p_query
         )
 
-    def keywords(self, name=None, df_node=None, p_query='lemma'):
+    def keywords(self, name=None, df_dump=None, p_query='lemma'):
         return Keywords(
             self,
             name=name,
-            df_node=df_node,
+            df_dump=df_dump,
             p_query=p_query
         )
