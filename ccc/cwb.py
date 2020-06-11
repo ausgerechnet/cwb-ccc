@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: item_freq
 # TODO: save subcopora independently from post-processing
-# TODO: result object (cache-key, concordance, collocates, etc.)
+# TODO: result object (cache-key, df_dump, concordance, collocates, keywords)
 
 class Engine:
     """ interface to CQP """
@@ -232,8 +232,10 @@ class Corpus:
             s_region[s_att] = s_region[2].apply(
                 lambda x: x.decode('utf-8')
             )
+
+            nr = len(s_region[s_att]) - s_region[s_att].isna().sum()
             logger.info(
-                'retrieved %d annotations of s-att %s' % (len(s_region), s_att)
+                'retrieved %d annotations of s-att %s' % (nr, s_att)
             )
             # join to dataframe
             df = df.join(s_region[s_att])

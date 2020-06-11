@@ -20,17 +20,20 @@ class Concordance:
     def __init__(self, corpus, df_dump, max_matches):
 
         if len(df_dump) == 0:
-            logger.warning('no concordance lines')
+            logger.warning('no concordance lines to show')
             return
 
-        # meta data
-        # matches = df_dump.index.droplevel('matchend')
-        # self.meta = DataFrame(index=matches,
-        #                       data=df_node['s_id'].values,
-        #                       columns=['s_id'])
+        # stuff we need
         self.corpus = corpus
         self.df_dump = df_dump
         self.size = len(df_dump)
+
+        # meta data
+        anchors = [i for i in range(10) if i in df_dump.columns]
+        anchors += ['match', 'matchend', 'context', 'contextend']
+        meta = df_dump.drop(anchors, axis=1, errors='ignore')
+        meta.index = meta.index.droplevel('matchend')
+        self.meta = meta
 
         # frequency breakdown
         if max_matches is not None and self.size > max_matches:
@@ -46,12 +49,12 @@ class Concordance:
 
         else:
             logger.info('creating frequency breakdown')
-            # self.breakdown = self.corpus.df_dump2counts(
-            #     df_dump=df_dump, start='match', end='matchend', p_atts=['word']
-            # )
-            self.breakdown = self.corpus.count_matches(
-                name="CACHE_06d0436812"
+            self.breakdown = self.corpus.df_dump2counts(
+                df_dump=df_dump, start='match', end='matchend', p_atts=['word']
             )
+            # self.breakdown = self.corpus.count_matches(
+            #     name=cache_name
+            # )
             self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
 
     def line(self, row, p_show, anchors):

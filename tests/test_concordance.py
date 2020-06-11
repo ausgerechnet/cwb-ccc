@@ -136,3 +136,15 @@ def test_concordance_persistence(sz_corpus):
     assert(not df_2.equals(df_3))
     assert(not breakdown_2.equals(breakdown_3))
     print(corpus.show_subcorpora())
+
+
+@pytest.mark.concordance_meta
+def test_concordance_meta(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    result = corpus.query(query, s_meta=['text_id', 'text_rubrik'])
+    concordance = corpus.concordance(result)
+    print(concordance.meta)
