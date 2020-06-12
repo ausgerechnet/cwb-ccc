@@ -49,7 +49,7 @@ class Concordance:
 
         else:
             logger.info('creating frequency breakdown')
-            self.breakdown = self.corpus.df_dump2counts(
+            self.breakdown = self.corpus.count_dump(
                 df_dump=df_dump, start='match', end='matchend', p_atts=['word']
             )
             # self.breakdown = self.corpus.count_matches(
