@@ -604,7 +604,7 @@ class Corpus:
 
         return df
 
-    def count_matches(self, name, p_att="word", split=False, flags="%cd"):
+    def count_matches(self, name, p_att="word", split=False, flags=None):
         """counts tokens in [match .. matchend] of subcorpus
 
         :param list name: name of the subcorpus
@@ -615,7 +615,9 @@ class Corpus:
         :rtype: DataFrame
         """
 
-        if not split:
+        if flags:
+            if split:
+                raise NotImplementedError("cannot split with flags")
             logger.info("cqp is counting ...")
             cqp_return = self.cqp.Exec(
                 'count %s by %s %s;' % (name, p_att, flags)
@@ -636,8 +638,10 @@ class Corpus:
             )
 
             # split strings into tokens
+            if split:
+                cqp_return = cqp_return.replace(" ", "\n")
             logger.info("splitting tokens ...")
-            tokens = cqp_return.replace("\n", " ").split(" ")
+            tokens = cqp_return.split("\n")
             logger.info("... found %d tokens" % len(tokens))
 
             # count
@@ -684,13 +688,14 @@ class Corpus:
             logger.info("count_items: strategy 2")
             query = formulate_cqp_query(items, p_att, s_query)
             df_node = self.subcorpus_from_query(query, name)
-            df = self.count_dump(df_node, p_atts=[p_att])
+            df = self.count_dump(df_node, start='match', end='matchend',
+                                 p_atts=[p_att], split=False)
 
         elif strategy == 3:
             logger.info("count_items: strategy 3")
             query = formulate_cqp_query(items, p_att, s_query)
             self.subcorpus_from_query(query, name)
-            df = self.count_matches(name, p_att=p_att)
+            df = self.count_matches(name, p_att=p_att, split=False, flags=None)
 
         # post-process dataframe
         df["freq"] = df["freq"].astype(int)

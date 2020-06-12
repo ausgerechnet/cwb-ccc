@@ -368,7 +368,7 @@ def test_subcorpus_from_s_att_wo(brexit_corpus):
 #     corpus.count_matches('Test')
 
 
-@pytest.mark.count
+@pytest.mark.counts
 def test_count_items_strategies(sz_corpus):
 
     # whole corpus
@@ -396,7 +396,7 @@ def test_count_items_strategies(sz_corpus):
     print(counts3)
 
 
-@pytest.mark.counts
+@pytest.mark.count
 def test_count_items_subcorpora(sz_corpus):
 
     # subcorpus
@@ -417,3 +417,10 @@ def test_count_items_subcorpora(sz_corpus):
         fill_missing=False
     )
     print(counts2)
+
+    counts3 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=3,
+        fill_missing=False
+    )
+    print(counts3)
