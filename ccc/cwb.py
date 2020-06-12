@@ -8,11 +8,12 @@ from collections import Counter
 # part of module
 from .cqp_interface import CQP
 from .utils import Cache, formulate_cqp_query, preprocess_query
+from .utils import time_it
 # , merge_s_atts
+from .utils import chunk_anchors
 from .concordances import Concordance
 from .collocates import Collocates
 from .keywords import Keywords
-from .utils import time_it, chunk_anchors
 # requirements
 from pandas import DataFrame, read_csv, to_numeric, MultiIndex
 from pandas.errors import EmptyDataError
@@ -22,9 +23,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# TODO: item_freq
 # TODO: save subcopora independently from post-processing
-# TODO: result object (cache-key, df_dump, concordance, collocates, keywords)
+# TODO: result object (cache-key, name, df_dump, concordance, collocates, keywords)
+# TODO: counting with group?
+
 
 class Engine:
     """ interface to CQP """
@@ -70,7 +72,7 @@ class Corpus:
         if self.data is not None:
             if not os.path.isdir(self.data):
                 os.makedirs(data_path)
-            cache_path = os.path.join(data_path, corpus_name + ":CACHE_dataframes")
+            cache_path = os.path.join(data_path, corpus_name + "-CACHE_dataframes")
         else:
             cache_path = None
         self.cache = Cache(
@@ -147,17 +149,21 @@ class Corpus:
 
         :param str s_att: s-attribute to get extents for
 
+        :return: df indexed by match, matchend; CWBID, annotation
+        :rtype: DataFrame
+
         """
+
+        logger.info("cwb.get_s_extents")
 
         # retrieve from cache
         parameters = ['s_extents', s_att]
         df = self.cache.get(parameters)
         if df is not None:
-            logger.info('retrieving extents of s-attribute "%s" from cache' % s_att)
             return df
 
         # compute
-        logger.info('getting extents of s-attribute "%s"' % s_att)
+        logger.info('computing extents of s-attribute "%s"' % s_att)
         s_regions = self.attributes.attribute(s_att, 's')
         # check if there's annotations
         annotation = self.attributes_available.loc[
@@ -180,13 +186,13 @@ class Corpus:
         df = DataFrame(records)
         df = df.set_index(['match', 'matchend'])
 
-        # put in cache
+        # put into cache
         self.cache.set(parameters, df)
 
         return df
 
     def get_s_id(self, cpos, s_att):
-        """Gets ID of s_att at cpos"""
+        """gets ID of s_att at cpos"""
         s_regions = self.attributes.attribute(s_att, "s")
         try:
             return s_regions.cpos2struc(cpos)
@@ -201,6 +207,8 @@ class Corpus:
 
         """
         # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc)
+
+        logger.info("cwb.get_s_annotation")
 
         # move index to columns
         df = df_dump.reset_index()
@@ -246,6 +254,7 @@ class Corpus:
         return df
 
     def get_s_annotations(self, df_dump, s_atts):
+        """gets all annotations of all s-att in s_atts at match positions"""
         for s in s_atts:
             df_dump = self.get_s_annotation(df_dump, s)
         return df_dump
@@ -334,9 +343,9 @@ class Corpus:
     def subcorpus_from_s_att(self, s_att, values, name='Last'):
         """Defines a subcorpus via s-attribute restriction.
 
+        :param str s_att: s-att that stores values
         :param set values: set (or list) of values
-        :param str s_att: s-att that stores these values
-        :param str name: subcorpus name
+        :param str name: subcorpus name to create
 
         """
         values = set(values)
@@ -346,9 +355,9 @@ class Corpus:
         extents = extents.drop(extents.columns, axis=1)
         self.subcorpus_from_dump(extents, name=name)
 
-    def df_dump_from_query(self, query, s_query=None, anchors=[],
-                           match_strategy='standard',
-                           name='Last'):
+    def dump_from_query(self, query, s_query=None, anchors=[],
+                        match_strategy='standard',
+                        name='Last'):
         """Executes query, gets DataFrame of corpus positions (dump of CWB).
         df_dump is indexed by (match, matchend).  Optional columns for
         each anchor.
@@ -448,7 +457,7 @@ class Corpus:
 
         return tuple(token)
 
-    def cpos2counts(self, cpos_list, p_atts=['word']):
+    def count_cpos(self, cpos_list, p_atts=['word']):
         """Creates a frequency table for the p_att-values of the cpos-list.
 
         :param list cpos_list: corpus positions to fill
@@ -464,8 +473,8 @@ class Corpus:
         df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
         return df_counts
 
-    @time_it
-    def df_dump2counts(self, df_dump, start, end, p_atts=['word'], split=False):
+    def count_dump(self, df_dump, start='match', end='matchend',
+                   p_atts=['word'], split=False):
         """counts tokens in [start .. end] where start and end are columns in
         df_dump.
 
@@ -595,74 +604,106 @@ class Corpus:
 
         return df
 
-    @time_it
-    def count_matches(self, name=None, df_dump=None, p_att="word", split=False):
-        """counts strings or tokens ([match .. matchend] for df)"""
+    def count_matches(self, name, p_att="word", split=False, flags="%cd"):
+        """counts tokens in [match .. matchend] of subcorpus
 
-        # undump the dump if it
-        if name is not None and df_dump is not None:
-            logger.error("cannot count name *and* df")
-            return DataFrame()
-        elif name is None and df_dump is None:
-            logger.error("cannot count *nothing*")
-            return DataFrame()
-        elif name is None:
-            name = "tmp_counts"
-            self.subcorpus_from_dump(df_dump, name=name)
+        :param list name: name of the subcorpus
+        :param list p_atts: p-attribute
+        :param bool split: token-based count? (default: MWU)
 
-        # tabulate matches
-        logger.info("tabulating ...")
-        cqp_return = self.cqp.Exec(
-            'tabulate %s match .. matchend %s;' % (name, p_att)
-        )
+        :return: counts of the p_attribute (combinations) of the positions
+        :rtype: DataFrame
+        """
 
-        # optionally split strings into tokens
-        if split:
-            tokens = cqp_return.replace("\n", " ").split(" ")
+        if not split:
+            logger.info("cqp is counting ...")
+            cqp_return = self.cqp.Exec(
+                'count %s by %s %s;' % (name, p_att, flags)
+            )
+            df_counts = read_csv(
+                StringIO(cqp_return), sep="\t", header=None,
+                names=["freq", "unknown", "item"]
+            )
+            df_counts = df_counts.set_index('item')
+            df_counts.index.name = None
+            df_counts = df_counts[['freq']]
+
         else:
-            tokens = cqp_return.split("\n")
-        logger.info("... found %d tokens" % len(tokens))
+            # tabulate matches
+            logger.info("tabulating ...")
+            cqp_return = self.cqp.Exec(
+                'tabulate %s match .. matchend %s;' % (name, p_att)
+            )
 
-        # count
-        counts = Counter(tokens)
-        df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
+            # split strings into tokens
+            logger.info("splitting tokens ...")
+            tokens = cqp_return.replace("\n", " ").split(" ")
+            logger.info("... found %d tokens" % len(tokens))
+
+            # count
+            logger.info("counting")
+            counts = Counter(tokens)
+            df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
 
         return df_counts
 
-    # @time_it
-    # def item_freq(self, items, p_att='word', s_query='text'):
-    #     """Calculates item frequencies."""
+    @time_it
+    def count_items(self, items, p_att='word', s_query='text',
+                    strategy=1, name='Last', fill_missing=True):
+        """Calculates item frequencies in given subcorpus.
 
-    #     freqs = list()
-    #     # run query for each item
-    #     for item in items:
-    #         query = formulate_cqp_query([item], p_att, s_query)
-    #         freq = self.cqp.Exec('tmp_freq=%s; size tmp_freq;' % query)
-    #         if freq is None:
-    #             freq = 0
-    #         else:
-    #             freq = int(freq)
-    #         freqs.append(freq)
+        Strategy 1:
+        for each item
+            (1) run query for item
+            (2) get size of corpus via cqp
 
-    #     # convert to dataframe
-    #     df = DataFrame(data=freqs, index=items, columns=['freq'])
+        Strategy 2:
+        (1) run query for all items at the same time
+        (2) dump df
+        (3) count_dump()
 
-    #     return df
+        Strategy 3:
+        (1) run query for all items at the same time
+        (2) count_matches()
+        """
 
-    # @time_it
-    # def item_freq_2(self, items, p_att='word', s_query='text'):
-    #     """Calculates item frequencies."""
+        # only count once for each item
+        items = set(items)
 
-    #     query = "tmp_query=" + formulate_cqp_query(items, p_att)
-    #     self.cqp.Exec(query)
-    #     df_node = self.cqp.Dump("tmp_query")
-    #     df = self.count_matches(df=df_node, p_att=p_att)
-    #     # fill missing values
-    #     missing = set(items) - set(df.index)
-    #     df_missing = DataFrame(data=0, index=missing, columns=['freq'])
-    #     df = df.append(df_missing)
+        if strategy == 1:
+            logger.info("count_items: strategy 1")
+            freqs = list()
+            for item in items:
+                query = formulate_cqp_query([item], p_att, s_query)
+                self.subcorpus_from_query(query, name)
+                freq = self.cqp.Exec('size %s;' % name)
+                freqs.append(freq)
+            df = DataFrame(data=freqs, index=items, columns=['freq'])
 
-    #     return df
+        elif strategy == 2:
+            logger.info("count_items: strategy 2")
+            query = formulate_cqp_query(items, p_att, s_query)
+            df_node = self.subcorpus_from_query(query, name)
+            df = self.count_dump(df_node, p_atts=[p_att])
+
+        elif strategy == 3:
+            logger.info("count_items: strategy 3")
+            query = formulate_cqp_query(items, p_att, s_query)
+            self.subcorpus_from_query(query, name)
+            df = self.count_matches(name, p_att=p_att)
+
+        # post-process dataframe
+        df["freq"] = df["freq"].astype(int)
+        df = df.sort_values(by=["freq"], ascending=False)
+
+        if fill_missing:
+            missing = set(items) - set(df.index)
+            df_missing = DataFrame(data=0, index=missing, columns=['freq'])
+            df = df.append(df_missing)
+        else:
+            df = df.loc[df["freq"] != 0]
+
+        return df
 
     # high-level methods
     def query_cache(self, query, context=20, context_left=None,
@@ -687,7 +728,7 @@ class Corpus:
 
         # retrieve from cache
         if self.data is not None:
-            df_dump = self.cache.get(name_cache, create_idx=False)
+            df_dump = self.cache.get(name_cache)
             if df_dump is not None:
                 logger.info('using version "%s" of df_dump' % name_cache)
                 logger.info('df_dump has %d matches' % len(df_dump))
@@ -699,7 +740,7 @@ class Corpus:
                              match_strategy, name_cache)
 
         # put into cache
-        self.cache.set(name_cache, df_dump, create_idx=False)
+        self.cache.set(name_cache, df_dump)
 
         return df_dump, name_cache
 
@@ -738,7 +779,7 @@ class Corpus:
         # get df_dump
         logger.info("running query to get df_dump")
         query, s_query, anchors = preprocess_query(query)
-        df_dump = self.df_dump_from_query(
+        df_dump = self.dump_from_query(
             query=query,
             s_query=s_query,
             anchors=anchors,
