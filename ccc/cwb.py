@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: save subcopora independently from post-processing
-# TODO: result object (cache-key, name, df_dump, concordance, collocates, keywords)
 # TODO: counting with group?
 
 
@@ -475,7 +474,7 @@ class Corpus:
 
     def count_dump(self, df_dump, start='match', end='matchend',
                    p_atts=['word'], split=False):
-        """counts tokens in [start .. end] where start and end are columns in
+        """Counts tokens in [start .. end] where start and end are columns in
         df_dump.
 
         :param list df_dump: corpus positions to fill
@@ -510,7 +509,7 @@ class Corpus:
             df_counts.index.name = " ".join(p_atts)
         return df_counts
 
-    def marginals(self, items, p_att='word', flags=3, pattern=False):
+    def marginals(self, items, p_att='word', flags=0, pattern=False):
         """Extracts marginal frequencies for given items (0 if not in corpus).
 
         :param list items: items to get marginals for
@@ -534,6 +533,7 @@ class Corpus:
                 cpos = tokens_all.find_pattern(item, flags=flags)
                 counts.append(len(cpos))
         df = DataFrame(data=counts, index=items, columns=['freq'])
+        df = df.sort_values(by='freq', ascending=False)
         return df
 
     def confine_df_dump(self, df_dump, context_left, context_right, s_context):
@@ -605,11 +605,12 @@ class Corpus:
         return df
 
     def count_matches(self, name, p_att="word", split=False, flags=None):
-        """counts tokens in [match .. matchend] of subcorpus
+        """Counts tokens in [match .. matchend] of subcorpus.
 
         :param list name: name of the subcorpus
         :param list p_atts: p-attribute
         :param bool split: token-based count? (default: MWU)
+        :param str flags: %c, %d, %cd
 
         :return: counts of the p_attribute (combinations) of the positions
         :rtype: DataFrame
@@ -653,8 +654,17 @@ class Corpus:
 
     @time_it
     def count_items(self, items, p_att='word', s_query='text',
-                    strategy=1, name='Last', fill_missing=True):
+                    fill_missing=True, strategy=1):
         """Calculates item frequencies in given subcorpus.
+
+        :param set items: set of str to count
+        :param str p_att: p-attribute to count
+        :param str s_query: s-attribute to confine items to
+        :param bool fill_missing: count 0 for missing items?
+        :param int strategy: strategy to use (see below)
+
+        :return: counts (index: items, column: freq)
+        :rtype: DataFrame
 
         Strategy 1:
         for each item
@@ -669,10 +679,11 @@ class Corpus:
         Strategy 3:
         (1) run query for all items at the same time
         (2) count_matches()
+
         """
 
-        # only count once for each item
-        items = set(items)
+        items = set(items)      # only count once for each item
+        name = 'tmp'            # subcorpus name
 
         if strategy == 1:
             logger.info("count_items: strategy 1")
@@ -710,12 +721,12 @@ class Corpus:
 
         return df
 
-    # high-level methods
-    def query_cache(self, query, context=20, context_left=None,
-                    context_right=None, s_context=None, s_meta=[],
-                    match_strategy='standard'):
-        """Query the corpus, compute df_dump and cache the result. See query()
-        for parameters.
+    def query_cache(self, query, context_left, context_right,
+                    s_context, s_meta, match_strategy):
+        """Queries the corpus, computes df_dump and caches the result. Name
+        will be generated automatically and returned.  Otherwise see
+        query() for parameters.
+
         """
 
         # check subcorpus size to avoid confusion when re-naming
@@ -726,9 +737,8 @@ class Corpus:
             subcorpus = None
 
         # set parameters
-        parameters = ['df_dump', query, context, context_left,
-                      context_right, s_context, s_meta, match_strategy,
-                      subcorpus]
+        parameters = ['df_dump', query, context_left, context_right,
+                      s_context, s_meta, match_strategy, subcorpus]
         name_cache = self.cache.generate_idx(parameters)
 
         # retrieve from cache
@@ -740,25 +750,26 @@ class Corpus:
                 return df_dump, name_cache
 
         # compute
-        df_dump = self.query(query, context, context_left,
-                             context_right, s_context, s_meta,
-                             match_strategy, name_cache)
+        df_dump = self.query(query, None, context_left, context_right,
+                             s_context, s_meta, match_strategy,
+                             name_cache)
 
         # put into cache
         self.cache.set(name_cache, df_dump)
 
         return df_dump, name_cache
 
+    # high-level methods
     def query(self, query, context=20, context_left=None,
               context_right=None, s_context=None, s_meta=[],
               match_strategy='standard', name='mnemosyne'):
-        """Query the corpus, compute df_dump.
+        """Queries the corpus, computes df_dump.
 
-        If the magic word 'mnemosyne' is given as name of
-        the result, the query parameters will be used to create and
-        identifier and the resulting subcorpus will be saved, so that
-        the same query (on the same subcorpus) can be retrieved for
-        later queries.
+        If the magic word 'mnemosyne' is given as name of the result,
+        the query parameters will be used to create an identifier and
+        the resulting subcorpus will be saved, so that the result of
+        the can be accessed directly by later queries with the same
+        parameters on the same subcorpus.
 
         :param str query: CQP query
         :param int context: maximum context around match (symmetric)
@@ -769,47 +780,53 @@ class Corpus:
         :param str match_strategy: CQP matching strategy
         :param str name: name for resulting subcorpus
 
+        :return: df_dump
+        :rtype: DataFrame
+
         """
 
-        # use cached version
-        if name == 'mnemosyne':
-
-            df_dump, name_cache = self.query_cache(query, context, context_left,
-                                                   context_right, s_context,
-                                                   s_meta, match_strategy)
-            self.cqp.Exec("%s = %s;" % (name, name_cache))
-            self.cqp.Exec("save %s;" % name_cache)
-            return df_dump
-
-        # get df_dump
-        logger.info("running query to get df_dump")
+        # preprocess input
         query, s_query, anchors = preprocess_query(query)
-        df_dump = self.dump_from_query(
-            query=query,
-            s_query=s_query,
-            anchors=anchors,
-            match_strategy=match_strategy,
-            name=name
-        )
-
-        # empty return?
-        if len(df_dump) == 0:
-            logger.warning("can't work on zero matches")
-            return DataFrame()
-
-        # get context
         if context_left is None:
             context_left = context
         if context_right is None:
             context_right = context
-        df_dump = self.confine_df_dump(
-            df_dump, context_left, context_right, s_context
-        )
+        name_cache = None
 
-        # get s_annotations
-        if len(s_meta) > 0:
-            df_dump = self.get_s_annotations(df_dump, s_meta)
+        if name == 'mnemosyne':  # use cached version
+            df_dump, name_cache = self.query_cache(
+                query, context_left, context_right,
+                s_context, s_meta, match_strategy
+            )
+            self.cqp.Exec("%s = %s;" % (name, name_cache))
+            self.cqp.Exec("save %s;" % name_cache)
 
+        else:
+            # get df_dump
+            logger.info("running query to get df_dump")
+            df_dump = self.dump_from_query(
+                query=query,
+                s_query=s_query,
+                anchors=anchors,
+                match_strategy=match_strategy,
+                name=name
+            )
+
+            # empty return?
+            if len(df_dump) == 0:
+                logger.warning("found 0 matches")
+                df_dump = DataFrame()
+
+            else:
+                df_dump = self.confine_df_dump(
+                    df_dump, context_left, context_right, s_context
+                )
+
+                # get s_annotations
+                if len(s_meta) > 0:
+                    df_dump = self.get_s_annotations(df_dump, s_meta)
+
+        # create and return result
         return df_dump
 
     def concordance(self, df_dump, max_matches=None):

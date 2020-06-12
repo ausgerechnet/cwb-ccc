@@ -247,6 +247,104 @@ def test_count_items(sz_corpus):
     assert(counts1.equals(counts2))
 
 
+@pytest.mark.s_extents
+def test_get_s_extents(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.get_s_extents('text_id')
+    print(df)
+
+
+@pytest.mark.s_extents
+def test_get_s_extents_2(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    df = corpus.get_s_extents('ner_type')
+    print(df)
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_from_s_att(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att('text_id', ['A44320331'])
+
+
+@pytest.mark.skip
+@pytest.mark.subcorpus
+def test_subcorpus_from_s_att_wo(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att('np', [True])
+
+
+@pytest.mark.count
+def test_count_matches(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    corpus.query(
+        query='[lemma="nigel"]',
+        context=10,
+        s_context='tweet',
+        s_meta=['ner_type', 'tweet_id', 'tweet'],
+        name='Test'
+    )
+    corpus.count_matches('Test')
+
+
+@pytest.mark.counts
+def test_count_items_strategies(sz_corpus):
+
+    # whole corpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+
+    counts1 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=1,
+        fill_missing=False
+    )
+    print(counts1)
+
+    counts2 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=2,
+        fill_missing=False
+    )
+    print(counts2)
+
+    counts3 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=3,
+        fill_missing=False
+    )
+    print(counts3)
+
+
+@pytest.mark.count
+def test_count_items_subcorpora(sz_corpus):
+
+    # subcorpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att("text_year", ["2011"], name='c2011')
+    corpus.activate_subcorpus('c2011')
+
+    counts1 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=1,
+        fill_missing=False
+    )
+    print(counts1)
+
+    counts2 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=2,
+        fill_missing=False
+    )
+    print(counts2)
+
+    counts3 = corpus.count_items(
+        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
+        strategy=3,
+        fill_missing=False
+    )
+    print(counts3)
+
+
 @pytest.mark.query
 def test_query_context_1(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
@@ -326,101 +424,3 @@ def test_query_meta_brexit(brexit_corpus):
     columns += [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]
     columns += ['ner_type', 'tweet_id']
     assert(all(elem in df.columns for elem in columns))
-
-
-@pytest.mark.s_extents
-def test_get_s_extents(sz_corpus):
-    corpus = Corpus(sz_corpus['corpus_name'])
-    df = corpus.get_s_extents('text_id')
-    print(df)
-
-
-@pytest.mark.s_extents
-def test_get_s_extents_2(brexit_corpus):
-    corpus = Corpus(brexit_corpus['corpus_name'])
-    df = corpus.get_s_extents('ner_type')
-    print(df)
-
-
-@pytest.mark.subcorpus
-def test_subcorpus_from_s_att(sz_corpus):
-    corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att('text_id', ['A44320331'])
-
-
-@pytest.mark.skip
-@pytest.mark.subcorpus
-def test_subcorpus_from_s_att_wo(brexit_corpus):
-    corpus = Corpus(brexit_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att('np', [True])
-
-
-# @pytest.mark.count
-# def test_count_matches(brexit_corpus):
-#     corpus = Corpus(brexit_corpus['corpus_name'])
-#     corpus.query(
-#         query='[lemma="q"]',
-#         context=10,
-#         s_context='tweet',
-#         s_meta=['ner_type', 'tweet_id', 'tweet'],
-#         name='Test'
-#     )
-#     corpus.count_matches('Test')
-
-
-@pytest.mark.counts
-def test_count_items_strategies(sz_corpus):
-
-    # whole corpus
-    corpus = Corpus(sz_corpus['corpus_name'])
-
-    counts1 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=1,
-        fill_missing=False
-    )
-    print(counts1)
-
-    counts2 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=2,
-        fill_missing=False
-    )
-    print(counts2)
-
-    counts3 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=3,
-        fill_missing=False
-    )
-    print(counts3)
-
-
-@pytest.mark.count
-def test_count_items_subcorpora(sz_corpus):
-
-    # subcorpus
-    corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att("text_year", ["2011"], name='c2011')
-    corpus.activate_subcorpus('c2011')
-
-    counts1 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=1,
-        fill_missing=False
-    )
-    print(counts1)
-
-    counts2 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=2,
-        fill_missing=False
-    )
-    print(counts2)
-
-    counts3 = corpus.count_items(
-        ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"],
-        strategy=3,
-        fill_missing=False
-    )
-    print(counts3)
