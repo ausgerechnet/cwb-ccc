@@ -2,7 +2,7 @@ from ccc import Corpus
 import pytest
 
 
-@pytest.mark.concordance_breakdown
+@pytest.mark.breakdown
 def test_concordance_breakdown(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     query = (
@@ -14,9 +14,9 @@ def test_concordance_breakdown(sz_corpus):
     print(concordance.breakdown)
 
 
-# @pytest.mark.skip
-@pytest.mark.concordance_breakdown
-@pytest.mark.concordance_many
+@pytest.mark.skip
+@pytest.mark.breakdown
+@pytest.mark.many
 def test_concordance_breakdown_many(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     query = (
@@ -27,7 +27,7 @@ def test_concordance_breakdown_many(sz_corpus):
     print(concordance.breakdown)
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 @pytest.mark.concordance_many
 def test_query_many(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
@@ -35,8 +35,6 @@ def test_query_many(sz_corpus):
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
     lines = concordance.lines(p_show=['lemma', 'pos'], order='random', cut_off=100)
-    # assert(concordance.breakdown is None)
-    # assert(type(concordance.meta) == pd.DataFrame)
     assert(len(lines) == 100)
 
 
@@ -68,7 +66,7 @@ def test_concordance_simple_p_atts(sz_corpus):
         order='random',
         cut_off=100
     )
-    print(lines[list(lines.keys())[0]])
+    # print(lines[list(lines.keys())[0]])
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
 
@@ -83,7 +81,9 @@ def test_concordance_anchors_simple(sz_corpus):
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
     lines = concordance.lines()
-    print(lines[list(lines.keys())[0]])
+    assert(len(concordance.breakdown) > 0)
+    assert(len(lines) == 100)
+    # print(lines[list(lines.keys())[0]])
 
 
 @pytest.mark.concordance_anchors
@@ -96,7 +96,7 @@ def test_concordance_anchors(sz_corpus):
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
     lines = concordance.lines(order='random', cut_off=100)
-    print(lines[list(lines.keys())[0]])
+    # print(lines[list(lines.keys())[0]])
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
 
@@ -138,7 +138,7 @@ def test_concordance_persistence(sz_corpus):
     print(corpus.show_subcorpora())
 
 
-@pytest.mark.concordance_meta
+@pytest.mark.meta
 def test_concordance_meta(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
     query = (
@@ -147,4 +147,4 @@ def test_concordance_meta(sz_corpus):
     )
     result = corpus.query(query, s_meta=['text_id', 'text_rubrik'])
     concordance = corpus.concordance(result)
-    print(concordance.meta)
+    assert('text_rubrik' in concordance.meta.columns)
