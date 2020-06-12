@@ -18,6 +18,19 @@ class Concordance:
     """ concordancing """
 
     def __init__(self, corpus, df_dump, max_matches):
+        """Executes query, gets DataFrame of corpus positions (dump of CWB).
+        df_dump is indexed by (match, matchend).  Optional columns for
+        each anchor.
+
+        :param str query: valid CQP query (without 'within' clause)
+        :param str s_query: s-attribute used for initial query
+        :param list anchors: anchors to search for
+        :param str match_strategy: CQP matching strategy
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
 
         if len(df_dump) == 0:
             logger.warning('no concordance lines to show')
