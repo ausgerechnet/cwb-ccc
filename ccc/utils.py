@@ -17,34 +17,42 @@ class Cache:
         self.path = path
         self.corpus = corpus_name
 
-    def generate_idx(self, identifiers):
+    def generate_idx(self, identifiers, prefix='CACHE_', length=10):
         string = ''.join([str(idx) for idx in identifiers])
         string += self.corpus
         h = sha256(str(string).encode()).hexdigest()
-        return 'CACHE_' + h[:10]
+        return prefix + h[:length]
 
-    def get(self, name, create_idx=True):
-        if create_idx:
-            key = self.generate_idx(name)
-        else:
-            key = name
-        if self.path is not None:
-            with shelve.open(self.path) as db:
-                try:
-                    return db[key]
-                except KeyError:
-                    return None
-        else:
+    def get(self, identifier):
+
+        if self.path is None:
             return None
 
-    def set(self, name, value, create_idx):
-        if create_idx:
-            key = self.generate_idx(name)
+        if type(identifier) is str:
+            key = identifier
         else:
-            key = name
-        if self.path is not None:
-            with shelve.open(self.path) as db:
-                db[key] = value
+            key = self.generate_idx(identifier)
+
+        with shelve.open(self.path) as db:
+            if key in db.keys():
+                logger.info('cache: retrieving object "%s"' % key)
+                return db[key]
+            else:
+                return None
+
+    def set(self, identifier, value):
+
+        if self.path is None:
+            return
+
+        if type(identifier) is str:
+            key = identifier
+        else:
+            key = self.generate_idx(identifier)
+
+        with shelve.open(self.path) as db:
+            logger.info('cache: saving object "%s"' % key)
+            db[key] = value
 
 
 # split list in tuples (for anchor queris)
