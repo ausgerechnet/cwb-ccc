@@ -291,32 +291,19 @@ def test_query_context_4(sz_corpus):
 
 
 @pytest.mark.query
-def test_query_meta(sz_corpus):
-    corpus = Corpus(sz_corpus['corpus_name'])
-    df = corpus.query(
-        query=sz_corpus['query_full'],
-        context=10,
-        s_context='s',
-        s_meta=['s', 'text', 'text_id']
-    )
-    assert(type(df) == pd.DataFrame)
-    columns = sz_corpus['anchors'] + ['context_id', 'context', 'contextend']
-    assert(all(elem in df.columns for elem in columns))
-
-
-@pytest.mark.query
-def test_query_meta_brexit(brexit_corpus):
+@pytest.mark.s_annotations
+def test_query_s_atts_brexit(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
-    df = corpus.query(
+    df_dump = corpus.query(
         query='[lemma="nigel"]',
         context=10,
-        s_context='tweet',
-        s_meta=['ner_type', 'tweet_id', 'tweet']
+        s_context='tweet'
     )
+    df = corpus.get_s_annotations(df_dump, ['ner_type', 'tweet_id', 'tweet'])
     assert(type(df) == pd.DataFrame)
-    columns = ['context_id', 'context', 'contextend']
-    columns += [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]
+    columns = [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]
     columns += ['ner_type', 'tweet_id']
+    print(df['ner_type'].value_counts())
     assert(all(elem in df.columns for elem in columns))
 
 
@@ -411,7 +398,6 @@ def test_count_matches(brexit_corpus):
         query='[lemma="nigel"]',
         context=10,
         s_context='tweet',
-        s_meta=['ner_type', 'tweet_id', 'tweet'],
         name='Test'
     )
     counts = corpus.counts.matches(corpus.cqp, 'Test')

@@ -219,19 +219,16 @@ class Corpus:
         except KeyError:
             return -1
 
-    def get_s_annotation(self, df_dump, s_att):
-        """Retrieves CWBIDs (and annotations) of s-attribute of match.
+    def get_s_annotation(self, df, s_att):
+        """Retrieves CWBIDs and annotations of s-attribute of match.
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param str s_att: s-attribute to retrieve
 
         """
-        # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc)
+        # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc.)
 
         logger.info("cwb.get_s_annotation")
-
-        # move index to columns
-        df = df_dump.reset_index()
 
         # get IDs
         df[s_att + "_CWBID"] = df.match.apply(
@@ -268,16 +265,24 @@ class Corpus:
             # join to dataframe
             df = df.join(s_region[s_att])
 
-        # move (match, matchend) back to index
-        df = df.set_index(['match', 'matchend'])
-
         return df
 
     def get_s_annotations(self, df_dump, s_atts):
-        """gets all annotations of all s-att in s_atts at match positions"""
+        """Gets all annotations of all s-att in s_atts at match positions.
+
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+        :param list s_meta: s-attributes to show (id + annotation)
+
+        :return: s_annotations
+        :rtype: DataFrame
+
+        """
+        df = df_dump.reset_index()
+        df = df[['match', 'matchend']]
         for s in s_atts:
-            df_dump = self.get_s_annotation(df_dump, s)
-        return df_dump
+            df = self.get_s_annotation(df, s)
+        df = df.set_index(['match', 'matchend'])
+        return df
 
     # working with subcorpora
     def show_subcorpora(self):
@@ -545,7 +550,7 @@ class Corpus:
         return df
 
     def query_cache(self, query, context_left, context_right,
-                    s_context, s_meta, match_strategy):
+                    s_context, match_strategy):
         """Queries the corpus, computes df_dump and caches the result. Name
         will be generated automatically and returned.  Otherwise see
         query() for parameters.
@@ -561,7 +566,7 @@ class Corpus:
 
         # set parameters
         parameters = ['df_dump', query, context_left, context_right,
-                      s_context, s_meta, match_strategy, subcorpus]
+                      s_context, match_strategy, subcorpus]
         name_cache = self.cache.generate_idx(parameters)
 
         # retrieve from cache
@@ -574,8 +579,7 @@ class Corpus:
 
         # compute
         df_dump = self.query(query, None, context_left, context_right,
-                             s_context, s_meta, match_strategy,
-                             name_cache)
+                             s_context, match_strategy, name_cache)
 
         # put into cache
         self.cache.set(name_cache, df_dump)
@@ -584,7 +588,7 @@ class Corpus:
 
     # high-level methods
     def query(self, query, context=20, context_left=None,
-              context_right=None, s_context=None, s_meta=[],
+              context_right=None, s_context=None,
               match_strategy='standard', name='mnemosyne'):
         """Queries the corpus, computes df_dump.
 
@@ -599,7 +603,6 @@ class Corpus:
         :param int context_left: maximum context left to the match
         :param int context_right: maximum context right to the match
         :param str s_context: s-attribute to confine context
-        :param list s_meta: s-attributes to show (id + annotation)
         :param str match_strategy: CQP matching strategy
         :param str name: name for resulting subcorpus
 
@@ -616,12 +619,14 @@ class Corpus:
             context_right = context
         name_cache = None
 
-        if name == 'mnemosyne':  # use cached version
+        # use cached version?
+        if name == 'mnemosyne':
             df_dump, name_cache = self.query_cache(
                 query, context_left, context_right,
-                s_context, s_meta, match_strategy
+                s_context, match_strategy
             )
             self.cqp.Exec("%s = %s;" % (name, name_cache))
+            # save to disk
             self.cqp.Exec("save %s;" % name_cache)
 
         else:
@@ -639,20 +644,15 @@ class Corpus:
             if len(df_dump) == 0:
                 logger.warning("found 0 matches")
                 df_dump = DataFrame()
-
+            # extend dump
             else:
                 df_dump = self.extend_df_dump(
                     df_dump, context_left, context_right, s_context
                 )
 
-                # get s_annotations
-                if len(s_meta) > 0:
-                    df_dump = self.get_s_annotations(df_dump, s_meta)
-
-        # create and return result
         return df_dump
 
-    def concordance(self, df_dump, max_matches=None):
+    def concordance(self, df_dump, max_matches=100000):
         return Concordance(
             self,
             df_dump=df_dump,
@@ -748,7 +748,7 @@ class Counts:
 
     @time_it
     def dump(self, df_dump, start='match', end='matchend',
-             p_atts=['word'], split=True, strategy=2):
+             p_atts=['word'], split=False, strategy=1):
         """Counts tokens in [start .. end] (columns in df_dump).
 
         :param list df_dump: corpus positions to fill
