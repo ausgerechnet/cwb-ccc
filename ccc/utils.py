@@ -6,7 +6,6 @@ from pandas import DataFrame
 from hashlib import sha256
 from timeit import default_timer
 from functools import wraps
-from collections import defaultdict
 import logging
 logger = logging.getLogger(__name__)
 
@@ -170,10 +169,6 @@ def time_it(func):
     return wrapper
 
 
-def inflate(df, ):
-    pass
-
-
 def node2cooc(row):
     """ convert one row of df_node to info for df_cooc """
 
@@ -205,71 +200,6 @@ def node2cooc(row):
     }
 
     return result
-
-
-# hole structure
-def get_holes(df, anchors, regions):
-
-    anchor_holes = dict()
-    for anchor in anchors:
-        if anchor[2] is not None:
-            anchor_holes[anchor[2]] = anchor[0]
-    region_holes = dict()
-    for region in regions:
-        if region[2] is not None:
-            region_holes[region[2]] = region[:2]
-
-    holes = defaultdict(dict)
-
-    for idx in anchor_holes.keys():
-        anchor = anchor_holes[idx]
-        row = df.loc[df['anchor'] == anchor]
-
-        if row.empty:
-            word = None
-            lemma = None
-        else:
-            row_nr = int(row.index.values)
-            word = df.at[row_nr, 'word']
-            if 'lemma' in df.columns:
-                lemma = str(df.at[row_nr, 'lemma'])
-            else:
-                lemma = None
-
-        holes['words'][idx] = word
-        holes['lemmas'][idx] = lemma
-
-    for idx in region_holes.keys():
-        region_start = region_holes[idx][0]
-        region_end = region_holes[idx][1]
-
-        row_start = df.loc[df['anchor'] == region_start]
-        row_end = df.loc[df['anchor'] == region_end]
-
-        # if both of them are empty
-        if row_start.empty and row_end.empty:
-            words = None
-            lemmas = None
-        else:
-            # if one of them is empty: start and end are the same
-            if row_start.empty:
-                row_start = row_end
-            elif row_end.empty:
-                row_end = row_start
-
-            row_start = int(row_start.index.values)
-            row_end = int(row_end.index.values)
-            region = df.loc[row_start:row_end]
-            words = " ".join(list(region['word']))
-            if 'lemma' in df.columns:
-                lemmas = " ".join(list(region['lemma']))
-            else:
-                lemmas = None
-
-        holes['words'][idx] = words
-        holes['lemmas'][idx] = lemmas
-
-    return holes
 
 
 # s-att handling
@@ -310,60 +240,144 @@ def merge_s_atts(s_query, s_break, s_meta):
     return s_query, s_break, s_meta
 
 
-def concordance_lines2df(lines, meta=None, kwic=True):
-    """ convert dict of concordance lines to one dataframe """
+def concordance_line2simple(line, p_att='word', kwic=False):
+    """
 
-    # init variables
-    match_ids = list()
-    meta_ids = list()
-    left_contexts = list()
-    matches = list()
-    right_contexts = list()
+    :param dict line: return value of concordance.text_line
 
-    # loop through lines
-    for line in list(lines.values()):
+    """
 
-        # get and append left / match / right
-        left = line.loc[line['offset'] < 0]
-        match = line.loc[line['offset'] == 0]
-        right = line.loc[line['offset'] > 0]
-        left_contexts.append(" ".join(list(left['word'].values)))
-        matches.append(" ".join(list(match['word'].values)))
-        right_contexts.append(" ".join(list(right['word'].values)))
-
-        # append match id
-        match_ids.append(match.index[0])
-
-        # append meta id
-        if meta is not None:
-            meta_ids.append(meta.loc[match.index[0]]['s_id'])
-        else:
-            meta_ids.append(None)
-
-    # convert to DataFrame
-    df = DataFrame(
-        index=match_ids,
-        data={
-            'meta_id': meta_ids,
-            'left': left_contexts,
-            'match': matches,
-            'right': right_contexts
-        }
-    )
-    df.index.name = 'match_id'
-
-    # convert to KWIC (optional) and bring columns in order
     if not kwic:
-        df['text'] = df[['left', 'match', 'right']].apply(
-            lambda x: ' '.join(x), axis=1
-        )
-        df = df[['meta_id', 'text']]
-    else:
-        df = df[['meta_id', 'left', 'match', 'right']]
+        return {
+            'text': line[p_att]
+        }
 
-    # drop meta column if meta is None
-    if meta is None:
-        df.drop('meta_id', inplace=True, axis=1)
+    # get and append left / match / right
+    left = list()
+    node = list()
+    right = list()
+    for offset, word in zip(line['offset'], line[p_att]):
+        if offset < 0:
+            left.append(word)
+        elif offset == 0:
+            node.append(word)
+        else:
+            right.append(word)
+
+    return {
+        'left': " ".join(left),
+        'node': " ".join(node),
+        'right': " ".join(right),
+    }
+
+
+def concordance_line2df(line, p_show):
+    """
+
+    :param dict line: return value of concordance.text_line
+
+    """
+
+    # pop non-lists
+    anchors = line.pop('anchors')
+    line.pop('match')           # not needed
+
+    # transform to df
+    df = DataFrame.from_records(line).set_index('cpos')
+
+    # append anchors
+    for a in anchors:
+        df[a] = False
+        if anchors[a] != -1:
+            df.at[anchors[a], a] = True
+
+    # init output
+    return {
+        'df': df
+    }
+
+
+def concordance_line2extended(line, p_show, p_text, p_slots, regions=[]):
+    """
+
+    :param dict line: return value of concordance.text_line
+
+    """
+
+    if p_text is None:
+        p_text = p_show[0]
+
+    anchors = line['anchors']
+    out = concordance_line2df(line, p_show)
+
+    for a in anchors:
+        anchor_value = anchors[a]
+        if anchor_value != -1:
+            out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
+
+    for region in regions:
+        region_name = "_".join([str(x) for x in region])
+
+        anchor_left = True in out['df'][region[0]].values
+        anchor_right = True in out['df'][region[1]].values
+
+        if not anchor_left and not anchor_right:
+            slots_p = None
+        elif anchor_left and anchor_right:
+            start = out['df'].index[out['df'][region[0]]].tolist()[0]
+            end = out['df'].index[out['df'][region[1]]].tolist()[0]
+            slots_p = " ".join(out['df'][p_slots].loc[start: end].to_list())
+        elif anchor_right:
+            end = out['df'].index[out['df'][region[1]]].tolist()[0]
+            slots_p = out['df'][p_slots].loc[end]
+        elif anchor_left:
+            start = out['df'].index[out['df'][region[0]]].tolist()[0]
+            slots_p = out['df'][p_slots][start]
+
+        out["_".join([region_name, p_slots])] = slots_p
+
+    return out
+
+
+def format_concordance_lines(df_lines, p_show=['word'], regions=[],
+                             p_text=None, p_slots='lemma', form='dataframes'):
+
+    if form == 'simple':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: concordance_line2simple(row, p_show[0], kwic=False)
+            )
+        )
+
+    elif form == 'kwic':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: concordance_line2simple(row, p_show[0], kwic=True)
+            )
+        )
+
+    elif form == 'dataframes':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: concordance_line2df(row, p_show)
+            )
+        )
+
+    elif form == 'extended':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: concordance_line2extended(row,
+                                                      p_show, p_text, p_slots,
+                                                      regions)
+            )
+        )
+
+    else:
+        raise NotImplementedError('no support for format "%s"' % form)
 
     return df
 
