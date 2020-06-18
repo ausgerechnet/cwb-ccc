@@ -1,15 +1,21 @@
 import setuptools
-from os import path
+import os
 
+here = os.path.abspath(os.path.dirname(__file__))
 
-here = path.abspath(path.dirname(__file__))
-with open(path.join(here, 'README.md')) as fh:
-    long_description = fh.read()
+# description
+with open(os.path.join(here, 'README.md')) as f:
+    long_description = f.read()
+
+# version
+version = {}
+with open(os.path.join(here, 'ccc', 'version.py')) as f:
+    exec(f.read(), version)
 
 
 setuptools.setup(
     name="cwb-ccc",
-    version="0.9.7",
+    version=version['__version__'],
     author="Philipp Heinrich",
     author_email="philipp.heinrich@fau.de",
     description="CWB wrapper to extract concordances and collocates",
@@ -19,6 +25,7 @@ setuptools.setup(
     url="https://github.com/ausgerechnet/cwb-ccc",
     install_requires=[
         "cython",
+        "numpy",
         "pandas>=0.24.2",
         "cwb-python>=0.2.2",
         "association-measures>=0.1.3"
