@@ -9,7 +9,7 @@ registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 corpus_name = "SZ_2009_14"
 
 
-@pytest.mark.collocates
+@pytest.mark.now
 @pytest.mark.collocates_default
 def test_query_default():
     corpus = Corpus(corpus_name, registry_path)

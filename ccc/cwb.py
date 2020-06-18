@@ -11,8 +11,8 @@ from tempfile import NamedTemporaryFile
 from .cqp_interface import CQP
 from .utils import Cache, preprocess_query
 from .utils import time_it
-# , merge_s_atts
-from .utils import chunk_anchors
+from .utils import merge_s_atts
+from .utils import chunk_anchors, correct_anchors
 from .concordances import Concordance
 from .collocates import Collocates
 from .keywords import Keywords
@@ -164,6 +164,7 @@ class Corpus:
         for macro in macros:
             self.cqp.Exec(macro)
 
+    # s-attributes
     def get_s_extents(self, s_att):
         """Maps s_att to corresponding extents, returns DataFrame.
 
@@ -284,6 +285,25 @@ class Corpus:
         df = df.set_index(['match', 'matchend'])
         return df
 
+    # p-attributes
+    def cpos2patts(self, cpos, p_atts=['word'], ignore_missing=True):
+        """Fills corpus position. Raises IndexError if out-of-bounds.
+
+        :param int cpos: corpus position to fill
+        :param list p_atts: p-attribute(s) to fill position with
+
+        :return: p_att(s) of the position
+        :rtype: tuple
+
+        """
+
+        if ignore_missing and cpos == -1:
+            token = [None] * len(p_atts)
+        else:
+            token = [self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts]
+
+        return tuple(token)
+
     # working with subcorpora
     def show_subcorpora(self):
         """Returns subcorpora defined in CQP as DataFrame.
@@ -380,6 +400,7 @@ class Corpus:
         extents = extents.drop(extents.columns, axis=1)
         self.subcorpus_from_dump(extents, name=name)
 
+    # dump
     def dump_from_query(self, query, s_query=None, anchors=[],
                         match_strategy='standard',
                         name='Last'):
@@ -397,6 +418,11 @@ class Corpus:
 
         """
         # TODO: improve cache
+        # strategy:
+        # do not work with target / keyword; additional anchors only in df_dump
+        # save match .. matchend to disk
+        # name: cache_name
+        # dataframes: cache_name_dataframes
 
         # match strategy
         self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
@@ -461,24 +487,6 @@ class Corpus:
         df_dump = df_dump.loc[:, (df_dump != df_dump.iloc[0]).any()]
 
         return df_dump
-
-    def cpos2patts(self, cpos, p_atts=['word'], ignore_missing=True):
-        """Fills corpus position. Raises IndexError if out-of-bounds.
-
-        :param int cpos: corpus position to fill
-        :param list p_atts: p-attribute(s) to fill position with
-
-        :return: p_att(s) of the position
-        :rtype: tuple
-
-        """
-
-        if ignore_missing and cpos == -1:
-            token = [None] * len(p_atts)
-        else:
-            token = [self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts]
-
-        return tuple(token)
 
     def extend_df_dump(self, df_dump, context_left, context_right, s_context):
         """Extends a df_dump to context, breaking the context at s_context:
@@ -549,8 +557,9 @@ class Corpus:
 
         return df
 
+    # query
     def query_cache(self, query, context_left, context_right,
-                    s_context, match_strategy):
+                    s_context, corrections, match_strategy):
         """Queries the corpus, computes df_dump and caches the result. Name
         will be generated automatically and returned.  Otherwise see
         query() for parameters.
@@ -566,7 +575,7 @@ class Corpus:
 
         # set parameters
         parameters = ['df_dump', query, context_left, context_right,
-                      s_context, match_strategy, subcorpus]
+                      s_context, corrections, match_strategy, subcorpus]
         name_cache = self.cache.generate_idx(parameters)
 
         # retrieve from cache
@@ -579,16 +588,15 @@ class Corpus:
 
         # compute
         df_dump = self.query(query, None, context_left, context_right,
-                             s_context, match_strategy, name_cache)
+                             s_context, corrections, match_strategy, name_cache)
 
         # put into cache
         self.cache.set(name_cache, df_dump)
 
         return df_dump, name_cache
 
-    # high-level methods
     def query(self, query, context=20, context_left=None,
-              context_right=None, s_context=None,
+              context_right=None, s_context=None, corrections=dict(),
               match_strategy='standard', name='mnemosyne'):
         """Queries the corpus, computes df_dump.
 
@@ -603,6 +611,7 @@ class Corpus:
         :param int context_left: maximum context left to the match
         :param int context_right: maximum context right to the match
         :param str s_context: s-attribute to confine context
+        :param dict corrections: corrections to apply to anchors {name: offset}
         :param str match_strategy: CQP matching strategy
         :param str name: name for resulting subcorpus
 
@@ -613,6 +622,7 @@ class Corpus:
 
         # preprocess input
         query, s_query, anchors = preprocess_query(query)
+        s_query, s_context, s_meta = merge_s_atts(s_query, s_context, None)
         if context_left is None:
             context_left = context
         if context_right is None:
@@ -623,7 +633,7 @@ class Corpus:
         if name == 'mnemosyne':
             df_dump, name_cache = self.query_cache(
                 query, context_left, context_right,
-                s_context, match_strategy
+                s_context, corrections, match_strategy
             )
             self.cqp.Exec("%s = %s;" % (name, name_cache))
             # save to disk
@@ -644,14 +654,18 @@ class Corpus:
             if len(df_dump) == 0:
                 logger.warning("found 0 matches")
                 df_dump = DataFrame()
-            # extend dump
             else:
+
+                # extend dump
                 df_dump = self.extend_df_dump(
                     df_dump, context_left, context_right, s_context
                 )
+                # apply corrections
+                df_dump = correct_anchors(df_dump, corrections)
 
         return df_dump
 
+    # high-level methods
     def concordance(self, df_dump, max_matches=100000):
         return Concordance(
             self,

@@ -1,12 +1,9 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import json
 from random import sample
-from collections import defaultdict
 # part of module
 from .utils import node2cooc
-from .utils import apply_corrections
 from .utils import format_concordance_lines
 # requirements
 from pandas import DataFrame
@@ -37,7 +34,7 @@ class Concordance:
         # frequency breakdown
         if max_matches is not None and self.size > max_matches:
             logger.warning(
-                'no frequency breakdown (found %d matches)' % (self.size, max_matches)
+                'no frequency breakdown (%d matches)' % self.size
             )
             self.breakdown = DataFrame(
                 index=['NODE'],
@@ -68,16 +65,16 @@ class Concordance:
         row['matchend'] = matchend
 
         # create cotext
-        _ = node2cooc(row)
-        cpos = _['cpos_list']
+        cotext = node2cooc(row)
+        cpos = cotext['cpos_list']
 
         # init output dictionary
         out = {
             'cpos': cpos,
-            'offset': _['offset_list'],
+            'offset': cotext['offset_list'],
             'match': match
         }
-        assert(match == _['match_list'][0])
+        assert(match == cotext['match_list'][0])
 
         # lexicalize positions
         attribute_lists = zip(
@@ -93,14 +90,20 @@ class Concordance:
 
         return out
 
-    def lines(self, matches=None, p_show=['word'], order='first',
-              s_show=[], regions=[], p_text=None, p_slots='lemma',
+    def lines(self, matches=None, p_show=['word'], s_show=[],
+              p_text=None, p_slots=None, regions=[], order='first',
               cut_off=100, form='raw'):
         """ creates concordance lines from self.df_dump
 
         :param str form: raw / simple / kwic / dataframes
 
         """
+
+        # check parameter consistency
+        if p_text is not None and p_text not in p_show:
+            logger.error('')
+        if p_slots is not None and p_slots not in p_show:
+            logger.error('')
 
         # select appropriate subset of matches
         logger.info('lines: selecting matches')
@@ -127,19 +130,24 @@ class Concordance:
         # texts
         if len(p_show) > 0:
 
+            # retrieve lines as Series
+            # - index: match, matchend
+            # - values: dictionaries
             df_lines = df.apply(
                 lambda row: self.text_line(row.name, row, p_show),
-                axis=1
+                axis=1,
             )
+            df_lines.name = 'raw'
 
             # format text
             if form == 'raw':
                 concordance = df_lines
             else:
                 concordance = format_concordance_lines(
-                    df_lines, p_show, regions, p_text, form=form
+                    df_lines, p_show, p_text,
+                    p_slots, regions, form=form
                 )
-                df = df.join(DataFrame(concordance))
+            df = df.join(DataFrame(concordance))
 
         # meta data
         if len(s_show) > 0:
@@ -147,37 +155,3 @@ class Concordance:
             df = df.join(meta)
 
         return df
-
-
-def process_argmin_file(corpus, query_path, p_show=['lemma'],
-                        context=None, s_break='s',
-                        match_strategy='longest'):
-
-    # try to parse file
-    with open(query_path, "rt") as f:
-        try:
-            query = json.loads(f.read())
-        except json.JSONDecodeError:
-            logger.error("not a valid json file")
-            return
-
-    # add query path to query info
-    query['query_path'] = query_path
-
-    # run the query
-    try:
-        result, info = corpus.query(query['query'], s_break=s_break,
-                                    context=context,
-                                    match_strategy=match_strategy,
-                                    info=True)
-        query['info'] = info
-        concordance = corpus.concordance(result)
-        query['result'] = concordance.show_argmin(
-            query['anchors'],
-            query['regions'],
-            p_show
-        )
-    except TypeError:
-        logger.warning("no results for path %s" % query_path)
-
-    return query

@@ -12,7 +12,7 @@ def test_concordance_breakdown(sz_corpus):
     )
     result = corpus.query(query)
     concordance = corpus.concordance(result)
-    print(concordance.breakdown)
+    assert(type(concordance.breakdown) == pd.DataFrame)
 
 
 @pytest.mark.breakdown
@@ -24,9 +24,7 @@ def test_concordance_breakdown_many(sz_corpus):
     )
     result = corpus.query(query)
     concordance = corpus.concordance(result)
-    print(concordance.breakdown)
-
-    print(corpus.counts.matches(corpus.cqp, "CACHE_625721eb12"))
+    assert(type(concordance.breakdown) == pd.DataFrame)
 
 
 @pytest.mark.meta
@@ -38,7 +36,7 @@ def test_concordance_meta(sz_corpus):
     )
     result = corpus.query(query)
     concordance = corpus.concordance(result)
-    concordance.lines(s_meta=['text_id', 'p_type'])
+    concordance.lines(s_show=['text_id', 'p_type'])
 
 
 @pytest.mark.line
@@ -53,14 +51,10 @@ def test_concordance_line(sz_corpus):
     assert(len(concordance.breakdown) > 0)
     for index, columns in concordance.df_dump.iterrows():
         break
-    assert(
-        type(
-            concordance.text_line(index, columns, p_show=['word', 'pos'])
-        ) == pd.DataFrame
-    )
+    line = concordance.text_line(index, columns, p_show=['word', 'pos'])
+    assert(type(line) == dict)
 
 
-@pytest.mark.now
 @pytest.mark.lines
 def test_concordance_lines(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
@@ -68,32 +62,79 @@ def test_concordance_lines(sz_corpus):
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"] "und" @3[pos="NE"]? @4[pos="NE"]'
     )
-    result = corpus.query(query, s_context='s', match_strategy='longest')
+    result = corpus.query(query, s_context='s',
+                          match_strategy='longest')
+
     concordance = corpus.concordance(result)
+
+    # standard = raw
     assert(len(concordance.breakdown) > 0)
-    # lines = concordance.lines()
-    # # print(lines)
-    # lines = concordance.lines(form='simple')
-    # # print(lines)
-    # lines = concordance.lines(form='kwic')
-    # # print(lines)
-    # lines = concordance.lines(form='kwic', s_show=['text_id'])
-    # # print(lines)
-    # lines = concordance.lines(form='dataframes', s_show=['text_id'])
-    # print(lines)
+    lines = concordance.lines()
+    assert(len(lines) > 10)
+    assert('raw' in lines.columns)
+    assert(all(elem in lines.iloc[0]['raw'] for elem in ['cpos', 'match', 'word']))
+
+    # simple
+    lines = concordance.lines(form='simple', cut_off=10)
+    assert('text' in lines.columns)
+    assert(len(lines) == 10)
+
+    # kwic
+    lines = concordance.lines(form='kwic', cut_off=10)
+    assert(all(elem in lines.columns for elem in ['left', 'node', 'right']))
+    assert(len(lines) == 10)
+
+    # kwic with s-attribute
+    lines = concordance.lines(form='kwic', s_show=['text_id'], cut_off=10)
+    assert(len(lines) == 10)
+    assert('text_id' in lines.columns)
+
+
+@pytest.mark.now
+@pytest.mark.lines
+def test_concordance_lines_dataframes(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    query = (
+        '@0[lemma="Angela"]? @1[lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"] "und" @3[pos="NE"]? @4[pos="NE"]'
+    )
+    result = corpus.query(query, s_context='s',
+                          match_strategy='longest')
+    concordance = corpus.concordance(result)
+    lines = concordance.lines(form='dataframes', s_show=['text_id'], cut_off=10)
+    assert('df' in lines.columns)
+    assert(type(lines['df'].iloc[0]) == pd.DataFrame)
+
+
+@pytest.mark.lines
+def test_concordance_lines_extended(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    query = (
+        '@0[lemma="Angela"]? @1[lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"] "und" @3[pos="NE"]? @4[pos="NE"]'
+    )
+    result = corpus.query(query, s_context='s',
+                          match_strategy='longest')
+    concordance = corpus.concordance(result)
+    p_slots = 'lemma'
+    region = (3, 4)
     lines = concordance.lines(form='extended',
                               p_show=['word', 'lemma'],
                               s_show=['text_id'],
-                              regions=[(3, 4)],
+                              regions=[region],
                               p_text='word',
-                              p_slots='lemma',
-                              cut_off=None)
-    print(lines)
-    print(lines.keys())
-    print(lines['3_4_lemma'].value_counts())
-    # assert(len(lines) == 100)
-    # one_match = list(lines.keys())[0]
-    # assert(type(lines[one_match]) == pd.DataFrame)
+                              p_slots=p_slots,
+                              cut_off=10)
+
+    assert('df' in lines.columns)
+    assert(type(lines['df'].iloc[0]) == pd.DataFrame)
+
+    assert('_'.join(['_'.join([
+        str(region[0]), str(region[1])
+    ]), p_slots]) in lines.columns)
+    assert(3 in lines.columns)
+
+    assert('text' in lines.columns)
 
 
 @pytest.mark.lines
@@ -107,8 +148,6 @@ def test_concordance_many(sz_corpus):
     assert(len(concordance.breakdown) > 0)
     lines = concordance.lines()
     assert(len(lines) == 100)
-    one_match = list(lines.keys())[0]
-    assert(type(lines[one_match]) == pd.DataFrame)
 
 
 @pytest.mark.lines
@@ -120,9 +159,8 @@ def test_concordance_p_atts(sz_corpus):
     )
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
-    lines = concordance.lines(p_show=['lemma', 'pos'])
-    one_match = list(lines.keys())[0]
-    assert('pos' in lines[one_match].columns)
+    lines = concordance.lines(p_show=['lemma', 'pos'], form='dataframes')
+    assert('pos' in lines.iloc[0]['df'].columns)
     assert(len(lines) == 100)
 
 
@@ -135,11 +173,9 @@ def test_concordance_anchors(sz_corpus):
     )
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
-    lines = concordance.lines()
+    lines = concordance.lines(p_show=['lemma', 'pos'], form='dataframes')
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
-    # one_match = list(lines.keys())[0]
-    # print(lines[one_match])
 
 
 @pytest.mark.lines
@@ -151,12 +187,9 @@ def test_concordance_anchors_weird(sz_corpus):
     )
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
-    lines = concordance.lines(order='random', cut_off=100)
-    # print(lines[list(lines.keys())[0]])
+    lines = concordance.lines(order='random', cut_off=100, form='dataframes')
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
-    # one_match = list(lines.keys())[0]
-    # print(lines[one_match])
 
 
 @pytest.mark.format_lines
@@ -169,14 +202,11 @@ def test_concordance_form_simple(sz_corpus):
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
     lines = concordance.lines(order='random', cut_off=100, form='simple')
-    print(lines)
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
-    # one_match = list(lines.keys())[0]
-    # print(lines[one_match])
 
 
-@pytest.mark.format_lines
+@pytest.mark.lines
 def test_concordance_form_simple_kwic(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     query = (
@@ -185,15 +215,12 @@ def test_concordance_form_simple_kwic(sz_corpus):
     )
     result = corpus.query(query, s_context='s')
     concordance = corpus.concordance(result)
-    lines = concordance.lines(order='random', cut_off=100, form='simple-kwic')
-    print(lines)
+    lines = concordance.lines(order='random', cut_off=100, form='kwic')
     assert(len(concordance.breakdown) > 0)
     assert(len(lines) == 100)
-    # one_match = list(lines.keys())[0]
-    # print(lines[one_match])
 
 
-@pytest.mark.switch_queries
+@pytest.mark.lines
 def test_concordance_persistence(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     query_1 = (
@@ -207,20 +234,20 @@ def test_concordance_persistence(sz_corpus):
     # will show results for query_1
     result = corpus.query(query_1, s_context='s')
     concordance = corpus.concordance(result)
-    line_1 = concordance.lines(cut_off=1)
-    df_1 = line_1[list(line_1.keys())[0]]
+    line_1 = concordance.lines(cut_off=1, form='dataframes')
+    df_1 = line_1['df'].iloc[0]
     breakdown_1 = concordance.breakdown
 
     # will show results for query_1
     result = corpus.query(query_2, s_context='s')
-    line_2 = concordance.lines(cut_off=1)
-    df_2 = line_2[list(line_2.keys())[0]]
+    line_2 = concordance.lines(cut_off=1, form='dataframes')
+    df_2 = line_2['df'].iloc[0]
     breakdown_2 = concordance.breakdown
 
     # will show results for query_2
     concordance = corpus.concordance(result)
-    line_3 = concordance.lines(cut_off=1)
-    df_3 = line_3[list(line_3.keys())[0]]
+    line_3 = concordance.lines(cut_off=1, form='dataframes')
+    df_3 = line_3['df'].iloc[0]
     breakdown_3 = concordance.breakdown
 
     assert(df_1.equals(df_2))

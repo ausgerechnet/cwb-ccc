@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import shelve
 import re
 import numpy as np
@@ -64,6 +67,11 @@ def chunk_anchors(lst, n, exclude={0, 1}):
 
 # anchor corrections
 def apply_correction(row, correction):
+    """Applies correction to one row in column.
+
+    :param list row: row of dump with [value, context, contextend]
+    :param int correction: offset to add/subtract from position
+    """
     value, lower_bound, upper_bound = row
     value += correction
     if value < lower_bound or value > upper_bound:
@@ -71,26 +79,52 @@ def apply_correction(row, correction):
     return value
 
 
-def apply_corrections(df_anchor, corrections):
+def correct_anchors(df, corrections):
+    """Corrects df columns via dictionary of corrections
+
+    :param DataFrame df: dump
+    :param dict corrections: {anchor_name (0-9, column in df): offset (int)}
+    """
     for correction in corrections:
-        if correction[0] in df_anchor.columns:
-            df_anchor[correction[0]] = df_anchor[
-                [correction[0], 'region_start', 'region_end']
-            ].apply(lambda x: apply_correction(x, correction[1]), axis=1)
-    return df_anchor
+        if correction in df.columns:
+            logger.info('correcting anchor %d by offset %d' % (
+                correction, corrections[correction]
+            ))
+            df[correction] = df[
+                [correction, 'context', 'contextend']
+            ].apply(lambda x: apply_correction(x, corrections[correction]), axis=1)
+        else:
+            logger.warning('anchor "%s" not in dataframe' % str(correction))
+    return df
 
 
 # query processing
 def cqp_escape(token):
-    """ escape CQP meta-characters """
+    """ escape CQP meta-characters
 
-    escaped = token.translate(str.maketrans({".": r"\.", "?": r"\?",
-                                             "*": r"\*", "+": r"\+",
-                                             "|": r"\|", "(": r"\(",
-                                             ")": r"\)", "[": r"\[",
-                                             "]": r"\]", "{": r"\{",
-                                             "}": r"\}", "^": r"\^",
-                                             "$": r"\$"}))
+    :param str token: string to escape
+
+    :return: escaped string
+    :rtype: str
+
+    """
+
+    escaped = token.translate(str.maketrans({
+        ".": r"\.",
+        "?": r"\?",
+        "*": r"\*",
+        "+": r"\+",
+        "|": r"\|",
+        "(": r"\(",
+        ")": r"\)",
+        "[": r"\[",
+        "]": r"\]",
+        "{": r"\{",
+        "}": r"\}",
+        "^": r"\^",
+        "$": r"\$"
+    }))
+
     return escaped
 
 
@@ -240,7 +274,7 @@ def merge_s_atts(s_query, s_break, s_meta):
     return s_query, s_break, s_meta
 
 
-def concordance_line2simple(line, p_att='word', kwic=False):
+def concordance_line2simple(line, p_show='word', kwic=False):
     """
 
     :param dict line: return value of concordance.text_line
@@ -249,14 +283,14 @@ def concordance_line2simple(line, p_att='word', kwic=False):
 
     if not kwic:
         return {
-            'text': line[p_att]
+            'text': line[p_show]
         }
 
     # get and append left / match / right
     left = list()
     node = list()
     right = list()
-    for offset, word in zip(line['offset'], line[p_att]):
+    for offset, word in zip(line['offset'], line[p_show]):
         if offset < 0:
             left.append(word)
         elif offset == 0:
@@ -297,56 +331,74 @@ def concordance_line2df(line, p_show):
     }
 
 
-def concordance_line2extended(line, p_show, p_text, p_slots, regions=[]):
+def concordance_line2extended(line, p_show, p_text=None, p_slots=None, regions=[]):
     """
 
     :param dict line: return value of concordance.text_line
 
     """
 
-    if p_text is None:
-        p_text = p_show[0]
-
+    # get anchors
     anchors = line['anchors']
+
+    # init dataframe
     out = concordance_line2df(line, p_show)
 
-    for a in anchors:
-        anchor_value = anchors[a]
-        if anchor_value != -1:
-            out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
+    # get full text
+    if p_text is None:
+        p_text = p_show[0]
+    out['text'] = " ".join(out['df'][p_text].to_list())
 
-    for region in regions:
-        region_name = "_".join([str(x) for x in region])
+    # process anchors and regions
+    if p_slots:
+        for a in anchors:
+            anchor_value = anchors[a]
+            if anchor_value != -1:
+                out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
 
-        anchor_left = True in out['df'][region[0]].values
-        anchor_right = True in out['df'][region[1]].values
+        for region in regions:
+            region_name = "_".join([str(x) for x in region])
 
-        if not anchor_left and not anchor_right:
-            slots_p = None
-        elif anchor_left and anchor_right:
-            start = out['df'].index[out['df'][region[0]]].tolist()[0]
-            end = out['df'].index[out['df'][region[1]]].tolist()[0]
-            slots_p = " ".join(out['df'][p_slots].loc[start: end].to_list())
-        elif anchor_right:
-            end = out['df'].index[out['df'][region[1]]].tolist()[0]
-            slots_p = out['df'][p_slots].loc[end]
-        elif anchor_left:
-            start = out['df'].index[out['df'][region[0]]].tolist()[0]
-            slots_p = out['df'][p_slots][start]
+            anchor_left = True in out['df'][region[0]].values
+            anchor_right = True in out['df'][region[1]].values
 
-        out["_".join([region_name, p_slots])] = slots_p
+            if not anchor_left and not anchor_right:
+                slots_p = None
+            elif anchor_left and anchor_right:
+                start = out['df'].index[out['df'][region[0]]].tolist()[0]
+                end = out['df'].index[out['df'][region[1]]].tolist()[0]
+                slots_p = " ".join(out['df'][p_slots].loc[start: end].to_list())
+            elif anchor_right:
+                end = out['df'].index[out['df'][region[1]]].tolist()[0]
+                slots_p = out['df'][p_slots].loc[end]
+            elif anchor_left:
+                start = out['df'].index[out['df'][region[0]]].tolist()[0]
+                slots_p = out['df'][p_slots][start]
+
+            out["_".join([region_name, p_slots])] = slots_p
 
     return out
 
 
-def format_concordance_lines(df_lines, p_show=['word'], regions=[],
-                             p_text=None, p_slots='lemma', form='dataframes'):
+def format_concordance_lines(df_lines,
+                             p_show=['word'],
+                             p_text=None,   # only for form == 'extended'
+                             p_slots=None,  # only for form == 'extended'
+                             regions=[],    # only for form == 'extended'
+                             form='dataframes'):
+
+    # select p-attribute
+    if form == 'simple' or form == 'kwic':
+        if len(p_show) > 1:
+            logger.warning('cannot show more than one p-attribute in simple format')
+            logger.warning('showing p-attribute "%s"' % p_show[0])
+        p_show = p_show[0]
 
     if form == 'simple':
         df = DataFrame.from_records(
             index=df_lines.index,
             data=df_lines.apply(
-                lambda row: concordance_line2simple(row, p_show[0], kwic=False)
+                lambda row: concordance_line2simple(row, p_show, kwic=False)
             )
         )
 
@@ -354,7 +406,7 @@ def format_concordance_lines(df_lines, p_show=['word'], regions=[],
         df = DataFrame.from_records(
             index=df_lines.index,
             data=df_lines.apply(
-                lambda row: concordance_line2simple(row, p_show[0], kwic=True)
+                lambda row: concordance_line2simple(row, p_show, kwic=True)
             )
         )
 
@@ -370,12 +422,12 @@ def format_concordance_lines(df_lines, p_show=['word'], regions=[],
         df = DataFrame.from_records(
             index=df_lines.index,
             data=df_lines.apply(
-                lambda row: concordance_line2extended(row,
-                                                      p_show, p_text, p_slots,
-                                                      regions)
+                lambda row: concordance_line2extended(
+                    row, p_show,
+                    p_text, p_slots, regions
+                )
             )
         )
-
     else:
         raise NotImplementedError('no support for format "%s"' % form)
 
@@ -384,7 +436,7 @@ def format_concordance_lines(df_lines, p_show=['word'], regions=[],
 
 # word post-processing
 def fold_item(item, flags="%cd"):
-
+    # TODO align with CWB
     if flags is None:
         return item
 
