@@ -2,7 +2,6 @@ import os
 from pprint import pprint
 
 from ccc.argmin import read_query_json, run_query
-from ccc.argmin import process_argmin_file
 from ccc.cwb import Corpus
 
 import pytest
@@ -46,10 +45,18 @@ def test_argmin(brexit_corpus):
         "/home/ausgerechnet/repositories/cwb-ccc/tests/"
         "argmin_queries"
     )
+
+    # read file
+    query = read_query_json(query_path)
+
+    # patch path to query
+    query['query_path'] = query_path
+
+    # run query
     corpus = Corpus(brexit_corpus['corpus_name'],
                     brexit_corpus['lib_path'],
                     data_path=data_path)
-    query, result = process_argmin_file(corpus, query_path)
+    result = run_query(corpus, query)
 
     # get path for output
     path_out = os.path.join(data_path, query['name']) + ".tsv"

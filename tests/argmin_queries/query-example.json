@@ -30,7 +30,7 @@
     ],
     "regions": [
         [
-            0,
+            "match",
             1,
             "0",
             null
