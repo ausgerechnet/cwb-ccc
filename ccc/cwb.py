@@ -272,7 +272,7 @@ class Corpus:
         """Gets all annotations of all s-att in s_atts at match positions.
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-        :param list s_meta: s-attributes to show (id + annotation)
+        :param list s_atts: s-attributes to show (id + annotation)
 
         :return: s_annotations
         :rtype: DataFrame
@@ -406,7 +406,9 @@ class Corpus:
                         name='Last'):
         """Executes query, gets DataFrame of corpus positions (dump of CWB).
         df_dump is indexed by (match, matchend).  Optional columns for
-        each anchor.
+        each anchor:
+
+        === (match, matchend), 0, ..., 9 ===
 
         :param str query: valid CQP query (without 'within' clause)
         :param str s_query: s-attribute used for initial query
@@ -490,7 +492,8 @@ class Corpus:
 
     def extend_df_dump(self, df_dump, context_left, context_right, s_context):
         """Extends a df_dump to context, breaking the context at s_context:
-        (match, matchend), 0, ..., 9, context, contextend, meta_1, meta_1_CWB, ...
+
+        === (match, matchend), 0, ..., 9, context, contextend ===
 
         left_context -> context
         (1) s_context is None, context_left is None
@@ -560,9 +563,10 @@ class Corpus:
     # query
     def query_cache(self, query, context_left, context_right,
                     s_context, corrections, match_strategy):
-        """Queries the corpus, computes df_dump and caches the result. Name
-        will be generated automatically and returned.  Otherwise see
-        query() for parameters.
+        """Queries the corpus, computes (context-extended) df_dump and caches
+        the result. Name will be generated automatically from query
+        parameters and returned.  Otherwise see query() for
+        parameters.
 
         """
 
@@ -573,10 +577,10 @@ class Corpus:
         else:
             subcorpus = None
 
-        # set parameters
-        parameters = ['df_dump', query, context_left, context_right,
-                      s_context, corrections, match_strategy, subcorpus]
-        name_cache = self.cache.generate_idx(parameters)
+        # identify query
+        identifiers = ['df_dump', query, context_left, context_right,
+                       s_context, corrections, match_strategy, subcorpus]
+        name_cache = self.cache.generate_idx(identifiers)
 
         # retrieve from cache
         if self.data is not None:
@@ -599,6 +603,8 @@ class Corpus:
               context_right=None, s_context=None, corrections=dict(),
               match_strategy='standard', name='mnemosyne'):
         """Queries the corpus, computes df_dump.
+
+        === (match, matchend), 0*, ..., 9*, context*, contextend* ===
 
         If the magic word 'mnemosyne' is given as name of the result,
         the query parameters will be used to create an identifier and
@@ -627,7 +633,6 @@ class Corpus:
             context_left = context
         if context_right is None:
             context_right = context
-        name_cache = None
 
         # use cached version?
         if name == 'mnemosyne':
@@ -636,8 +641,7 @@ class Corpus:
                 s_context, corrections, match_strategy
             )
             self.cqp.Exec("%s = %s;" % (name, name_cache))
-            # save to disk
-            self.cqp.Exec("save %s;" % name_cache)
+            self.cqp.Exec("save %s;" % name_cache)  # save to disk
 
         else:
             # get df_dump
@@ -649,18 +653,16 @@ class Corpus:
                 match_strategy=match_strategy,
                 name=name
             )
-
             # empty return?
             if len(df_dump) == 0:
                 logger.warning("found 0 matches")
                 df_dump = DataFrame()
             else:
-
                 # extend dump
                 df_dump = self.extend_df_dump(
                     df_dump, context_left, context_right, s_context
                 )
-                # apply corrections
+                # apply corrections to anchor points
                 df_dump = correct_anchors(df_dump, corrections)
 
         return df_dump
