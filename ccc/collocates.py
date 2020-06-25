@@ -14,17 +14,23 @@ logger = logging.getLogger(__name__)
 
 
 class Collocates:
-    """ calculate and format collocates """
+    """ collocation analysis """
 
-    def __init__(self, corpus, df_node, p_query, context=None, mws=10):
+    def __init__(self, corpus, df_dump, p_query, context=None, mws=10):
 
-        if len(df_node) == 0:
+        # consistency check
+        if len(df_dump) == 0:
             logger.warning('cannot calculate collocates of 0 contexts')
             return
 
+        # TODO: start independent CQP process
         self.corpus = corpus
-        self.df_node = df_node.copy()
-        self.size = len(df_node)
+
+        # what's in the dump?
+        self.df_dump = df_dump
+        self.size = len(df_dump)
+
+        # determine maximum window size
         if context is not None:
             if mws > context:
                 logger.warning(
@@ -32,17 +38,19 @@ class Collocates:
                 )
                 mws = context
         self.mws = mws
-        if p_query not in self.corpus.attributes_available['value'].values:
+
+        # determine layer to work on
+        if p_query not in self.corpus.attributes_available['name'].values:
             logger.warning(
                 'p_att "%s" not available, falling back to primary layer' % p_query
             )
             p_query = 'word'
         self.p_query = p_query
 
+        # collect context and save result
         logger.info('collecting contexts')
-        deflated, f1_set = df_node_to_cooc(self.df_node)
+        deflated, f1_set = df_node_to_cooc(self.df_dump)
         logger.info('collected %d token positions' % len(deflated))
-
         self.deflated = deflated
         self.f1_set = f1_set
 
@@ -50,8 +58,10 @@ class Collocates:
 
         mws = self.mws
         if window > mws:
-            logger.warning('desired window outside maximum window size')
-            logger.warning('will use maximum window (%d)' % mws)
+            logger.warning(
+                'requested window outside maximum window size,'
+                ' falling back to %d' % mws
+            )
             window = mws
 
         # slice relevant window
@@ -61,8 +71,8 @@ class Collocates:
         f1_inflated = len(relevant)
 
         # get frequency counts
-        counts = self.corpus.cpos2counts(
-            relevant['cpos'], self.p_query
+        counts = self.corpus.counts.cpos(
+            relevant['cpos'], [self.p_query]
         )
         counts.columns = ['f']
 
@@ -71,26 +81,32 @@ class Collocates:
     def show(self, window=5, order='f', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None):
 
+        # consistency check
         if len(self.f1_set) == 0:
-            logger.error("there's nothing to show")
+            logger.error("nothing to show")
             return DataFrame()
 
+        # count
         counts, f1_inflated = self.count(window)
         if counts.empty:
-            logger.error("there's nothing to show")
+            logger.error("nothing to show")
             return DataFrame()
 
         # drop items that occur less than min-freq
         counts = counts.loc[~(counts['f'] < min_freq)]
 
+        # re-format index
+        counts.index = counts.index.get_level_values(self.p_query)
+
         # get marginals
-        f2 = self.corpus.marginals(
+        f2 = self.corpus.counts.marginals(
             counts.index, self.p_query, flags=0
         )
         f2.columns = ['marginal']
 
         # deduct node frequencies from marginals
-        node_freq = self.corpus.cpos2counts(self.f1_set, self.p_query)
+        node_freq = self.corpus.counts.cpos(self.f1_set, [self.p_query])
+        node_freq.index = node_freq.index.get_level_values(self.p_query)
         node_freq.columns = ['in_nodes']
         f2 = f2.join(node_freq)
         f2.fillna(0, inplace=True)
@@ -130,10 +146,10 @@ class Collocates:
 
 
 # utilities ####################################################################
-def df_node_to_cooc(df_node, context=None):
-    """ converts df_node to df_cooc
+def df_node_to_cooc(df_dump, context=None):
+    """ converts df_dump to df_cooc
 
-    df_node: [match, matchend] + [s_id, region_start, region_end]
+    df_node: [match, matchend] + [context_id, context, contextend]
     df_cooc: [match, cpos, offset] (dedpulicated)
     f1_set: cpos of nodes
 
@@ -147,28 +163,33 @@ def df_node_to_cooc(df_node, context=None):
     NB: equivalent to UCS when switching steps 3 and 4
     """
 
-    # reset the index to be able to work with it
-    df_node.reset_index(inplace=True)
-
+    # can't work on 0 context
     if context == 0:
         return DataFrame(), set()
 
-    elif context is None:
-        if (df_node['match'].values == df_node['region_start'].values).all() and (df_node['matchend'].values == df_node['region_end'].values).all():
+    # reset the index to be able to work with it
+    df = df_dump.reset_index()
+
+    if context is None:
+        if (
+            df['match'].values == df['context'].values
+        ).all() and (
+            df['matchend'].values == df['contextend'].values
+        ).all():
             return DataFrame(), set()
         else:
-            df_node['start'] = df_node['region_start']
-            df_node['end'] = df_node['region_end']
+            df['start'] = df['context']
+            df['end'] = df['contextend']
 
     else:
         logger.info("re-confine regions by given context")
-        df_node['start'] = df_node['match'] - context
-        df_node['start'] = df_node[['start', 'region_start']].max(axis=1)
-        df_node['end'] = df_node['matchend'] + context
-        df_node['end'] = df_node[['end', 'region_end']].min(axis=1)
+        df['start'] = df['match'] - context
+        df['start'] = df[['start', 'context']].max(axis=1)
+        df['end'] = df['matchend'] + context
+        df['end'] = df[['end', 'contextend']].min(axis=1)
 
     logger.info("(1a) create local contexts")
-    df = DataFrame.from_records(df_node.apply(node2cooc, axis=1).values)
+    df = DataFrame.from_records(df.apply(node2cooc, axis=1).values)
 
     logger.info("(1b) concatenate local contexts")
     df_infl = DataFrame({
