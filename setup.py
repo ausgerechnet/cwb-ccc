@@ -29,6 +29,7 @@ setuptools.setup(
         "pandas>=0.24.2",
         "cwb-python>=0.2.2",
         "association-measures>=0.1.3"
+        "unidecode>=1.1.1"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
