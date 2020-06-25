@@ -21,3 +21,5 @@ build/
 .Rhistory
 
 Pipfile*
+
+*CACHE*
