@@ -9,7 +9,7 @@ def brexit_corpus():
     context = 50
 
     corpus_name = "BREXIT_V20190522_DEDUP"
-    lib_path = "/home/ausgerechnet/repositories/spheroscope/instance-stable/lib/"
+    lib_path = "/home/ausgerechnet/repositories/spheroscope/library/BREXIT_V20190522_DEDUP/"
 
     s_break = 'tweet'
     s_query = 'tweet'

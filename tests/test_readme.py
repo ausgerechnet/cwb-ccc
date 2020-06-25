@@ -4,6 +4,17 @@ import json
 import pytest
 
 
+@pytest.mark.now
+def test_macro(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    lib_path=brexit_corpus['lib_path'],
+                    registry_path=brexit_corpus['registry_path'])
+
+    corpus.cqp.Exec("Last=/ap();")
+    counts = corpus.counts.matches(corpus.cqp, name="Last")
+    print(counts)
+
+
 @pytest.mark.readme_concordancing
 def test_concordancing():
     corpus = Corpus(
