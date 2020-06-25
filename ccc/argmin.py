@@ -73,7 +73,7 @@ def read_query_json(query_path, convert=True):
     return query
 
 
-def run_query(corpus, query, match_strategy='longest', json_mode=True):
+def run_query(corpus, query, match_strategy='longest'):
 
     # get post-processed dump
     result = corpus.query(

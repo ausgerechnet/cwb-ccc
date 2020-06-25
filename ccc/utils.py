@@ -322,7 +322,7 @@ def concordance_line2df(line, p_show):
     # append anchors
     for a in anchors:
         df[a] = False
-        if anchors[a] != -1:
+        if anchors[a] in df.index:
             df.at[anchors[a], a] = True
 
     # init output
@@ -353,7 +353,8 @@ def concordance_line2extended(line, p_show, p_text=None, p_slots=None, regions=[
     if p_slots:
         for a in anchors:
             anchor_value = anchors[a]
-            if anchor_value != -1:
+            anchor_exists = True in out['df'][a].values
+            if anchor_exists:
                 out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
 
         for region in regions:

@@ -37,6 +37,7 @@ def test_run_query(brexit_corpus):
 
 @pytest.mark.files
 def test_argmin(brexit_corpus):
+
     query_path = (
         "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
         "query-example.json"
@@ -46,19 +47,17 @@ def test_argmin(brexit_corpus):
         "argmin_queries"
     )
 
-    # read file
+    # read query file
     query = read_query_json(query_path)
-
-    # patch path to query
     query['query_path'] = query_path
 
-    # run query
+    # init corpus, run query
     corpus = Corpus(brexit_corpus['corpus_name'],
                     brexit_corpus['lib_path'],
                     data_path=data_path)
     result = run_query(corpus, query)
 
-    # get path for output
+    # save result
     path_out = os.path.join(data_path, query['name']) + ".tsv"
     result['df'] = result['df'].apply(lambda row: row.to_json())
     result.to_csv(path_out, sep="\t")
