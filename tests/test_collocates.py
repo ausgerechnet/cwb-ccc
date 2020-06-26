@@ -142,8 +142,7 @@ def test_query_keywords_collocates(sz_corpus):
     assert('Angela' == keywords.show(order='log_likelihood').head(1).index[0])
 
 
-@pytest.mark.collocates
-@pytest.mark.collocates_mwu_marginals
+@pytest.mark.mwu_marginals
 def test_collactes_mwu(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
     query = (
@@ -155,7 +154,8 @@ def test_collactes_mwu(sz_corpus):
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
     assert('Bundeskanzler' in c.index)
-    print(c.loc[['Gerhard', 'in']])
+    c.loc['Gerhard']['in_nodes'] > c.loc['Gerhard']['f']
+    c.loc['in']['in_nodes'] == 0
 
 
 @pytest.mark.fold_items
@@ -167,6 +167,6 @@ def test_collocates_pp(sz_corpus):
     result = corpus.query(query)
     collocates = corpus.collocates(result, p_query='word')
     c = collocates.show(order='log_likelihood', cut_off=None)
-    print(c.loc[['In', 'in']][['O11', 'O12', 'O21', 'O22']])
+    assert(c.loc['In']['O11'] < c.loc['in']['O11'])
     c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
-    print(c.loc[['in']][['O11', 'O12', 'O21', 'O22']])
+    assert('in' in c.index and 'In' not in c.index)
