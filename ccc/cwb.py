@@ -45,8 +45,10 @@ def cwb_scan_corpus(path, corpus_name, p_atts=['word'], cmd='cwb-scan-corpus'):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     ret = scan.communicate()[0].decode()
+
     logger.info("... collecting results")
-    df_counts = read_csv(StringIO(ret), sep="\t", header=None)
+    df_counts = read_csv(StringIO(ret), sep="\t", header=None,
+                         quoting=3, keep_default_na=False)
     df_counts.columns = ['freq'] + p_atts
     df_counts = df_counts.set_index(p_atts)
     return df_counts
@@ -142,6 +144,8 @@ class Corpus:
 
         """
 
+        logger.info("enter read_lib")
+
         # wordlists
         wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
         for wordlist in wordlists:
@@ -175,17 +179,19 @@ class Corpus:
 
         """
 
-        logger.info("cwb.get_s_extents")
+        logger.info("enter get_s_extents")
 
         # retrieve from cache
         parameters = ['s_extents', s_att]
         df = self.cache.get(parameters)
         if df is not None:
+            logger.info('using cached version of extents of s-attribute "%s"' % s_att)
             return df
 
         # compute
         logger.info('computing extents of s-attribute "%s"' % s_att)
         s_regions = self.attributes.attribute(s_att, 's')
+
         # check if there's annotations
         annotation = self.attributes_available.loc[
             self.attributes_available['name'] == s_att
@@ -826,7 +832,7 @@ class Counts:
         return df_counts
 
     @time_it
-    def matches(self, cqp, name, p_atts=["word"], split=False, flags=None, strategy=2):
+    def matches(self, cqp, name, p_atts=["word"], split=False, flags=None, strategy=3):
         """Counts tokens in [match .. matchend] of named subcorpus defined in
         running cqp.
 
