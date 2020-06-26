@@ -128,11 +128,12 @@ def df_node_to_cooc(df_dump, context=None):
     f1_set: cpos of nodes
 
     deduplication strategy:
-    (1) create overlapping contexts with nodes
-    (2) sort by abs(offset)
-    (3) deduplicate by cpos, keep first occurrences (=smallest offset)
-    (4) f1_set = (cpos where offset == 0)
-    (5) remove rows where cpos in f1_set
+    (1a) create overlapping contexts with nodes
+    (1b) concatenate local contexts
+    (2a) sort by abs(offset)
+    (2b) deduplicate by cpos, keep first occurrences (=smallest offset)
+    (3a) f1_set = (cpos where offset == 0)
+    (3b) remove rows where cpos in f1_set
 
     NB: equivalent to UCS when switching steps 3 and 4
     """
@@ -172,18 +173,18 @@ def df_node_to_cooc(df_dump, context=None):
         'offset': list(chain.from_iterable(df['offset_list'].values))
     })
 
-    logger.info("(2) sort by absolut offset")
+    logger.info("(2a) sort by absolute offset")
     df_infl['abs_offset'] = df_infl.offset.abs()
     df_infl.sort_values(by=['abs_offset', 'cpos'], inplace=True)
     df_infl.drop(["abs_offset"], axis=1)
 
-    logger.info("(3) drop duplicates")
+    logger.info("(2b) drop duplicates")
     df_defl = df_infl.drop_duplicates(subset='cpos')
 
-    logger.info("(4) identify matches")
+    logger.info("(3a) identify and remove nodes")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
 
-    logger.info("(5) remove matches")
+    logger.info("(3b) identify and remove nodes")
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
