@@ -404,13 +404,36 @@ def test_count_matches(brexit_corpus):
     assert("Nigel" in counts.index)
 
 
+@pytest.mark.mwus
+def test_count_mwus_3(sz_corpus):
+
+    # whole corpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    queries = [
+        formulate_cqp_query([item]) for item in items
+    ]
+
+    counts3 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=3,
+        fill_missing=False
+    )
+
+    print(counts3)
+
+
+@pytest.mark.mwus
 @pytest.mark.cwb_counts
 def test_count_mwus_strategies(sz_corpus):
 
     # whole corpus
     corpus = Corpus(sz_corpus['corpus_name'])
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
-    queries = [formulate_cqp_query([item]) for item in items]
+    queries = [
+        formulate_cqp_query([item]) for item in items
+    ]
 
     counts1 = corpus.counts.mwus(
         corpus.cqp,
