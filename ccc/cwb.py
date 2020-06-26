@@ -894,7 +894,7 @@ class Counts:
                 )
                 strategy = 3
         if strategy == 3:
-            if flags:
+            if flags or not split:
                 logger.warning(
                     "matches: cannot use cwb-scan-corpus"
                 )
@@ -1023,7 +1023,7 @@ class Counts:
             query = "|".join(queries)
             cqp.Exec('%s=%s;' % (name, query))
             df = self.matches(cqp, name, p_atts=p_atts,
-                              split=False, flags=None)
+                              split=False, flags=None, strategy=2)
 
         # post-process dataframe
         df["freq"] = df["freq"].astype(int)
