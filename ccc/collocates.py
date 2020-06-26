@@ -75,6 +75,7 @@ class Collocates:
             relevant['cpos'], [self.p_query]
         )
         counts.columns = ['f']
+        counts.index = counts.index.get_level_values(self.p_query)
 
         return counts, f1_inflated
 
@@ -86,21 +87,12 @@ class Collocates:
             logger.error("nothing to show")
             return DataFrame()
 
-        # count
-        counts, f1_inflated = self.count(window)
-        if counts.empty:
-            logger.error("nothing to show")
-            return DataFrame()
-
-        # drop items that occur less than min-freq
-        counts = counts.loc[~(counts['f'] < min_freq)]
-
-        # re-format index
-        counts.index = counts.index.get_level_values(self.p_query)
+        # get frequencies
+        f, f1_inflated = self.count(window)
 
         # get marginals
         f2 = self.corpus.counts.marginals(
-            counts.index, self.p_query, flags=0
+            f.index, self.p_query
         )
         f2.columns = ['marginal']
 
@@ -113,34 +105,16 @@ class Collocates:
         f2['in_nodes'] = f2['in_nodes'].astype(int)
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
-        # join to contingency table
-        contingencies = counts.join(f2)
+        # get sub-corpus size
+        f1 = f1_inflated
 
-        # post-processing: fold items
-        contingencies = fold_df(contingencies, flags)
+        # get corpus size
+        N = self.corpus.corpus_size - len(self.f1_set)
 
-        # add constant columns
-        contingencies['N'] = self.corpus.corpus_size - len(self.f1_set)
-        contingencies['f1'] = f1_inflated
-        # NB: frequency signature notation (Evert 2004: 36)
-
-        # add measures
-        if frequencies:
-            collocates = contingencies.join(fq.observed_frequencies(contingencies))
-            collocates = collocates.join(fq.expected_frequencies(collocates))
-            collocates = collocates.join(calculate_measures(contingencies, ams))
-        else:
-            collocates = contingencies.join(calculate_measures(contingencies, ams))
-        collocates.index.name = 'item'
-
-        # sort dataframe
-        collocates.sort_values(
-            by=[order, 'item'],
-            ascending=False, inplace=True
+        collocates = add_ams(
+            f, f1, f2, N,
+            min_freq, order, cut_off, flags, ams, frequencies
         )
-
-        if cut_off is not None:
-            collocates = collocates.head(cut_off)
 
         return collocates
 
@@ -213,3 +187,52 @@ def df_node_to_cooc(df_dump, context=None):
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
+
+
+def add_ams(f, f1, f2, N,
+            min_freq=2,
+            order='f',
+            cut_off=100,
+            flags=None,
+            ams=None,
+            frequencies=True):
+
+    # drop items that occur less than min-freq
+    f = f.loc[~(f['f'] < min_freq)]
+
+    # init contingency table with f and f2
+    contingencies = f.join(f2)
+
+    # post-processing: fold items
+    contingencies = fold_df(contingencies, flags)
+
+    # add constant columns
+    contingencies['N'] = N
+    contingencies['f1'] = f1
+    # NB: frequency signature notation (Evert 2004: 36)
+
+    # add measures
+    logger.info("calculating measures")
+    measures = calculate_measures(contingencies, ams)
+    contingencies = contingencies.join(measures)
+
+    # create output
+    if frequencies:
+        contingencies = contingencies.join(
+            fq.observed_frequencies(contingencies)
+        )
+        contingencies = contingencies.join(
+            fq.expected_frequencies(contingencies)
+        )
+    contingencies.index.name = 'item'
+
+    # sort dataframe
+    contingencies.sort_values(
+        by=[order, 'item'],
+        ascending=False, inplace=True
+    )
+
+    if cut_off is not None:
+        contingencies = contingencies.head(cut_off)
+
+    return contingencies
