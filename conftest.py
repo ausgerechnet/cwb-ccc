@@ -10,6 +10,10 @@ def brexit_corpus():
 
     corpus_name = "BREXIT_V20190522_DEDUP"
     lib_path = "/home/ausgerechnet/repositories/spheroscope/library/BREXIT_V20190522_DEDUP/"
+    meta_path = (
+        "/home/ausgerechnet/corpora/cwb/upload/"
+        "brexit/brexit-preref-rant/brexit_v20190522_dedup.tsv.gz"
+    )
 
     s_break = 'tweet'
     s_query = 'tweet'
@@ -28,7 +32,8 @@ def brexit_corpus():
         's_break': s_break,
         's_query': s_query,
         'query': query,
-        'query_lib': query_lib
+        'query_lib': query_lib,
+        'meta_path': meta_path
     }
 
 
