@@ -179,17 +179,17 @@ class Corpus:
 
         """
 
-        logger.info("enter get_s_extents")
+        logger.info("get_s_extents")
 
         # retrieve from cache
         parameters = ['s_extents', s_att]
         df = self.cache.get(parameters)
         if df is not None:
-            logger.info('using cached version of extents of s-attribute "%s"' % s_att)
+            logger.info('using cached version of extents of "%s"' % s_att)
             return df
 
         # compute
-        logger.info('computing extents of s-attribute "%s"' % s_att)
+        logger.info('computing extents of "%s"' % s_att)
         s_regions = self.attributes.attribute(s_att, 's')
 
         # check if there's annotations
