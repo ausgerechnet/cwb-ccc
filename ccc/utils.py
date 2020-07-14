@@ -283,7 +283,7 @@ def concordance_line2simple(line, p_show='word', kwic=False):
 
     if not kwic:
         return {
-            'text': line[p_show]
+            'text': " ".join(line[p_show])
         }
 
     # get and append left / match / right
@@ -313,8 +313,12 @@ def concordance_line2df(line, p_show):
     """
 
     # pop non-lists
-    anchors = line.pop('anchors')
-    line.pop('match')           # not needed
+    if 'anchors' in line.keys():
+        anchors = line.pop('anchors')
+    else:
+        anchors = []
+    if 'match' in line:
+        line.pop('match')           # not needed
 
     # transform to df
     df = DataFrame.from_records(line).set_index('cpos')
@@ -457,3 +461,15 @@ def fold_df(df, flags="%cd"):
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)
     return df
+
+
+def merge_intervals(inter, start_index=0):
+    """ for merging contexts """
+    for i in range(start_index, len(inter)-1):
+        if inter[i][1] >= inter[i+1][0]:
+            new_start = inter[i][0]
+            new_end = inter[i+1][1]
+            inter[i] = [new_start, new_end]
+            del inter[i+1]
+            return merge_intervals(inter.copy(), start_index=i)
+    return inter
