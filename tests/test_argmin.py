@@ -25,7 +25,6 @@ def test_run_query(brexit_corpus):
     )
     data_path = (
         "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
-        "argmin_queries"
     )
     corpus = Corpus(brexit_corpus['corpus_name'],
                     brexit_corpus['lib_path'],
@@ -43,8 +42,7 @@ def test_argmin(brexit_corpus):
         "query-example.json"
     )
     data_path = (
-        "/home/ausgerechnet/repositories/cwb-ccc/tests/"
-        "argmin_queries"
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries"
     )
 
     # read query file

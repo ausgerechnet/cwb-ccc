@@ -1,7 +1,7 @@
-from ccc.utils import preprocess_query
-from ccc.utils import concordance_lines2df
-from ccc.utils import fold_item
 from ccc.cwb import Corpus
+from ccc.utils import preprocess_query
+from ccc.utils import fold_item
+from ccc.utils import merge_intervals
 import pytest
 
 
@@ -37,13 +37,6 @@ def test_preprocess_anchor_query():
     assert(anchors_1 == anchors_2 == anchors_3 == anchors_4)
 
 
-def test_lines2df():
-    corpus = Corpus('SZ_2009_14', s_meta='text_id')
-    result = corpus.query('"selten"', s_break='s', context=2)
-    conc = corpus.concordance(result)
-    assert(concordance_lines2df(conc.lines(), meta=conc.meta).shape == (100, 4))
-
-
 @pytest.mark.fold
 def test_fold_items():
     items_aber = ['aber', 'äber', 'AbEr', 'ÄBER']
@@ -52,12 +45,63 @@ def test_fold_items():
     print([fold_item(item) for item in items_francais])
 
 
-def test_kwic_export():
-    corpus = Corpus('SZ_2009_14', s_meta='text_id')
+def test_lines_raw():
+    corpus = Corpus('SZ_2009_14')
     result = corpus.query(
         '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_break='s'
+        context=None, s_context='s'
+    )
+    conc = corpus.concordance(result)
+    df_lines = conc.lines(form='raw')
+    print(df_lines)
+
+
+def test_lines_simple():
+    corpus = Corpus('SZ_2009_14')
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_context='s'
     )
     conc = corpus.concordance(result)
     df_lines = conc.lines(form='simple')
     print(df_lines)
+
+
+def test_lines_kwic():
+    corpus = Corpus('SZ_2009_14')
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_context='s'
+    )
+    conc = corpus.concordance(result)
+    df_lines = conc.lines(form='kwic')
+    print(df_lines)
+
+
+def test_lines_dataframes():
+    corpus = Corpus('SZ_2009_14')
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_context='s'
+    )
+    conc = corpus.concordance(result)
+    df_lines = conc.lines(form='dataframes')
+    print(df_lines)
+
+
+def test_lines_extended():
+    corpus = Corpus('SZ_2009_14')
+    result = corpus.query(
+        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
+        context=None, s_context='s'
+    )
+    conc = corpus.concordance(result)
+    df_lines = conc.lines(form='extended')
+    print(df_lines)
+
+
+@pytest.mark.now
+def test_merge_intervals():
+    intervals = [[1, 3], [2, 4], [5, 9], [6, 10]]
+    merge = merge_intervals(intervals)
+    print(merge)
