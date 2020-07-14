@@ -101,7 +101,7 @@ class Collocates:
         node_freq.index = node_freq.index.get_level_values(self.p_query)
         node_freq.columns = ['in_nodes']
         f2 = f2.join(node_freq)
-        f2.fillna(0, inplace=True)
+        f2 = f2.fillna(0)
         f2['in_nodes'] = f2['in_nodes'].astype(int)
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
@@ -135,7 +135,7 @@ def df_node_to_cooc(df_dump, context=None):
     (3a) f1_set = (cpos where offset == 0)
     (3b) remove rows where cpos in f1_set
 
-    NB: equivalent to UCS when switching steps 3 and 4
+    NB: equivalent to UCS when switching steps 3a and 3b
     """
 
     # can't work on 0 context
@@ -175,16 +175,16 @@ def df_node_to_cooc(df_dump, context=None):
 
     logger.info("(2a) sort by absolute offset")
     df_infl['abs_offset'] = df_infl.offset.abs()
-    df_infl.sort_values(by=['abs_offset', 'cpos'], inplace=True)
-    df_infl.drop(["abs_offset"], axis=1)
+    df_infl = df_infl.sort_values(by=['abs_offset', 'cpos'])
+    df_infl = df_infl.drop(["abs_offset"], axis=1)
 
     logger.info("(2b) drop duplicates")
     df_defl = df_infl.drop_duplicates(subset='cpos')
 
-    logger.info("(3a) identify and remove nodes")
+    logger.info("(3a) identify nodes ...")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])
 
-    logger.info("(3b) identify and remove nodes")
+    logger.info("(3b) ... and remove them")
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
