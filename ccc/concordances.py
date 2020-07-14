@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Concordance:
     """ concordancing """
 
-    def __init__(self, corpus, df_dump, name=None, max_matches=None):
+    def __init__(self, corpus, df_dump, max_matches=None):
 
         if len(df_dump) == 0:
             logger.warning('no concordance lines to show')
@@ -95,15 +95,15 @@ class Concordance:
               cut_off=100, form='raw'):
         """ creates concordance lines from self.df_dump
 
-        :param str form: raw / simple / kwic / dataframes
+        :param str form: raw / simple / kwic / dataframes / extended
 
         """
 
         # check parameter consistency
         if p_text is not None and p_text not in p_show:
-            logger.error('')
+            logger.error('p_text not in p_show')
         if p_slots is not None and p_slots not in p_show:
-            logger.error('')
+            logger.error('p_slots not in p_show')
 
         # select appropriate subset of matches
         logger.info('lines: selecting matches')
@@ -113,6 +113,8 @@ class Concordance:
         if matches is None:
             if not cut_off or len(all_matches) < cut_off:
                 cut_off = len(all_matches)
+        else:
+            all_matches = matches
 
         # order
         if order == 'random':
