@@ -607,16 +607,16 @@ class Corpus:
 
     def query(self, query, context=20, context_left=None,
               context_right=None, s_context=None, corrections=dict(),
-              match_strategy='standard', name='mnemosyne'):
+              match_strategy='standard', name='mnemosyne', return_name=False):
         """Queries the corpus, computes df_dump.
 
         === (match, matchend), 0*, ..., 9*, context*, contextend* ===
 
         If the magic word 'mnemosyne' is given as name of the result,
         the query parameters will be used to create an identifier and
-        the resulting subcorpus will be saved, so that the result of
-        the can be accessed directly by later queries with the same
-        parameters on the same subcorpus.
+        the resulting subcorpus will be saved, so that the result can
+        be accessed directly by later queries with the same parameters
+        on the same subcorpus.
 
         :param str query: CQP query
         :param int context: maximum context around match (symmetric)
@@ -634,7 +634,7 @@ class Corpus:
 
         # preprocess input
         query, s_query, anchors = preprocess_query(query)
-        s_query, s_context, s_meta = merge_s_atts(s_query, s_context, None)
+        s_query, s_context, s_meta = merge_s_atts(s_query, s_context, None)  # ToDo
         if context_left is None:
             context_left = context
         if context_right is None:
@@ -671,7 +671,10 @@ class Corpus:
                 # apply corrections to anchor points
                 df_dump = correct_anchors(df_dump, corrections)
 
-        return df_dump
+        if return_name:
+            return df_dump, name_cache
+        else:
+            return df_dump
 
     # high-level methods
     def concordance(self, df_dump, max_matches=100000):
