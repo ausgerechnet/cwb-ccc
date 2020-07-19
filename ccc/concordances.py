@@ -2,14 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from random import sample
-from collections import defaultdict
-import json
 # part of module
 from .utils import node2cooc
-from .utils import get_holes, apply_corrections
-from .utils import concordance_lines2df
+from .utils import format_concordance_lines
 # requirements
 from pandas import DataFrame
+# logging
 import logging
 logger = logging.getLogger(__name__)
 
@@ -17,190 +15,143 @@ logger = logging.getLogger(__name__)
 class Concordance:
     """ concordancing """
 
-    def __init__(self, corpus, df_node, max_matches=None):
+    def __init__(self, corpus, df_dump, max_matches=None):
 
-        if len(df_node) == 0:
-            logger.warning('0 query hits')
+        if len(df_dump) == 0:
+            logger.warning('no concordance lines to show')
             return
 
-        matches = df_node.index.droplevel('matchend')
-        self.meta = DataFrame(index=matches,
-                              data=df_node['s_id'].values,
-                              columns=['s_id'])
+        # TODO: start independent CQP process
         self.corpus = corpus
-        self.df_node = df_node
-        self.size = len(df_node)
 
-        # frequency breakdown of matches
-        breakdown = True
-        if max_matches is not None:
-            if self.size > max_matches:
-                logger.warning(
-                    'found %d matches (more than %d)' % (self.size, max_matches)
-                )
-                logger.warning('skipping frequency breakdown')
-                self.breakdown = None
-                breakdown = False
-        if breakdown:
-            self.breakdown = self.corpus.count_matches(df=df_node)
-            self.breakdown.index.name = 'type'
-            self.breakdown.sort_values(by='freq', inplace=True, ascending=False)
+        # what's in the dump?
+        self.df_dump = df_dump
+        self.size = len(df_dump)
+        anchors = [i for i in range(10) if i in df_dump.columns]
+        anchors += ['match', 'matchend', 'context', 'contextend']
+        self.anchors = anchors
 
-    def lines(self, matches=None, p_show=[], order='first',
-              cut_off=100, form='dictionary'):
-        """ creates concordance lines from self.df_node """
-
-        # take appropriate sub-set of matches
-        topic_matches = set(self.df_node.index.droplevel('matchend'))
-
-        if matches is None:
-            if not cut_off or len(topic_matches) < cut_off:
-                cut_off = len(topic_matches)
-            if order == 'random':
-                topic_matches_cut = sample(topic_matches, cut_off)
-            elif order == 'first':
-                topic_matches_cut = sorted(list(topic_matches))[:cut_off]
-            elif order == 'last':
-                topic_matches_cut = sorted(list(topic_matches))[-cut_off:]
-            else:
-                raise NotImplementedError('concordance order not implemented')
-            df_node = self.df_node.loc[topic_matches_cut, :]
-
-        else:
-            df_node = self.df_node.loc[matches, :]
-
-        # check if there's anchors
-        anchor_keys = set(df_node.columns) - {'region_start', 'region_end', 's_id'}
-        anchored = len(anchor_keys) > 0
-
-        # fill concordance dictionary
-        concordance = dict()
-        for row_ in df_node.iterrows():
-
-            # gather values
-            match, matchend = row_[0]
-            row = dict(row_[1])
-            row['match'] = match
-            row['matchend'] = matchend
-            row['start'] = row['region_start']
-            row['end'] = row['region_end']
-
-            # create cotext
-            df = DataFrame(node2cooc(row))
-            df.columns = ['match', 'cpos', 'offset']
-            df.drop('match', inplace=True, axis=1)
-
-            # lexicalize positions
-            for p_att in ['word'] + p_show:
-                df[p_att] = df.cpos.apply(
-                    lambda x: self.corpus.cpos2token(x, p_att)
-                )
-            df.set_index('cpos', inplace=True)
-
-            # handle optional anchors
-            if anchored:
-                anchors = dict()
-                for anchor in anchor_keys:
-                    anchors[anchor] = int(row[anchor])
-                df['anchor'] = None
-                for anchor in anchors.keys():
-                    if anchors[anchor] != -1:
-                        df.at[anchors[anchor], 'anchor'] = anchor
-
-            # save concordance line
-            concordance[match] = df
-
-        if form == 'dictionary':
-            return concordance
-        elif form == 'simple-kwic':
-            kwic = True
-        elif form == 'simple':
-            kwic = False
-        else:
-            raise NotImplementedError("format type (%s) not implemented" % form)
-
-        if self.corpus.s_meta is None:
-            concordance = concordance_lines2df(
-                concordance, kwic=kwic
+        # frequency breakdown
+        if max_matches is not None and self.size > max_matches:
+            logger.warning(
+                'no frequency breakdown (%d matches)' % self.size
             )
+            self.breakdown = DataFrame(
+                index=['NODE'],
+                data=[self.size],
+                columns=['freq']
+            )
+            self.breakdown.index.name = 'word'
         else:
-            concordance = concordance_lines2df(
-                concordance, self.meta, kwic=kwic
+            logger.info('creating frequency breakdown')
+            self.breakdown = self.corpus.counts.dump(
+                df_dump=df_dump,
+                start='match', end='matchend',
+                p_atts=['word']
             )
 
-        return concordance
+    def text_line(self, index, columns, p_show=['word']):
+        """Translates one row of self.df_dump into a concordance_line.
 
-    def show_argmin(self, anchors, regions, p_show=['lemma'],
-                    order='first', cut_off=None):
+        :return: dictionary of [match, cpos, offset, anchors] + p_show
+        :rtype: dict
 
-        # apply corrections
-        self.df_node = apply_corrections(self.df_node, anchors)
+        """
 
-        # get concordance
-        lines = self.lines(p_show=p_show, order='first', cut_off=None)
+        # pack values
+        match, matchend = index
+        row = dict(columns)
+        row['match'] = match
+        row['matchend'] = matchend
 
-        # initialize output
-        result = dict()
-        result['nr_matches'] = self.size
-        result['matches'] = list()
-        result['holes'] = defaultdict(list)
-        result['meta'] = self.meta.to_dict()
+        # create cotext
+        cotext = node2cooc(row)
+        cpos = cotext['cpos_list']
 
-        # loop through concordances
-        for key in lines.keys():
+        # init output dictionary
+        out = {
+            'cpos': cpos,
+            'offset': cotext['offset_list'],
+            'match': match
+        }
+        assert(match == cotext['match_list'][0])
 
-            line = lines[key]
-
-            # fill concordance line
-            entry = dict()
-            entry['df'] = line.to_dict()
-            entry['position'] = key
-            entry['full'] = " ".join(entry['df']['word'].values())
-
-            # hole structure
-            holes = get_holes(line, anchors, regions)
-            if 'lemmas' in holes.keys():
-                entry['holes'] = holes['lemmas']
-            else:
-                entry['holes'] = holes['words']
-
-            result['matches'].append(entry)
-
-            # append to global holes list
-            for idx in entry['holes'].keys():
-                result['holes'][idx].append(entry['holes'][idx])
-
-        return result
-
-
-def process_argmin_file(corpus, query_path, p_show=['lemma'],
-                        context=None, s_break='s',
-                        match_strategy='longest'):
-
-    with open(query_path, "rt") as f:
-        try:
-            query = json.loads(f.read())
-        except json.JSONDecodeError:
-            logger.error("not a valid json file")
-            return
-
-    # add query
-    query['query_path'] = query_path
-
-    # run the query
-    try:
-        result, info = corpus.query(query['query'], s_break=s_break,
-                                    context=context,
-                                    match_strategy=match_strategy,
-                                    info=True)
-        query['info'] = info
-        concordance = corpus.concordance(result)
-        query['result'] = concordance.show_argmin(
-            query['anchors'],
-            query['regions'],
-            p_show
+        # lexicalize positions
+        attribute_lists = zip(
+            *list(map(lambda x: self.corpus.cpos2patts(x, p_show), cpos))
         )
-    except TypeError:
-        logger.warning("no results for path %s" % query_path)
+        for a, p in zip(p_show, attribute_lists):
+            out[a] = list(p)
 
-    return query
+        # process anchors
+        out['anchors'] = dict()
+        for a in self.anchors:
+            out['anchors'][a] = row[a]
+
+        return out
+
+    def lines(self, matches=None, p_show=['word'], s_show=[],
+              p_text=None, p_slots=None, regions=[], order='first',
+              cut_off=100, form='raw'):
+        """ creates concordance lines from self.df_dump
+
+        :param str form: raw / simple / kwic / dataframes / extended
+
+        """
+
+        # check parameter consistency
+        if p_text is not None and p_text not in p_show:
+            logger.error('p_text not in p_show')
+        if p_slots is not None and p_slots not in p_show:
+            logger.error('p_slots not in p_show')
+
+        # select appropriate subset of matches
+        logger.info('lines: selecting matches')
+        if matches is None:
+            matches = set(self.df_dump.index.droplevel('matchend'))
+
+        # pre-process cut_off if necessary
+        if (cut_off is None) or (len(matches) < cut_off):
+            cut_off = len(matches)
+
+        # order
+        if order == 'random':
+            matches = sample(matches, cut_off)
+        elif order == 'first':
+            matches = sorted(list(matches))[:cut_off]
+        elif order == 'last':
+            matches = sorted(list(matches))[-cut_off:]
+        else:
+            raise NotImplementedError('concordance order not implemented')
+
+        logger.info("lines: retrieving %d concordance line(s)" % len(matches))
+        df = self.df_dump.loc[matches, :]
+
+        # texts
+        if len(p_show) > 0:
+
+            # retrieve lines as Series
+            # - index: match, matchend
+            # - values: dictionaries
+            df_lines = df.apply(
+                lambda row: self.text_line(row.name, row, p_show),
+                axis=1,
+            )
+            df_lines.name = 'raw'
+
+            # format text
+            if form == 'raw':
+                concordance = df_lines
+            else:
+                concordance = format_concordance_lines(
+                    df_lines, p_show, p_text,
+                    p_slots, regions, form=form
+                )
+            df = df.join(DataFrame(concordance))
+
+        # meta data
+        if len(s_show) > 0:
+            meta = self.corpus.get_s_annotations(df, s_show)
+            df = df.join(meta)
+
+        return df

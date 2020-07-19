@@ -1,101 +1,122 @@
 from ccc import Corpus
-from ccc.utils import time_it
+from ccc.cwb import Counts
+from ccc.cwb import cwb_scan_corpus
+from ccc.utils import formulate_cqp_query
 import pandas as pd
 import pytest
 
 
-# global settings
-registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
-context = 50
-cqp3 = "/home/ausgerechnet/tools/cwb-software/cwb-3.0.0/bin/cqp"
-
-# BREXIT CORPUS
-corpus_name = "BREXIT_V20190522"
-lib_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/lib/"
-s_break = 'tweet'
-s_query = 'tweet'
-query = '[lemma="test"]'
-query_wordlist = (
-    '<np>[pos_simple!="P"] []*</np> [lemma = $verbs_cause] [pos_simple="R"]? '
-    '<np>[]*</np> (<np>[]*</np> | <vp>[]*</vp> | <pp>[]*</pp>)+'
-)
-
-# SZ CORPUS
-corpus_name_2 = 'SZ_2009_14'
-s_query_2 = 's'
-s_break_2 = 'text'
-query_2 = '[lemma="Angela"] [lemma="Merkel"] | [lemma="CDU"]'
-anchor_query_2 = (
-    '@0[lemma="Angela"]? @1[lemma="Merkel"] '
-    '[word="\\("] @2[lemma="CDU"] [word="\\)"]'
-)
-anchors_2 = [0, 1, 2]
-
-
-# tests
 @pytest.mark.corpus_init
-def test_corpus():
-    corpus = Corpus(corpus_name, registry_path, lib_path)
+def test_corpus(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'],
+                    registry_path=sz_corpus['registry_path'])
     assert(corpus.corpus_size > 1000)
 
 
 @pytest.mark.corpus_init
-def test_corpus_init():
-    corpus = Corpus(corpus_name, registry_path, lib_path, cqp_bin=cqp3)
+def test_corpus_lib(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    lib_path=brexit_corpus['lib_path'],
+                    registry_path=brexit_corpus['registry_path'])
     assert(corpus.corpus_size > 1000)
 
 
 @pytest.mark.corpus_init
-def test_corpus_init_alt():
-    corpus = Corpus(corpus_name_2, registry_path, cqp_bin=cqp3)
-    assert(corpus.corpus_size > 1000)
-
-
-@pytest.mark.corpus_init
-def test_corpus_descriptor():
-    corpus = Corpus(corpus_name_2, registry_path)
+def test_corpus_descriptor(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
     assert(type(corpus.attributes_available) == pd.DataFrame)
 
 
-@pytest.mark.corpus_node
-def test_df_node_from_query():
-    corpus = Corpus(corpus_name, registry_path, lib_path, data_path=None)
-    df_node = corpus.df_node_from_query(
-        query=query,
-        s_query=s_query,
-        anchors=[],
-        s_break=s_break,
-        context=context,
-        match_strategy='standard'
-    )
-    assert(type(df_node) == pd.DataFrame)
-    assert(all(x in df_node.columns for x in ['region_start',
-                                              'region_end']))
+@pytest.mark.corpus_init
+@pytest.mark.cqp3
+@pytest.mark.skip
+def test_corpus_cqp3(sz_corpus):
+    cqp3 = ""
+    corpus = Corpus(sz_corpus['corpus_name'],
+                    cqp_bin=cqp3,
+                    registry_path=sz_corpus['registry_path'])
+    assert(corpus.corpus_size > 1000)
 
 
-@pytest.mark.corpus_anchor
-def test_df_anchor_from_query():
-    corpus = Corpus(corpus_name_2, registry_path, data_path=None)
-    df_node = corpus.df_node_from_query(
-        query=anchor_query_2,
-        s_query=s_query_2,
-        anchors=anchors_2,
-        s_break=s_break_2,
-        context=context,
+@pytest.mark.corpus_init
+@pytest.mark.cqp3
+@pytest.mark.skip
+def test_corpus_cqp3_lib(brexit_corpus):
+    cqp3 = ""
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    lib_path=brexit_corpus['lib_path'],
+                    cqp_bin=cqp3,
+                    registry_path=brexit_corpus['registry_path'])
+    assert(corpus.corpus_size > 1000)
+
+
+################################################
+# DUMPS ########################################
+################################################
+
+
+@pytest.mark.dump
+def test_dump_from_query(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'],
+                    data_path=None)
+    df_dump = corpus.dump_from_query(
+        query=sz_corpus['query'],
+        s_query=sz_corpus['s_query'],
         match_strategy='standard'
     )
-    assert(type(df_node) == pd.DataFrame)
-    assert(all(x in df_node.columns for x in [0,
-                                              1,
-                                              'region_start',
-                                              'region_end']))
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+
+
+@pytest.mark.dump
+def test_dump_from_query_lib(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    lib_path=brexit_corpus['lib_path'],
+                    data_path=None)
+    df_dump = corpus.dump_from_query(
+        query=brexit_corpus['query_lib'],
+        s_query=brexit_corpus['s_query'],
+        match_strategy='longest'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+
+
+@pytest.mark.dump
+def test_dump_from_query_1(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    df_dump = corpus.dump_from_query(
+        query='[lemma="angela"] @1[lemma="merkel"]',
+        match_strategy='longest'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+
+
+@pytest.mark.dump
+def test_dump_from_query_anchors(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df_dump = corpus.dump_from_query(
+        query=sz_corpus['anchor_query'],
+        s_query=sz_corpus['s_query'],
+        anchors=sz_corpus['anchors'],
+        match_strategy='standard'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+    assert(all(elem in df_dump.columns for elem in sz_corpus['anchors']))
+
+
+#####################################################
+# SUBCORPORA ########################################
+#####################################################
 
 
 @pytest.mark.subcorpus
-def test_subcorpus_from_query():
-    corpus = Corpus(corpus_name, registry_path)
+def test_subcorpus_from_query(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
     assert(int(corpus.cqp.Exec('size SBCRPS1')) == 0)
-    corpus.define_subcorpus(
+    corpus.subcorpus_from_query(
         query="[lemma='test*']",
         name='SBCRPS1'
     )
@@ -103,152 +124,618 @@ def test_subcorpus_from_query():
 
 
 @pytest.mark.subcorpus
-def test_subcorpus_from_df():
-    corpus = Corpus(corpus_name, registry_path)
+def test_subcorpus_from_df(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
     assert(int(corpus.cqp.Exec('size SBCRPS2')) == 0)
-    df = corpus.df_node_from_query(
-        query=query,
-        s_query=s_query,
-        anchors=[],
-        s_break=s_break,
-        context=context
+    df = corpus.dump_from_query(
+        query=brexit_corpus['query']
     )
-    corpus.define_subcorpus(
-        df_node=df,
+    corpus.subcorpus_from_dump(
+        df_dump=df,
         name='SBCRPS2'
     )
     assert(int(corpus.cqp.Exec('size SBCRPS2')) > 0)
 
 
 @pytest.mark.subcorpus
-def test_deactivate_subcorpus():
+def test_deactivate_subcorpus(brexit_corpus):
 
-    corpus = Corpus(corpus_name, registry_path)
-    df1 = corpus.df_node_from_query(
-        query, s_query, [], s_break, context=20
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    df1 = corpus.dump_from_query(
+        brexit_corpus['query'], brexit_corpus['s_query']
     )
 
     # activation
-    corpus.define_subcorpus(query="[lemma='be'] expand to tweet",
-                            name='SBCRPS3', activate=True)
-    df2 = corpus.df_node_from_query(
-        query, s_query, [], s_break, context=20
+    corpus.subcorpus_from_query(
+        query="[lemma='be'] expand to tweet",
+        name='SBCRPS3'
+    )
+    corpus.activate_subcorpus('SBCRPS3')
+
+    df2 = corpus.dump_from_query(
+        brexit_corpus['query'], brexit_corpus['s_query']
     )
 
     # deactivation
     corpus.activate_subcorpus()
-    df3 = corpus.df_node_from_query(
-        query, s_query, [], s_break, context=20
+    df3 = corpus.dump_from_query(
+        brexit_corpus['query'], brexit_corpus['s_query']
     )
 
     assert(len(df1) == len(df3))
     assert(len(df1) > len(df2))
 
 
-@pytest.mark.anchor_subcorpus
-def test_subcorpus_anchor():
-    corpus = Corpus(corpus_name_2, registry_path, lib_path)
-    df1 = corpus.df_node_from_query("[lemma='Angela']", s_query_2, [], s_break_2, 20)
-    df_anchor = corpus.df_node_from_query(
-        anchor_query_2,
-        s_query_2,
-        anchors_2,
-        s_break_2,
-        20
+@pytest.mark.subcorpus
+def test_subcorpus_anchor(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df1 = corpus.dump_from_query(
+        "[lemma='Angela']", sz_corpus['s_break']
     )
-    corpus.define_subcorpus(
-        df_node=df_anchor,
-        name='SBCRPS5',
-        activate=True
+    df_anchor = corpus.dump_from_query(
+        sz_corpus['anchor_query'],
+        sz_corpus['s_query'],
+        sz_corpus['anchors']
     )
-    df2 = corpus.df_node_from_query("[lemma='Angela']", None, [], s_break_2, 20)
+    corpus.subcorpus_from_dump(
+        df_dump=df_anchor,
+        name='SBCRPS5'
+    )
+    corpus.activate_subcorpus('SBCRPS5')
+    df2 = corpus.dump_from_query(
+        "[lemma='Angela']", None
+    )
     assert(len(df1) > len(df_anchor) > len(df2))
 
 
-@pytest.mark.cpos2token
-def test_cpos2token():
-    corpus = Corpus(corpus_name_2, registry_path)
-    token = corpus.cpos2token(124345)
-    assert(type(token) == str)
+@pytest.mark.subcorpus
+def test_subcorpus_from_s_att(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att('text_id', ['A44320331'])
 
 
-@pytest.mark.marginals
+@pytest.mark.skip
+@pytest.mark.subcorpus
+def test_subcorpus_from_s_att_wo(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att('np', [True])
+
+
+#####################################################
+# ATTRIBUTES ########################################
+#####################################################
+
+
+@pytest.mark.attributes
+def test_cpos2patt(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    token = corpus.cpos2patts(124345)
+    assert(type(token) == tuple)
+
+
+@pytest.mark.attributes
+def test_cpos2patts(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    token = corpus.cpos2patts(124345, ['word', 'pos'])
+    assert(type(token) == tuple)
+
+
+@pytest.mark.attributes
+def test_get_s_extents(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.get_s_extents('text_id')
+    print(df)
+
+
+@pytest.mark.attributes
+def test_get_s_extents_2(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    df = corpus.get_s_extents('ner_type')
+    print(df)
+
+
+#################################################
+# .query ########################################
+#################################################
+
+
+@pytest.mark.query
+def test_query_context_1(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.query(
+        query=sz_corpus['query_full'],
+        context=None,
+    )
+    assert(type(df) == pd.DataFrame)
+    columns = sz_corpus['anchors'] + ['context', 'contextend']
+    assert(all(elem in df.columns for elem in columns))
+
+
+@pytest.mark.query
+def test_query_context_2(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.query(
+        query=sz_corpus['query_full'],
+        context_left=10,
+        context=15,
+    )
+    assert(type(df) == pd.DataFrame)
+    columns = sz_corpus['anchors'] + ['context', 'contextend']
+    assert(all(elem in df.columns for elem in columns))
+
+
+@pytest.mark.query
+def test_query_context_3(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.query(
+        query=sz_corpus['query_full'],
+        context=None,
+        s_context='s'
+    )
+    assert(type(df) == pd.DataFrame)
+    columns = sz_corpus['anchors'] + ['context_id', 'context', 'contextend']
+    assert(all(elem in df.columns for elem in columns))
+
+
+@pytest.mark.query
+def test_query_context_4(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.query(
+        query=sz_corpus['query_full'],
+        context=10,
+        s_context='s'
+    )
+    assert(type(df) == pd.DataFrame)
+    columns = sz_corpus['anchors'] + ['context_id', 'context', 'contextend']
+    assert(all(elem in df.columns for elem in columns))
+
+
+@pytest.mark.query
+@pytest.mark.s_annotations
+def test_query_s_atts_brexit(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    df_dump = corpus.query(
+        query='[lemma="nigel"]',
+        context=10,
+        s_context='tweet'
+    )
+    df = corpus.get_s_annotations(df_dump, ['ner_type', 'tweet_id', 'tweet'])
+    assert(type(df) == pd.DataFrame)
+    columns = [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]
+    columns += ['ner_type', 'tweet_id']
+    print(df['ner_type'].value_counts())
+    assert(all(elem in df.columns for elem in columns))
+
+
+##################################################
+# .counts ########################################
+##################################################
+
+
 @pytest.mark.cwb_counts
-def test_marginals():
-    corpus = Corpus(corpus_name_2, registry_path)
-    counts = corpus.marginals(["Angela", "Merkel", "CDU"])
+def test_cwb_scan_corpus(brexit_corpus):
+    from tempfile import NamedTemporaryFile
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    corpus.query('[lemma="test"]', name='tmp')
+
+    with NamedTemporaryFile(mode="wt") as f:
+        corpus.cqp.Exec('dump tmp > "%s"' % f.name)
+        df1 = cwb_scan_corpus(f.name, brexit_corpus['corpus_name'])
+
+    corpus.subcorpus_from_query(query='[lemma="farage"] expand to tweet',
+                                name='farage')
+    corpus.activate_subcorpus('farage')
+    corpus.query('[lemma="test"]', name='tmp')
+
+    with NamedTemporaryFile(mode="wt") as f:
+        corpus.cqp.Exec('dump tmp > "%s"' % f.name)
+        df2 = cwb_scan_corpus(f.name, brexit_corpus['corpus_name'])
+
+    assert(sum(df2['freq']) != sum(df1['freq']))
+
+
+@pytest.mark.cwb_counts
+def test_count_cpos(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
+    assert(type(counts) == pd.DataFrame)
+
+
+@pytest.mark.cwb_counts
+def test_count_cpos_combo(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
+    assert(type(counts) == pd.DataFrame)
+    assert(counts.index.names == ['lemma', 'pos'])
+
+
+@pytest.mark.cwb_counts
+def test_marginals(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    counts = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
     assert(len(counts) == 3)
 
 
 @pytest.mark.cwb_counts
-def test_item_freq_subcorpora():
-
-    corpus = Corpus(corpus_name_2, registry_path)
-
-    # whole corpus
-    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.item_freq(["Angela", "Merkel", "CDU"])
-    assert(counts1.equals(counts2))
-
-    # subcorpus
-    corpus.define_subcorpus(query='[lemma="Bundesregierung"] expand to s',
-                            name='Bundesregierung', activate=True)
-
-    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.item_freq(["Angela", "Merkel", "CDU"])
-    assert(counts1.loc['Angela', 'freq'] > counts2.loc['Angela', 'freq'])
-
-    # whole corpus
-    corpus.activate_subcorpus()
-    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.item_freq(["Angela", "Merkel", "CDU"])
-    assert(counts1.equals(counts2))
+def test_marginals_patterns(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    counts = corpus.counts.marginals(["Ang*", "Merkel", "CDU"])
+    assert(len(counts) == 3)
+    counts = corpus.counts.marginals(["Angel*", "Merkel", "CDU"], pattern=True)
+    assert(len(counts) == 3)
 
 
 @pytest.mark.cwb_counts
-def test_item_freq_mwu():
-    corpus = Corpus(corpus_name_2, registry_path)
+def test_count_items(sz_corpus):
+
+    corpus = Corpus(sz_corpus['corpus_name'])
 
     # whole corpus
-    counts = corpus.item_freq(["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"])
-    assert(counts.loc['Horst Seehofer', 'freq'] > 0)
-    assert(counts.loc[r'( CSU )', 'freq'] > 0)
-    assert(counts.loc['WES324', 'freq'] == 0)
-    assert(counts.loc['CSU', 'freq'].iloc[0] > counts.loc[r'( CSU )', 'freq'])
-    assert(counts.loc['CSU', 'freq'].iloc[0] == counts.loc['CSU', 'freq'].iloc[1])
+    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    assert(list(counts1["freq"]) == list(counts2["freq"]))
 
+    # subcorpus
+    corpus.subcorpus_from_query(query='[lemma="Bundesregierung"] expand to s',
+                                name='Bundesregierung')
+    corpus.activate_subcorpus('Bundesregierung')
 
-@pytest.mark.cwb_counts_speed
-@time_it
-def test_item_freq_1():
-    corpus = Corpus(corpus_name_2, registry_path)
-    corpus.item_freq(["Horst Seehofer", r"( CSU )", "CSU",
-                      "WES324", "CSU"])
+    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    assert(counts1.loc['Angela', 'freq'] > counts2.loc['"Angela"', 'freq'])
 
-
-@time_it
-@pytest.mark.cwb_counts_speed
-def test_item_freq_2():
-    corpus = Corpus(corpus_name_2, registry_path)
-    corpus.item_freq_2(["Horst Seehofer", r"( CSU )", "CSU",
-                        "WES324", "CSU"])
-
-
-@pytest.mark.subcorpus2
-def test_subcorpus_2():
-    corpus = Corpus(corpus_name, registry_path)
-    corpus.define_subcorpus('[lemma="make"]', name='make', activate=True)
+    # whole corpus
     corpus.activate_subcorpus()
-    corpus.define_subcorpus('[lemma="nigel"] expand to tweet',
-                            name='nigel', activate=True)
-    corpus.define_subcorpus('[lemma="make"]', name='make', activate=True)
+    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    assert(list(counts1["freq"]) == list(counts2["freq"]))
 
 
-@pytest.mark.s_ids
-def test_get_s_ids():
-    corpus = Corpus(corpus_name, registry_path, s_meta='tweet_id')
-    df_node = corpus.df_node_from_query("[lemma='make']", s_query,
-                                        [], s_break, 20)
-    assert('s_id' in df_node.columns)
-    meta_regions = corpus.get_meta_regions()
-    assert('match' in meta_regions.columns)
+@pytest.mark.cwb_counts
+def test_count_matches(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    corpus.query(
+        query='[lemma="nigel"]',
+        context=10,
+        s_context='tweet',
+        name='Test'
+    )
+    counts = corpus.counts.matches(corpus.cqp, 'Test')
+    assert("Nigel" in counts.index)
+
+
+@pytest.mark.mwus
+def test_count_mwus_3(sz_corpus):
+
+    # whole corpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    queries = [
+        formulate_cqp_query([item]) for item in items
+    ]
+
+    counts3 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=3,
+        fill_missing=False
+    )
+
+    print(counts3)
+
+
+@pytest.mark.mwus
+@pytest.mark.cwb_counts
+def test_count_mwus_strategies(sz_corpus):
+
+    # whole corpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    queries = [
+        formulate_cqp_query([item]) for item in items
+    ]
+
+    counts1 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=1,
+        fill_missing=False
+    )
+    assert('([word="CSU"])' in counts1.index)
+
+    counts2 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=2,
+        fill_missing=False
+    )
+
+    counts3 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=3,
+        fill_missing=False
+    )
+
+    assert(counts2.equals(counts3))
+    assert(sum(counts1['freq']) == sum(counts2['freq']))
+
+
+@pytest.mark.cwb_counts
+def test_count_items_subcorpora(sz_corpus):
+
+    # subcorpus
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_s_att("text_year", ["2011"], name='c2011')
+    corpus.activate_subcorpus('c2011')
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    queries = [formulate_cqp_query([item]) for item in items]
+
+    counts1 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=1,
+        fill_missing=False
+    )
+    assert(sum(counts1['freq']) > 0)
+
+    counts2 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=2,
+        fill_missing=False
+    )
+
+    counts3 = corpus.counts.mwus(
+        corpus.cqp,
+        queries,
+        strategy=3,
+        fill_missing=False
+    )
+    print(counts2.equals(counts3))
+
+
+# @pytest.mark.now
+# @pytest.mark.cwb_counts
+# def test_count_dump_1(sz_corpus):
+
+#     strategy = 1
+#     corpus = Corpus(sz_corpus['corpus_name'])
+#     df_dump = corpus.dump_from_query(
+#         query=sz_corpus['query'],
+#         s_query=sz_corpus['s_query'],
+#         match_strategy='standard'
+#     )
+
+#     # no split
+#     # - easy
+#     counts_ns_e = corpus.count_dump(df_dump,
+#                                     strategy=strategy,
+#                                     split=False,
+#                                     p_atts=['word'])
+#     # - combo
+#     counts_ns_c = corpus.count_dump(df_dump,
+#                                     strategy=strategy,
+#                                     split=False,
+#                                     p_atts=['word', 'pos'])
+
+#     # split
+#     # - easy
+#     counts_s_e = corpus.count_dump(df_dump,
+#                                    strategy=strategy,
+#                                    split=True,
+#                                    p_atts=['word'])
+#     # - combo
+#     counts_s_c = corpus.count_dump(df_dump,
+#                                    strategy=strategy,
+#                                    split=True,
+#                                    p_atts=['word', 'pos'])
+
+#     print(counts_ns_e)
+#     print(counts_ns_c)
+#     print(counts_s_e)
+#     print(counts_s_c)
+
+
+# def test_count_dump_2(sz_corpus):
+
+#     strategy = 2
+#     corpus = Corpus(sz_corpus['corpus_name'])
+#     df_dump = corpus.dump_from_query(
+#         query=sz_corpus['query'],
+#         s_query=sz_corpus['s_query'],
+#         match_strategy='standard'
+#     )
+
+#     # no split
+#     # - easy
+#     counts_ns_e = corpus.count_dump(df_dump,
+#                                     strategy=strategy,
+#                                     split=False,
+#                                     p_atts=['word'])
+#     # - combo
+#     counts_ns_c = corpus.count_dump(df_dump,
+#                                     strategy=strategy,
+#                                     split=False,
+#                                     p_atts=['word', 'pos'])
+
+#     # split
+#     # - easy
+#     counts_s_e = corpus.count_dump(df_dump,
+#                                    strategy=strategy,
+#                                    split=True,
+#                                    p_atts=['word'])
+#     # - combo
+#     counts_s_c = corpus.count_dump(df_dump,
+#                                    strategy=strategy,
+#                                    split=True,
+#                                    p_atts=['word', 'pos'])
+
+#     print(counts_ns_e)
+#     print(counts_ns_c)
+#     print(counts_s_e)
+#     print(counts_s_c)
+
+
+@pytest.mark.cwb_counts
+def test_counts_dump_1_split(brexit_corpus):
+    strategy = 1
+
+    corpus = Corpus(brexit_corpus['corpus_name'])
+    dump = corpus.dump_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]')
+
+    df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
+    print(df)
+
+    df = corpus.counts.dump(dump, p_atts=['word', 'lemma'], split=True, strategy=strategy)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_dump_1_no_split(sz_corpus):
+    strategy = 1
+
+    corpus = Corpus(sz_corpus['corpus_name'])
+    dump = corpus.dump_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]')
+
+    # no split
+    df = corpus.counts.dump(dump, p_atts=['word'], split=False, strategy=strategy)
+    print(df)
+
+    df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=False, strategy=strategy)
+    print(df)
+
+
+@pytest.mark.count_class
+def test_counts_dump_2(sz_corpus):
+    strategy = 2
+
+    corpus = Corpus(sz_corpus['corpus_name'])
+    dump = corpus.dump_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]')
+
+    print("\n\n\nsplit\n")
+    df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
+    print(df)
+
+    df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=True, strategy=strategy)
+    print(df)
+
+    print("\n\n\nno split\n")
+    df = corpus.counts.dump(dump, p_atts=['word'], split=False, strategy=strategy)
+    print(df)
+
+    df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=False, strategy=strategy)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_matches_1(sz_corpus):
+    strategy = 1
+
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+
+    print("\n\n\nno split\n")
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+                               flags="%cd", strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+                               strategy=strategy)
+    print(df)
+
+    print("\n\n\n split\n")
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               flags="%cd", strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               strategy=strategy)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_matches_2(sz_corpus):
+    strategy = 2
+
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+
+    print("\n\n\nno split\n")
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+                               flags="%cd", strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+                               strategy=strategy)
+    print(df)
+
+    print("\n\n\n split\n")
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               flags="%cd", strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               strategy=strategy)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_matches_3(sz_corpus):
+    strategy = 3
+
+    corpus = Corpus(sz_corpus['corpus_name'])
+    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               flags="%cd", strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+                               strategy=strategy)
+    print(df)
+
+    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word', 'pos'], split=True,
+                               strategy=strategy)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_marginals(sz_corpus):
+    counter = Counts(sz_corpus['corpus_name'])
+    df = counter.marginals(['angela', 'merkel'], flags=3)
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_counts_mwus(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.counts.mwus(corpus.cqp,
+                            ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
+                             '[lemma="Horst"]'],
+                            strategy=1)
+    print(df)
+
+    df = corpus.counts.mwus(corpus.cqp,
+                            ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
+                             '[lemma="Horst"]'],
+                            strategy=3,
+                            p_atts=['lemma', 'pos'])
+    print(df)
+
+    df = corpus.counts.mwus(corpus.cqp,
+                            ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
+                             '[lemma="Horst"]'],
+                            strategy=3,
+                            p_atts=['lemma'])
+
+    print(df)
+
+
+@pytest.mark.cwb_counts
+def test_cwb_counts(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    df = corpus.counts.mwus(corpus.cqp,
+                            ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
+                             '[lemma="Horst"]'])
+    print(df)

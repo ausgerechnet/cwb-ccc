@@ -1,84 +1,61 @@
-from ccc import Corpus
-from ccc.concordances import process_argmin_file
-import gzip
+import os
+from pprint import pprint
+
+from ccc.argmin import read_query_json, run_query
+from ccc.cwb import Corpus
+
 import pytest
-import json
 
 
-registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
-lib_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/lib/"
-corpus_name = "BREXIT_V20190522"
-subcorpus_query = "/region[tweet,a] :: (a.tweet_duplicate_status!='1') within tweet"
-subcorpus_name = "DEDUP"
-match_strategy = 'longest'
-
-query_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example.json"
-result_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example-result.ldjson.gz"
-
-
-@pytest.mark.argconc
-def test_argconc():
-
-    corpus = Corpus(corpus_name=corpus_name,
-                    registry_path=registry_path, lib_path=lib_path,
-                    s_meta="tweet_id")
-
-    with open(query_path, "rt") as f:
-        try:
-            query = json.loads(f.read())
-        except json.JSONDecodeError:
-            print("WARNING: not a valid json file")
-            return
-
-    result = corpus.query(query['query'], context=None, s_break='tweet',
-                          match_strategy='longest')
-    conc = corpus.concordance(result)
-    result = conc.show_argmin(query['anchors'], query['regions'])
-    assert('test' in result['holes'].keys())
-    assert(type(result['matches']) == list)
+@pytest.mark.now
+def test_read_query_json():
+    query_path = (
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
+        "query-example.json"
+    )
+    query = read_query_json(query_path)
+    pprint(query)
 
 
-@pytest.mark.argmin_file
-def test_process_argmin_file():
-
-    corpus = Corpus(corpus_name=corpus_name,
-                    registry_path=registry_path, lib_path=lib_path,
-                    s_meta="tweet_id")
-    corpus.define_subcorpus(query=subcorpus_query,
-                            name=subcorpus_name, activate=True)
-    result = process_argmin_file(corpus, query_path, s_break='tweet')
-    assert(all(x in result.keys() for x in ['query',
-                                            'pattern',
-                                            'name',
-                                            'query_path',
-                                            'result']))
-    assert(all(x in result['result'].keys() for x in ['matches',
-                                                      'holes',
-                                                      'nr_matches']))
-    with gzip.open(result_path, 'wt') as f_out:
-        json.dump(result, f_out, indent=4)
+@pytest.mark.now
+def test_run_query(brexit_corpus):
+    query_path = (
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
+        "query-example.json"
+    )
+    data_path = (
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
+    )
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    brexit_corpus['lib_path'],
+                    data_path=data_path)
+    query = read_query_json(query_path)
+    result = run_query(corpus, query)
+    pprint(result)
 
 
-@pytest.mark.argmin_file_rant
-def test_process_argmin_file_rant():
+@pytest.mark.files
+def test_argmin(brexit_corpus):
 
-    corpus = Corpus(corpus_name=corpus_name,
-                    registry_path=registry_path, lib_path=lib_path,
-                    s_meta="tweet_id")
+    query_path = (
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries/"
+        "query-example.json"
+    )
+    data_path = (
+        "/home/ausgerechnet/repositories/cwb-ccc/tests/argmin_queries"
+    )
 
-    query_path = "/home/ausgerechnet/projects/spheroscope/app/instance-stable/queries/correlation_between_x_and_y_causecorr.query"
+    # read query file
+    query = read_query_json(query_path)
+    query['query_path'] = query_path
 
-    result = process_argmin_file(corpus, query_path, s_break='tweet')
+    # init corpus, run query
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    brexit_corpus['lib_path'],
+                    data_path=data_path)
+    result = run_query(corpus, query)
 
-    assert(all(x in result.keys() for x in ['query',
-                                            'pattern',
-                                            'info',
-                                            'name',
-                                            'query_path',
-                                            'result']))
-    assert(all(x in result['result'].keys() for x in ['matches',
-                                                      'holes',
-                                                      'nr_matches']))
-    # result_path = "/home/ausgerechnet/Downloads/correlation_between_x_and_y_causecorr.json"
-    # with gzip.open(result_path, 'wt') as f_out:
-    #     json.dump(result, f_out, indent=4)
+    # save result
+    path_out = os.path.join(data_path, query['name']) + ".tsv"
+    result['df'] = result['df'].apply(lambda row: row.to_json())
+    result.to_csv(path_out, sep="\t")
