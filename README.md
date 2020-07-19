@@ -8,7 +8,6 @@
 	* [Dealing with anchored queries](#anchored-queries)
 	* [Calculating collocates](#collocation-analyses)
 	* [Extracting keywords](#keyword-analyses)
-	* [Argument queries](#argument-queries)
 * [Acknowledgements](#acknowledgements)
 
 
@@ -56,14 +55,10 @@ separate folder (with subfolders `wordlists` and `macros`).  Make sure
 you specify this folder via `lib_path` when initializing the
 corpus.
 
-If you want to compare your query results according to meta data,
-set the `s_meta` parameter to the structural attribute that links your
-data base (e.g. "text_id").
-
 You can use the `cqp_bin` to point the module to a specific version of
 `cqp` (this is also helpful if `cqp` is not in your `PATH`).
 
-By default, the `cache_path` points to "/tmp/ccc-cache". Make sure
+By default, the `cache_path` points to "/tmp/ccc-data". Make sure
 that "/tmp/" exists and appropriate rights are granted. Otherwise,
 change the parameter when initializing the corpus (or set it to
 `None`).
@@ -74,25 +69,27 @@ Before you can display concordances, you have to run a query with the
 `corpus.query()` method, which accepts valid CQP queries such as
 
 ```python
-query = '[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
-result = corpus.query(query)
+angela = corpus.query(
+    '[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
+)
 ```
 
 The default context window is 20 tokens to the left and 20 tokens to
 the right of the query match and matchend, respectively. You can
-change this via the `context` parameter.
+change this via the `context` parameter (use `context_left` and
+`context_right` for asymmetric windows).
 
-Note that queries _may_ end on a "within" clause (`s_query`), which
-will limit the matches to regions defined by this structural
-attributes. Additionally, you can specify an `s_break` parameter,
-which will cut the context. NB: The implementation assumes that
-`s_query` regions are confined by `s_break` regions, and both of them
-are within the `s_meta` regions.
+Note that queries _may_ end on a "within" clause, which will limit the
+matches to regions defined by this structural attribute.
+Alternatively, you can specify this value via `s_query`. Additionally,
+you can specify an `s_context` parameter, which will cut the
+context. NB: The implementation assumes that `s_query` regions are
+confined by `s_context` regions.
 
 Now you are set up to get the query concordance:
 
 ```
-concordance = corpus.concordance(result)
+concordance = corpus.concordance(angela)
 ```
 
 You can access the query frequency breakdown via
@@ -104,23 +101,20 @@ You can access the query frequency breakdown via
 | Merkel ( CDU )         | 29   |
 | Angela Merkels ( CDU ) | 2    |
 
-All query matches and their respective `s_meta` identifiers are listed
-in `concordance.meta` (if `s_meta=None`, it will use the CQP
-identifiers of the `s_break` parameter as `s_id`):
-
-| *match* | s_id      |
-|---------|-----------|
-| 48349   | A44847086 |
-| 48856   | A44855701 |
-| 52966   | A44847097 |
-| 53395   | A44847526 |
-| ...     | ...       |
-
 You can use `concordance.lines()` to get concordance lines. This
-method returns a dictionary with the _cpos_ of the match as keys and
-the entries one concordance line each. Each concordance line is
-formatted as a `pandas.DataFrame` with the _cpos_ of each token as
-index:
+method returns dataframes, with various information of the requested
+lines which will be determined by `p_show` and `s_show` (lists of
+attributes to be retrieved). Choose one of "raw", "simple", "kwic",
+"dataframes" or "extended".
+
+You can decide which and how many concordance lines you want to
+retrieve by means of the parameters `order` ("first", "last", or
+"random") and `cut_off`. You can also provide a list of `matches` to
+get only specific concordance lines.
+
+If `form="dataframes"` or `form="extended"`, the dataframe contains a
+column `df` with each concordance line being formatted as a
+`DataFrame` with the _cpos_ of each token as index:
 
 | *cpos* | offset | word                | anchor |
 |--------|--------|---------------------|--------|
@@ -138,15 +132,6 @@ index:
 | 48355  | 2      | ausgeschlossen      | None   |
 | 48356  | 3      | .                   | None   |
 
-You can decide which and how many concordance lines you want to
-retrieve by means of the parameters `order` ("first", "last", or
-"random") and `cut_off`. You can also provide a list of `matches`
-(from `concordance.meta.index`) to get a `dict` of specific
-concordance lines.
-
-You can specify a `list` of additional p-attributes besides the
-primary word layer to show via the `p_show` parameter of
-`concordance.lines()` (these will be added as additional columns).
 
 ### Anchored Queries ###
 
@@ -154,30 +139,29 @@ The concordancer detects anchored queries automatically. The following
 query
 
 ```python
-result = corpus.query(
+angela = corpus.query(
 	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]',
 )
-concordance = corpus.concordance(result)
+concordance = corpus.concordance(angela)
 ```
 
-thus returns `DataFrame`s with appropriate anchors in the anchor
-column:
+thus returns `DataFrame`s with additional columns for each anchor point.
 
-| *cpos* | offset | word                | anchor |
-|--------|--------|---------------------|--------|
-| 48344  | -5     | Eine                | None   |
-| 48345  | -4     | entsprechende       | None   |
-| 48346  | -3     | Steuererleichterung | None   |
-| 48347  | -2     | hat                 | None   |
-| 48348  | -1     | Kanzlerin           | None   |
-| 48349  | 0      | Angela              | 0      |
-| 48350  | 0      | Merkel              | 1      |
-| 48351  | 0      | (                   | None   |
-| 48352  | 0      | CDU                 | 2      |
-| 48353  | 0      | )                   | None   |
-| 48354  | 1      | bisher              | None   |
-| 48355  | 2      | ausgeschlossen      | None   |
-| 48356  | 3      | .                   | None   |
+| *cpos* | offset | word                | 0 | 1 | 2 |
+|--------|--------|---------------------|---|---|---|
+| 48344  | -5     | Eine                | F | F | F |
+| 48345  | -4     | entsprechende       | F | F | F |
+| 48346  | -3     | Steuererleichterung | F | F | F |
+| 48347  | -2     | hat                 | F | F | F |
+| 48348  | -1     | Kanzlerin           | F | F | F |
+| 48349  | 0      | Angela              | T | F | F |
+| 48350  | 0      | Merkel              | F | T | F |
+| 48351  | 0      | (                   | F | F | F |
+| 48352  | 0      | CDU                 | F | F | T |
+| 48353  | 0      | )                   | F | F | F |
+| 48354  | 1      | bisher              | F | F | F |
+| 48355  | 2      | ausgeschlossen      | F | F | F |
+| 48356  | 3      | .                   | F | F | F |
 
 
 ### Collocation Analyses ###
@@ -186,9 +170,11 @@ to extract collocates for a given window size (symmetric windows
 around the corpus matches):
 
 ```python
-query = '[lemma="Angela"] [lemma="Merkel"]'
-result = corpus.query(query, s_break='s', context=20)
-collocates = corpus.collocates(result)
+angela = corpus.query(
+    '[lemma="Angela"] [lemma="Merkel"]',
+	s_context='s', context=20
+)
+collocates = corpus.collocates(angela)
 ```
 
 `collocates()` will create a dataframe of the context of the query
@@ -224,7 +210,7 @@ as index and frequency signatures and association measures as columns:
 
 For improved performance, all hapax legomena in the context are
 dropped after calculating the context size. You can change this
-behaviour via the `drop_hapaxes` parameter of `collocates.show()`.
+behaviour via the `min_freq` parameter of `collocates.show()`.
 
 By default, the dataframe is annotated with "z_score", "t_score",
 "dice", "log_likelihood", and "mutual_information" (parameter `ams`).
@@ -235,119 +221,27 @@ association measures depend on their implementation in the
 [association-measures](https://pypi.org/project/association-measures/)
 module.
 
-The dataframe is sorted by co-occurrence frequency (O11), and only the
-first 100 most frequently co-occurring collocates are retrieved. You
-can change this behaviour via the `order` and `cut_off` parameters.
+The dataframe is sorted by co-occurrence frequency (column "f"), and
+only the first 100 most frequently co-occurring collocates are
+retrieved. You can change this behaviour via the `order` and `cut_off`
+parameters.
 
 ### Keyword Anayses
 For keyword analyses, you will have to define a subcorpus. The natural
 way of doing so is by selecting text identifiers (on the `s_meta`
 annotations) via spreadsheets or relational databases. If you have
 collected a set of identifiers, you can create a subcorpus via the
-`corpus.subcorpus_from_ids()` method:
+`corpus.subcorpus_from_s_att()` method:
 
 ```python
-corpus.subcorpus_from_ids(ids)
-keywords = corpus.keywords()
+corpus.subcorpus_from_s_att('text_id', ids, name="Panorama")
+keywords = corpus.keywords("Panorama")
 keywords.show()
 ```
 
 Just as with collocates, the result will be a `DataFrame` with lexical
 items (`p_query` layer) as index and frequency signatures and
 association measures as columns.
-
-### Argument Queries
-Argument queries are anchored queries with additional information. (1)
-Each anchor can be modified by an offset (usually used to capture
-underspecified tokens near an anchor point). (2) Anchors can be mapped
-to external identifiers for further logical processing. (3) Anchors
-may be given a clear name:
-
-| anchor | offset | idx  | clear name |
-|--------|--------|------|------------|
-| 0      | 0      | None | None       |
-| 1      | -1     | None | None       |
-| 2      | 0      | None | None       |
-| 3      | -1     | None | None       |
-
-Furthermore, several anchor points can be combined to form regions,
-which in turn can be mapped to identifiers and be given a clear name:
-
-| start | end | idx | clear name |
-|-------|-----|-----|------------|
-| 0     | 1   | "0" | "person X" |
-| 2     | 3   | "1" | "person Y" |
-
-Example: Given the definition of anchors and regions above as well as
-suitable wordlists, the following complex query extracts corpus
-positions where there's some correlation between "person X" (the
-region from anchor 0 to anchor 1) and "person Y" (anchor 2 to 3):
-```python
-query = (
-	"<np> []* /ap[]* [lemma = $nouns_similarity] "
-	"[]*</np> \"between\" @0:[::](<np>[pos_simple=\"D|A\"]* "
-	"([pos_simple=\"Z|P\" | lemma = $nouns_person_common | "
-	"lemma = $nouns_person_origin | lemma = $nouns_person_support | "
-	"lemma = $nouns_person_negative | "
-	"lemma = $nouns_person_profession] |/region[ner])+ "
-	"[]*</np>)+@1:[::] \"and\" @2:[::](<np>[pos_simple=\"D|A\"]* "
-	"([pos_simple=\"Z|P\" | lemma = $nouns_person_common | "
-	"lemma = $nouns_person_origin | lemma = $nouns_person_support | "
-	"lemma = $nouns_person_negative | "
-	"lemma = $nouns_person_profession] | /region[ner])+ "
-	"[]*</np>) (/region[np] | <vp>[lemma!=\"be\"]</vp> | "
-	"/region[pp] |/be_ap[])* @3:[::]"
-)
-```
-
-NB: the set of identifiers defined in the table of anchors and in the
-table of regions, respectively, should not overlap.
-
-It is customary to store these queries in json objects (see an
-[example](tests/gold/query-example.json) in the repository). 
-
-You can use the concordancer to process argument queries and display
-the results:
-
-```python
-# read the query file
-import json
-query_path = "tests/gold/query-example.json"
-with open(query_path, "rt") as f:
-	query = json.loads(f.read())
-
-# query the corpus and initialize the concordancer
-query_result = corpus.query(
-	query['query'],
-	context=None,
-	s_break='tweet',
-	match_strategy='longest'
-)
-concordance = corpus.concordance(query_result)
-
-# show results
-concordance.show_argmin(query['anchors'], query['regions'])
-```
-
-The `show_argmin` method returns the result as a `dict` with the
-following keys:
-
-- "nr_matches": the number of query matches in the corpus.
-- "holes": a global list of all tokens of the entities specified in
-  the "idx" columns (default: lemma layer).
-- "meta": the meta ids of the concordance lines.
-- "settings": the query settings.
-- "matches": a list of concordance lines. Each concordance line
-  contains:
-  - "position": the corpus position of the match
-  - "df": the actual concordance line as returned from
-	`Concordance().query()` (see above) converted to a `dict`
-  - "holes": a mapping from the IDs specified in the anchor and region
-	tables to the tokens or token sequences, respectively (default:
-	lemma layer)
-  - "full": a reconstruction of the concordance line as a sequence of
-	tokens (word layer)
-
 
 ## Acknowledgements ##
 The module relies on
