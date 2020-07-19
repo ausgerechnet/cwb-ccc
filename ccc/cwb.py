@@ -248,7 +248,6 @@ class Corpus:
         ]['annotation'].values[0]
         if not annotation:
             logger.info('no annotation in s-att "%s"' % s_att)
-
         else:
             # only retrieve where applicable
             s_regions = self.attributes.attribute(s_att, "s")
