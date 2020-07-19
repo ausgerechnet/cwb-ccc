@@ -107,22 +107,20 @@ class Concordance:
 
         # select appropriate subset of matches
         logger.info('lines: selecting matches')
-        all_matches = set(self.df_dump.index.droplevel('matchend'))
-
-        # cut_off
         if matches is None:
-            if not cut_off or len(all_matches) < cut_off:
-                cut_off = len(all_matches)
-        else:
-            all_matches = matches
+            matches = set(self.df_dump.index.droplevel('matchend'))
+
+        # pre-process cut_off if necessary
+        if (cut_off is None) or (len(matches) < cut_off):
+            cut_off = len(matches)
 
         # order
         if order == 'random':
-            matches = sample(all_matches, cut_off)
+            matches = sample(matches, cut_off)
         elif order == 'first':
-            matches = sorted(list(all_matches))[:cut_off]
+            matches = sorted(list(matches))[:cut_off]
         elif order == 'last':
-            matches = sorted(list(all_matches))[-cut_off:]
+            matches = sorted(list(matches))[-cut_off:]
         else:
             raise NotImplementedError('concordance order not implemented')
 
