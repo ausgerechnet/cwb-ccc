@@ -7,6 +7,6 @@ coverage:
 build:
 	pip3 install --upgrade setuptools wheel
 	python3 setup.py sdist bdist_wheel
-	sudo -H python3 -m twine upload dist/*
+	python3 -m twine upload dist/*
 clean:
 	rm -rf *.egg-info build/ association_measures/*.so association_measures/*.c dist/
