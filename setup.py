@@ -28,7 +28,7 @@ setuptools.setup(
         "numpy",
         "pandas>=0.24.2",
         "cwb-python>=0.2.2",
-        "association-measures>=0.1.3"
+        "association-measures>=0.1.4",
         "unidecode>=1.1.1"
     ],
     classifiers=[
