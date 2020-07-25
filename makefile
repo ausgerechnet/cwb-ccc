@@ -9,4 +9,4 @@ build:
 	python3 setup.py sdist bdist_wheel
 	python3 -m twine upload dist/*
 clean:
-	rm -rf *.egg-info build/ association_measures/*.so association_measures/*.c dist/
+	rm -rf *.egg-info build/
