@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Concordance:
     """ concordancing """
 
-    def __init__(self, corpus, df_dump, max_matches=None):
+    def __init__(self, corpus, df_dump):
 
         if len(df_dump) == 0:
             logger.warning('no concordance lines to show')
@@ -30,25 +30,6 @@ class Concordance:
         anchors = [i for i in range(10) if i in df_dump.columns]
         anchors += ['match', 'matchend', 'context', 'contextend']
         self.anchors = anchors
-
-        # frequency breakdown
-        if max_matches is not None and self.size > max_matches:
-            logger.warning(
-                'no frequency breakdown (%d matches)' % self.size
-            )
-            self.breakdown = DataFrame(
-                index=['NODE'],
-                data=[self.size],
-                columns=['freq']
-            )
-            self.breakdown.index.name = 'word'
-        else:
-            logger.info('creating frequency breakdown')
-            self.breakdown = self.corpus.counts.dump(
-                df_dump=df_dump,
-                start='match', end='matchend',
-                p_atts=['word']
-            )
 
     def text_line(self, index, columns, p_show=['word']):
         """Translates one row of self.df_dump into a concordance_line.

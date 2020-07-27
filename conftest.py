@@ -44,6 +44,10 @@ def sz_corpus():
     registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
     context = 50
 
+    meta_path = (
+        "/home/ausgerechnet/corpora/cwb/upload/efe/sz-2009-14.tsv.gz"
+    )
+
     corpus_name = 'SZ_2009_14'
 
     s_query = 's'
@@ -67,5 +71,6 @@ def sz_corpus():
         'query': query,
         'anchor_query': anchor_query,
         'anchors': anchors,
-        'query_full': query_full
+        'query_full': query_full,
+        'meta_path': meta_path
     }

@@ -45,61 +45,6 @@ def test_fold_items():
     print([fold_item(item) for item in items_francais])
 
 
-def test_lines_raw():
-    corpus = Corpus('SZ_2009_14')
-    result = corpus.query(
-        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_context='s'
-    )
-    conc = corpus.concordance(result)
-    df_lines = conc.lines(form='raw')
-    print(df_lines)
-
-
-def test_lines_simple():
-    corpus = Corpus('SZ_2009_14')
-    result = corpus.query(
-        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_context='s'
-    )
-    conc = corpus.concordance(result)
-    df_lines = conc.lines(form='simple')
-    print(df_lines)
-
-
-def test_lines_kwic():
-    corpus = Corpus('SZ_2009_14')
-    result = corpus.query(
-        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_context='s'
-    )
-    conc = corpus.concordance(result)
-    df_lines = conc.lines(form='kwic')
-    print(df_lines)
-
-
-def test_lines_dataframes():
-    corpus = Corpus('SZ_2009_14')
-    result = corpus.query(
-        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_context='s'
-    )
-    conc = corpus.concordance(result)
-    df_lines = conc.lines(form='dataframes')
-    print(df_lines)
-
-
-def test_lines_extended():
-    corpus = Corpus('SZ_2009_14')
-    result = corpus.query(
-        '[lemma="Volk*"] | [lemma="Bürger*"] | [lemma="Wähler*"]',
-        context=None, s_context='s'
-    )
-    conc = corpus.concordance(result)
-    df_lines = conc.lines(form='extended')
-    print(df_lines)
-
-
 @pytest.mark.now
 def test_merge_intervals():
     intervals = [[1, 3], [2, 4], [5, 9], [6, 10]]
