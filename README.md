@@ -6,9 +6,11 @@ This module is a wrapper around the [IMS Open Corpus Workbench
 run queries, extract concordance lines, and calculate collocates.
 
 * [Introduction](#introduction)
-* [Installation](#installation)
-* [Usage](#usage)
+	* [Prerequisites](#prerequisites)
+	* [Installation](#installation)
 	* [Defining your corpus](#corpus-setup)
+* [Usage](#usage)
+	* [Queries and Dumps)(#queries-and-dumps)
 	* [Extracting concordance lines](#concordancing)
 	* [Dealing with anchored queries](#anchored-queries)
 	* [Calculating collocates](#collocation-analyses)
@@ -16,14 +18,14 @@ run queries, extract concordance lines, and calculate collocates.
 * [Acknowledgements](#acknowledgements)
 
 
-## Prerequisites
+### Prerequisites ###
 The module needs a working installation of the CWB and operates on
 CWB-indexed corpora.
 
 If you want to run queries with more than two anchor points, the
 module requires CWB version 3.4.16 or later.
 
-## Installation ##
+### Installation ###
 You can install this module with pip from PyPI:
 
 	pip3 install cwb-ccc
@@ -33,9 +35,6 @@ You can also clone the repository from
 respective folder, and use `setup.py`:
 
 	python3 setup.py install
-
-
-## Usage ##
 
 ### Corpus Setup
 All methods rely on the `Corpus` class, which establishes the
@@ -64,6 +63,8 @@ You can use the `cqp_bin` to point the module to a specific version of
 By default, the `data_path` points to "/tmp/ccc-data". Make sure
 that "/tmp/" exists and appropriate rights are granted. Otherwise,
 change the parameter when initializing the corpus.
+
+## Usage ##
 
 ### Queries and Dumps
 Before you can display anything, you have to run a query with the
@@ -306,7 +307,7 @@ only the first 100 most frequently co-occurring collocates are
 retrieved. You can change this behaviour via the `order` and `cut_off`
 parameters.
 
-### Keyword Anayses
+### Keyword Analyses
 
 For keyword analyses, you will have to define a subcorpus. The natural
 way of doing so is by selecting text identifiers via spreadsheets or
