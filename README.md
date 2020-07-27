@@ -10,7 +10,7 @@ run queries, extract concordance lines, and calculate collocates.
 	* [Installation](#installation)
 	* [Defining your corpus](#corpus-setup)
 * [Usage](#usage)
-	* [Queries and Dumps)(#queries-and-dumps)
+	* [Queries and Dumps](#queries-and-dumps)
 	* [Extracting concordance lines](#concordancing)
 	* [Dealing with anchored queries](#anchored-queries)
 	* [Calculating collocates](#collocation-analyses)
