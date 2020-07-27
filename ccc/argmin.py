@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from ccc.concordances import Concordance
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -77,16 +78,16 @@ def run_query(corpus, query, match_strategy='longest'):
 
     # get post-processed dump
     result = corpus.query(
-        query=query['query'],
+        cqp_query=query['query'],
         context=query['context'],
-        s_context=query['s_context'],
+        context_break=query['s_context'],
         corrections=query['corrections'],
         match_strategy=match_strategy,
     )
 
     # extended concordancing
-    concordance = corpus.concordance(
-        result, max_matches=0
+    concordance = Concordance(
+        corpus, result.df
     )
     lines = concordance.lines(
         p_show=query['p_show'],

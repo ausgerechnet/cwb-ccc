@@ -1,4 +1,4 @@
-from ccc.cqp_interface import CQP
+from ccc.cqp import CQP
 import pandas as pd
 
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"

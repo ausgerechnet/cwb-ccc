@@ -91,7 +91,9 @@ class CQP:
         version_string = version_string.rstrip()  # Equivalent to Perl's chomp
         self.CQP_process.stdout.flush()
         print(version_string, file=sys.stderr)
-        version_regexp = re.compile(r'^CQP\s+(?:\w+\s+)*([0-9]+)\.([0-9]+)(?:\.b?([0-9]+))?(?:\s+(.*))?$')
+        version_regexp = re.compile(
+            r'^CQP\s+(?:\w+\s+)*([0-9]+)\.([0-9]+)(?:\.b?([0-9]+))?(?:\s+(.*))?$'
+        )
         match = version_regexp.match(version_string)
         if not match:
             print("ERROR: CQP backend startup failed", file=sys.stderr)
@@ -291,7 +293,8 @@ class CQP:
             cutoff = spec2
             spec2 = ''
         spec_regexp = re.compile(
-          r'^(match|matchend|target[0-9]?|keyword)\.([A-Za-z0-9_-]+)$')
+          r'^(match|matchend|target[0-9]?|keyword)\.([A-Za-z0-9_-]+)$'
+        )
         match = re.match(spec_regexp, spec1)
         if not match:
             print(

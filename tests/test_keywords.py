@@ -1,4 +1,5 @@
 from ccc import Corpus
+from ccc.keywords import Keywords
 from pandas import read_csv
 import pytest
 
@@ -17,7 +18,7 @@ def test_keywords_from_meta(brexit_corpus):
     corpus.subcorpus_from_s_att('tweet_id', ids_replies, name=name)
 
     # keywords
-    keywords = corpus.keywords(name=name)
+    keywords = Keywords(corpus, name=name, df_dump=None, p_query='lemma')
     lines = keywords.show(order='log_ratio')
     assert('@pama1969' in lines.index)
 
@@ -34,7 +35,7 @@ def test_keywords_from_query(brexit_corpus):
                                 return_dump=False)
 
     # keywords
-    keywords = corpus.keywords(name=name)
+    keywords = Keywords(corpus, name=name, df_dump=None, p_query="lemma")
     lines = keywords.show(order='log_ratio')
     assert('test' in lines.index)
 
@@ -51,36 +52,46 @@ def test_keywords_from_dump(sz_corpus):
                                        return_dump=True)
 
     # will show keywords for df_1
-    keywords = corpus.keywords(df_dump=df_1)
+    keywords = Keywords(corpus, name=None, df_dump=df_1, p_query="lemma")
     line_1 = keywords.show(order='log_likelihood', min_freq=10)
     assert('CDU' in line_1.index)
 
 
-@pytest.mark.query
+@pytest.mark.switch
 def test_keywords_switch(sz_corpus):
 
-    name = 'test_keywords'
+    name_all = 'test_all'
 
     # get some regions
     corpus = Corpus(corpus_name=sz_corpus['corpus_name'])
-    df = corpus.subcorpus_from_query(sz_corpus['query'] + 'expand to text',
-                                     name=name,
-                                     return_dump=True)
-    df_1 = df.head(5000)
-    df_2 = df.tail(5000)
+    df_all = corpus.subcorpus_from_query(
+        sz_corpus['query'] + 'expand to text',
+        name=name_all,
+        return_dump=True
+    )
+    df_head = df_all.head(5000)
+    corpus.subcorpus_from_dump(df_dump=df_head, name="head")
+    df_tail = df_all.tail(5000)
+    corpus.subcorpus_from_dump(df_dump=df_tail, name="tail")
 
-    # will show keywords for df_1
-    corpus.subcorpus_from_dump(df_dump=df_1, name=name)
-    keywords = corpus.keywords(name=name)
-    line_1 = keywords.show(order='log_likelihood')
+    # will show keywords for head
+    keywords = Keywords(corpus, name="head", df_dump=None, p_query="lemma")
+    line_head_name = keywords.show(order='log_likelihood')
 
-    # will show collocates for query_1
-    corpus.subcorpus_from_dump(df_dump=df_2, name=name)
-    line_2 = keywords.show(order='log_likelihood')
+    # will show keywords for head
+    keywords = Keywords(corpus, name=None, df_dump=df_head, p_query="lemma")
+    line_head_df = keywords.show(order='log_likelihood')
 
-    # will show collocates for query_2
-    keywords = corpus.keywords(name=name)
-    line_3 = keywords.show(order='log_likelihood')
+    assert(line_head_df.equals(line_head_name))
 
-    assert(line_1.equals(line_2))
-    assert(not line_2.equals(line_3))
+    # will show keywords for tail
+    keywords = Keywords(corpus, name="tail", df_dump=None, p_query="lemma")
+    line_tail_name = keywords.show(order='log_likelihood')
+
+    # will show keywords for head
+    keywords = Keywords(corpus, name=None, df_dump=df_tail, p_query="lemma")
+    line_tail_df = keywords.show(order='log_likelihood')
+
+    assert(line_tail_df.equals(line_tail_name))
+
+    assert(not line_tail_df.equals(line_head_df))

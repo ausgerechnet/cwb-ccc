@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ collocation analysis """
 
-    def __init__(self, corpus, df_dump, p_query, context=None, mws=10):
+    def __init__(self, corpus, df_dump, p_query, mws=10):
 
         # consistency check
         if len(df_dump) == 0:
@@ -30,13 +30,7 @@ class Collocates:
         self.df_dump = df_dump
         self.size = len(df_dump)
 
-        # determine maximum window size
-        if context is not None:
-            if mws > context:
-                logger.warning(
-                    "maximum window size outside context, using mws=%d" % context
-                )
-                mws = context
+        # maximum window size (=context)
         self.mws = mws
 
         # determine layer to work on
@@ -91,7 +85,7 @@ class Collocates:
         f, f1_inflated = self.count(window)
 
         # get marginals
-        f2 = self.corpus.counts.marginals(
+        f2 = self.corpus.marginals(
             f.index, self.p_query
         )
         f2.columns = ['marginal']

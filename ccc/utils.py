@@ -1,60 +1,16 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import shelve
 import re
+from timeit import default_timer
+from functools import wraps
+# requirements
 import numpy as np
 from unidecode import unidecode
 from pandas import DataFrame
-from hashlib import sha256
-from timeit import default_timer
-from functools import wraps
+# logging
 import logging
 logger = logging.getLogger(__name__)
-
-
-class Cache:
-
-    def __init__(self, corpus_name, path=None):
-        self.path = path
-        self.corpus = corpus_name
-
-    def generate_idx(self, identifiers, prefix='CACHE_', length=10):
-        string = ''.join([str(idx) for idx in identifiers])
-        string += self.corpus
-        h = sha256(str(string).encode()).hexdigest()
-        return prefix + h[:length]
-
-    def get(self, identifier):
-
-        if self.path is None:
-            return None
-
-        if type(identifier) is str:
-            key = identifier
-        else:
-            key = self.generate_idx(identifier)
-
-        with shelve.open(self.path) as db:
-            if key in db.keys():
-                logger.info('cache: retrieving object "%s"' % key)
-                return db[key]
-            else:
-                return None
-
-    def set(self, identifier, value):
-
-        if self.path is None:
-            return
-
-        if type(identifier) is str:
-            key = identifier
-        else:
-            key = self.generate_idx(identifier)
-
-        with shelve.open(self.path) as db:
-            logger.info('cache: saving object "%s"' % key)
-            db[key] = value
 
 
 # split list in tuples (for anchor queris)

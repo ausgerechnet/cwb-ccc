@@ -1,4 +1,6 @@
 from ccc import Corpus
+from ccc.collocates import Collocates
+from ccc.keywords import Keywords
 
 import pandas as pd
 import pytest
@@ -11,8 +13,8 @@ def test_query_default(sz_corpus):
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    result = corpus.query(query)
-    collocates = corpus.collocates(result)
+    df_dump = corpus.query(query).df
+    collocates = Collocates(corpus, df_dump, 'lemma')
     c = collocates.show(order='log_likelihood')
     assert(type(c) == pd.DataFrame)
     assert(len(c) == 100)
@@ -26,8 +28,8 @@ def test_query_logging(sz_corpus):
         '[lemma="Angela"]? [lemma="Merkel"] '
         '[word="\\("] [lemma="CDU"] [word="\\)"]'
     )
-    result = corpus.query(query)
-    collocates = corpus.collocates(result, p_query='fail')
+    df_dump = corpus.query(query).df
+    collocates = Collocates(corpus, df_dump, 'fail')
     c = collocates.show(order='log_likelihood', window=15)
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -39,8 +41,8 @@ def compare_counts(lemma, window, min_freq=0):
     # CCC
     corpus = Corpus("GERMAPARL_1114")
     query = '[lemma="' + lemma + '"]'
-    result = corpus.query(query, context=window, s_context='s')
-    collocates = corpus.collocates(result, p_query='lemma')
+    df_dump = corpus.query(query, context=window, context_break='s').df
+    collocates = Collocates(corpus, df_dump, p_query='lemma')
     col = collocates.show(window=5, cut_off=None,
                           min_freq=min_freq)
 
@@ -59,7 +61,7 @@ def compare_counts(lemma, window, min_freq=0):
     # (1) N_ccc + f1_ccc = N_ucs
     # (2) f1_infl_ccc = f1_infl_ucs - O11_ucs_node
     nr = {
-        'f1_ccc': int(corpus.counts.marginals([lemma], "lemma")[['freq']].values[0]),
+        'f1_ccc': int(corpus.marginals([lemma], "lemma")[['freq']].values[0]),
         'N_ccc': int(col[['N']].values[0]),
         'f1_infl_ccc': int(col[['f1']].values[0]),
         'N_ucs': int(ucs[['N']].values[0]),
@@ -96,8 +98,8 @@ def test_compare_counts_3():
 def test_collocates_speed_many():
     corpus = Corpus("GERMAPARL_1114")
     query = '[lemma="sagen"]'
-    result = corpus.query(query, context=2, s_context='s')
-    collocates = corpus.collocates(result, p_query='lemma')
+    df_dump = corpus.query(query, context=2, context_break='s').df
+    collocates = Collocates(corpus, df_dump, p_query='lemma')
     c2 = collocates.show(window=2, cut_off=50)
     assert(type(c2) == pd.DataFrame)
 
@@ -114,16 +116,16 @@ def test_collocates_persistence(sz_corpus):
     )
 
     # will show collocates for query_1
-    result = corpus.query(query_1, s_context='s')
-    collocates = corpus.collocates(result)
+    result = corpus.query(query_1, context_break='s').df
+    collocates = Collocates(corpus, result, 'lemma')
     line_1 = collocates.show()
 
     # will show collocates for query_1
-    result = corpus.query(query_2, s_context='s')
+    result = corpus.query(query_2, context_break='s').df
     line_2 = collocates.show()
 
     # will show collocates for query_2
-    collocates = corpus.collocates(result)
+    collocates = Collocates(corpus, result, 'lemma')
     line_3 = collocates.show()
 
     assert(line_1.equals(line_2))
@@ -137,8 +139,8 @@ def test_query_keywords_collocates(sz_corpus):
         r'[lemma="Angela"]? [lemma="Merkel"] '
         r'[word="\("] [lemma="CDU"] [word="\)"] expand to s'
     )
-    result = corpus.query(query)
-    keywords = corpus.keywords(df_dump=result)
+    dump = corpus.query(query)
+    keywords = Keywords(corpus, name=dump.name_cache, df_dump=dump.df, p_query='lemma')
     assert('Angela' == keywords.show(order='log_likelihood').head(1).index[0])
 
 
@@ -149,7 +151,7 @@ def test_collactes_mwu(sz_corpus):
         '[lemma="Gerhard"]? [lemma="Schröder"]'
     )
     result = corpus.query(query)
-    collocates = corpus.collocates(result)
+    collocates = Collocates(corpus, result.df, 'lemma')
     c = collocates.show(order='log_likelihood', cut_off=None)
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
@@ -165,7 +167,7 @@ def test_collocates_pp(sz_corpus):
         '[lemma="Gerhard"]? [lemma="Schröder"]'
     )
     result = corpus.query(query)
-    collocates = corpus.collocates(result, p_query='word')
+    collocates = Collocates(corpus, result.df, p_query='word')
     c = collocates.show(order='log_likelihood', cut_off=None)
     assert(c.loc['In']['O11'] < c.loc['in']['O11'])
     c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
