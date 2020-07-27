@@ -1,5 +1,4 @@
 from ccc.cwb import Corpus
-from ccc.counts import Counts
 from ccc.counts import cwb_scan_corpus
 from ccc.utils import formulate_cqp_query
 import pandas as pd
@@ -46,16 +45,16 @@ def test_count_cpos_combo(sz_corpus):
 @pytest.mark.cwb_counts
 def test_marginals(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
-    counts = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts = corpus.marginals(["Angela", "Merkel", "CDU"])
     assert(len(counts) == 3)
 
 
 @pytest.mark.cwb_counts
 def test_marginals_patterns(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
-    counts = corpus.counts.marginals(["Ang*", "Merkel", "CDU"])
+    counts = corpus.marginals(["Ang*", "Merkel", "CDU"])
     assert(len(counts) == 3)
-    counts = corpus.counts.marginals(["Angel*", "Merkel", "CDU"], pattern=True)
+    counts = corpus.marginals(["Angel*", "Merkel", "CDU"], pattern=True)
     assert(len(counts) == 3)
 
 
@@ -65,7 +64,7 @@ def test_count_items(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
 
     # whole corpus
-    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
     counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
@@ -74,13 +73,13 @@ def test_count_items(sz_corpus):
                                 name='Bundesregierung')
     corpus.activate_subcorpus('Bundesregierung')
 
-    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
     counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(counts1.loc['Angela', 'freq'] > counts2.loc['"Angela"', 'freq'])
 
     # whole corpus
     corpus.activate_subcorpus()
-    counts1 = corpus.counts.marginals(["Angela", "Merkel", "CDU"])
+    counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
     counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
@@ -89,9 +88,9 @@ def test_count_items(sz_corpus):
 def test_count_matches(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
     corpus.query(
-        query='[lemma="nigel"]',
+        cqp_query='[lemma="nigel"]',
         context=10,
-        s_context='tweet',
+        context_break='tweet',
         name='Test'
     )
     counts = corpus.counts.matches(corpus.cqp, 'Test')
@@ -391,13 +390,6 @@ def test_counts_matches_3(sz_corpus):
 
     df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word', 'pos'], split=True,
                                strategy=strategy)
-    print(df)
-
-
-@pytest.mark.cwb_counts
-def test_counts_marginals(sz_corpus):
-    counter = Counts(sz_corpus['corpus_name'])
-    df = counter.marginals(['angela', 'merkel'], flags=3)
     print(df)
 
 

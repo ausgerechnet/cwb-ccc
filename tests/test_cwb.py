@@ -240,9 +240,9 @@ def test_get_s_extents_2(brexit_corpus):
 def test_query_context_1(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     df = corpus.query(
-        query=sz_corpus['query_full'],
+        cqp_query=sz_corpus['query_full'],
         context=None,
-    )
+    ).df
     assert(type(df) == pd.DataFrame)
     columns = sz_corpus['anchors'] + ['context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
@@ -252,10 +252,10 @@ def test_query_context_1(sz_corpus):
 def test_query_context_2(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     df = corpus.query(
-        query=sz_corpus['query_full'],
+        cqp_query=sz_corpus['query_full'],
         context_left=10,
         context=15,
-    )
+    ).df
     assert(type(df) == pd.DataFrame)
     columns = sz_corpus['anchors'] + ['context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
@@ -265,10 +265,10 @@ def test_query_context_2(sz_corpus):
 def test_query_context_3(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     df = corpus.query(
-        query=sz_corpus['query_full'],
+        cqp_query=sz_corpus['query_full'],
         context=None,
-        s_context='s'
-    )
+        context_break='s'
+    ).df
     assert(type(df) == pd.DataFrame)
     columns = sz_corpus['anchors'] + ['context_id', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
@@ -278,10 +278,10 @@ def test_query_context_3(sz_corpus):
 def test_query_context_4(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
     df = corpus.query(
-        query=sz_corpus['query_full'],
+        cqp_query=sz_corpus['query_full'],
         context=10,
-        s_context='s'
-    )
+        context_break='s'
+    ).df
     assert(type(df) == pd.DataFrame)
     columns = sz_corpus['anchors'] + ['context_id', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
@@ -292,10 +292,10 @@ def test_query_context_4(sz_corpus):
 def test_query_s_atts_brexit(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
     df_dump = corpus.query(
-        query='[lemma="nigel"]',
+        cqp_query='[lemma="nigel"]',
         context=10,
-        s_context='tweet'
-    )
+        context_break='tweet'
+    ).df
     df = corpus.get_s_annotations(df_dump, ['ner_type', 'tweet_id', 'tweet'])
     assert(type(df) == pd.DataFrame)
     columns = [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]

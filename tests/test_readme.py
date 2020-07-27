@@ -4,31 +4,70 @@ import json
 import pytest
 
 
+@pytest.mark.v1
+@pytest.mark.setup
+def test_init_corpus(brexit_corpus):
+    corpus = Corpus(brexit_corpus['corpus_name'],
+                    lib_path=brexit_corpus['lib_path'],
+                    registry_path=brexit_corpus['registry_path'])
+    print(corpus)
+
+
+@pytest.mark.v1
+@pytest.mark.setup
 def test_macro(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'],
                     lib_path=brexit_corpus['lib_path'],
                     registry_path=brexit_corpus['registry_path'])
-
     corpus.cqp.Exec("Last=/ap();")
     counts = corpus.counts.matches(corpus.cqp, name="Last")
     print(counts)
 
 
+@pytest.mark.v1
+@pytest.mark.queries
+def test_query_no_cache(sz_corpus):
+
+    corpus = Corpus(
+        corpus_name=sz_corpus['corpus_name']
+    )
+    query = r'[lemma="Angela"]? [lemma="Merkel"]'
+    dump = corpus.query(query, name='Merkel')
+    print(dump)
+    print(dump.df)
+
+
+@pytest.mark.v1
+@pytest.mark.queries
+def test_query(sz_corpus):
+
+    corpus = Corpus(
+        corpus_name=sz_corpus['corpus_name']
+    )
+    query = r'[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
+    dump = corpus.query(query)
+    print(dump)
+    print(dump.df)
+    print(dump.breakdown())
+
+
+@pytest.mark.v1
 @pytest.mark.concordancing
 def test_concordancing_simple():
     corpus = Corpus(
         corpus_name="SZ_2009_14"
     )
 
-    query = r'[lemma="Angela"]? [lemma="Merkel"]'
+    query = r'[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
     dump = corpus.query(query)
-    concordance = corpus.concordance(dump)
+    lines = dump.concordance()
+    print(lines)
+    print(lines.columns)
+    from pprint import pprint
+    pprint(lines['raw'].iloc[0])
 
-    print(concordance.breakdown)
-    print(concordance.size)
-    print(concordance.lines(form='kwic'))
 
-
+@pytest.mark.v1
 @pytest.mark.concordancing
 def test_concordancing():
     corpus = Corpus(
@@ -36,14 +75,31 @@ def test_concordancing():
     )
 
     query = r'[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
-    result = corpus.query(query, s_context='s')
-    concordance = corpus.concordance(result)
-
-    print(concordance.breakdown)
-    print(concordance.size)
-    print(concordance.lines([567792], form='dataframes')['df'][0])
+    result = corpus.query(query, context_break='s')
+    lines = result.concordance(form='dataframes')
+    from pprint import pprint
+    pprint(lines['df'].iloc[0])
 
 
+@pytest.mark.v1
+@pytest.mark.concordancing
+def test_concordancing_attributes():
+    corpus = Corpus(
+        corpus_name="SZ_2009_14"
+    )
+
+    query = r'[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
+    result = corpus.query(query, context_break='s')
+    lines = result.concordance(
+        form='dataframes',
+        p_show=['word', 'lemma'],
+        s_show=['text_id']
+    )
+    print(lines['df'].iloc[0])
+    print(lines)
+
+
+@pytest.mark.v1
 @pytest.mark.anchor
 def test_anchor():
     corpus = Corpus(
@@ -51,13 +107,10 @@ def test_anchor():
     )
 
     query = r'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]'
-    result = corpus.query(query, s_context='s')
-    concordance = corpus.concordance(result)
-
-    print(concordance.breakdown)
-    print(concordance.size)
-    print(concordance.lines([567792], s_show=['text_id'], form='dataframes')['df'][0])
-    print(concordance.lines(s_show=['text_id'], form='dataframes'))
+    result = corpus.query(query, context_break='s')
+    concordance = result.concordance(matches=[18640085],
+                                     form='dataframes')['df'][0]
+    print(concordance)
 
 
 @pytest.mark.collocates
@@ -67,13 +120,13 @@ def test_collocates():
     )
 
     query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
-    result = corpus.query(query, s_context='s')
-    collocates = corpus.collocates(result)
-
-    print(collocates.show())
-    print(collocates.show(window=5, order="log_likelihood").head(10))
+    result = corpus.query(query, context=10, context_break='s')
+    collocates = result.collocates()
+    print(collocates)
 
 
+@pytest.mark.now
+@pytest.mark.v1
 @pytest.mark.keywords
 def test_keywords():
     meta = read_csv("/home/ausgerechnet/corpora/cwb/upload/efe/sz-2009-14.tsv.gz",
@@ -86,13 +139,13 @@ def test_keywords():
     corpus = Corpus(
         corpus_name="SZ_2009_14"
     )
-    corpus.subcorpus_from_s_att('text_id', ids, name='tmp_keywords')
-    keywords = corpus.keywords('tmp_keywords')
-    print(keywords.show(order='dice').head(50))
+    dump = corpus.dump_from_s_att('text_id', ids)
+    keywords = dump.keywords()
+    print(keywords.head(50))
 
 
 @pytest.mark.skip
-@pytest.mark.readme_argmin
+@pytest.mark.argmin
 def test_argmin():
     corpus = Corpus(
         corpus_name="BREXIT_V20190522",

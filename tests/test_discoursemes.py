@@ -1,8 +1,9 @@
 from ccc import Corpus
-from ccc.discoursemes import Disc, DiscPos
+from ccc.discoursemes import Disc, DiscCon
 import pytest
 
 
+@pytest.mark.discourseme
 def test_disc():
     corpus = Corpus('GERMAPARL_1114')
     topic = Disc(
@@ -13,9 +14,9 @@ def test_disc():
         's'
     )
     print(topic.dump)
-    print(topic.idx)
 
 
+@pytest.mark.discourseme
 def test_disc_matches():
     corpus = Corpus('GERMAPARL_1114')
 
@@ -30,6 +31,7 @@ def test_disc_matches():
     print(topic.matches())
 
 
+@pytest.mark.discourseme
 def test_disc_context():
     corpus = Corpus('GERMAPARL_1114')
 
@@ -44,6 +46,7 @@ def test_disc_context():
     print(topic.context())
 
 
+@pytest.mark.discourseme
 def test_disc_concordance():
 
     topic = Disc(
@@ -58,6 +61,7 @@ def test_disc_concordance():
     print(topic.show_concordance(30))
 
 
+@pytest.mark.discourseme
 def test_disc_concordance_form():
 
     topic = Disc(
@@ -71,6 +75,7 @@ def test_disc_concordance_form():
     print(topic.show_concordance(matches=[11057], cut_off=None, form='extended'))
 
 
+@pytest.mark.discourseme
 def test_disc_collocates():
 
     corpus = Corpus('GERMAPARL_1114')
@@ -84,7 +89,8 @@ def test_disc_collocates():
     print(topic.show_collocates())
 
 
-def test_discpos():
+@pytest.mark.disccon
+def test_disccon():
 
     # init topic disc
     topic = Disc(
@@ -110,12 +116,13 @@ def test_discpos():
         's',
         's'
     )
-    discpos = DiscPos(topic, [disc1, disc2])
+    discpos = DiscCon(topic, [disc1, disc2])
     discpos.slice_discs()
     print(discpos.df_nodes.keys())
     print(discpos.df_nodes[discpos.parameters['context']])
 
 
+@pytest.mark.disccon
 def test_discpos_2():
 
     # init topic disc
@@ -126,7 +133,7 @@ def test_discpos_2():
         's',
         's'
     )
-    dp = DiscPos(topic)
+    dp = DiscCon(topic)
     # two floating discoursemes
     dp.add_items(["Streit", "Verhandlung", "Regierung"])
     dp.add_items(["Angela"])
@@ -136,7 +143,8 @@ def test_discpos_2():
     print(dp.df_nodes)
 
 
-def test_discpos_concordance():
+@pytest.mark.disccon
+def test_disccon_concordance():
     corpus = Corpus('GERMAPARL_1114')
 
     # three discoursemes
@@ -163,10 +171,10 @@ def test_discpos_concordance():
     )
 
     # init discursive position
-    dp = DiscPos(topic, [disc1, disc2])
-    # show collocates
-    print(dp.show_concordance())
-    print(dp.show_concordance(p_show=['word', 'lemma'])['df'].iloc[0])
+    disccon = DiscCon(topic, [disc1, disc2])
+    # show concordance
+    print(disccon.show_concordance())
+    print(disccon.show_concordance(p_show=['word', 'lemma'])['df'].iloc[0])
 
 
 @pytest.mark.skip
@@ -195,11 +203,12 @@ def test_discpos_collocates():
     )
 
     # init discursive position
-    discpos = DiscPos(topic, [disc1, disc2])
+    discpos = DiscCon(topic, [disc1, disc2])
     # show collocates
     print(discpos.show_collocates())
 
 
+@pytest.mark.disccon
 def test_discpos_collocates_small():
     # three discoursemes
     topic = Disc(
@@ -225,13 +234,13 @@ def test_discpos_collocates_small():
     )
 
     # init discursive position
-    discpos = DiscPos(topic, [disc1, disc2])
+    disccon = DiscCon(topic, [disc1, disc2])
     # show collocates
-    print(discpos.show_collocates())
+    print(disccon.show_collocates())
 
 
-@pytest.mark.now
-def test_discpos_collocates_empty():
+@pytest.mark.disccon
+def test_disccon_collocates_empty():
     # three discoursemes
     topic = Disc(
         Corpus('GERMAPARL_1114'),
@@ -241,7 +250,7 @@ def test_discpos_collocates_empty():
         's'
     )
     # init discursive position
-    discpos = DiscPos(topic)
-    discpos.add_items(["Verhandlung"])
+    disccon = DiscCon(topic)
+    disccon.add_items(["Verhandlung"])
     # show collocates
-    print(discpos.show_collocates(window=5))
+    print(disccon.show_collocates(window=5))

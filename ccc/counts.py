@@ -38,24 +38,28 @@ class Counts:
     def: (p_att_1, p_att_2, ...), freq
     all p_atts are strings, " "-delimited for MWUs (split=NO)
 
-    methods:
+    attributes:
+    .corpus_name
+    .attributes
 
-    - dump      (df_dump, start, end, p_atts, split)
+    methods:
+    ._cpos2patts
+
+    .cpos      (cpos_list, p_atts)
+
+    .dump      (df_dump, start, end, p_atts, split)
       - strategy 1: split NO|YES; flags  ; combo x
       - strategy 2: split   |YES; flags  ; combo
 
-    - matches   (name, p_att, split, flags)
+    .matches   (name, p_att, split, flags)
       - strategy 1: split NO|   ; flags x; combo
       - strategy 2: split NO|YES; flags x; combo
       - strategy 3: split   |YES; flags  ; combo x
 
-    - mwus      (queries)
+    .mwus      (queries)
       - strategy 1: split NO| - ; flags x; combo x; mwu NO
       - strategy 2: split NO| - ; flags x; combo x; mwu YES
       - strategy 3: split NO| - ; flags x; combo  ; mwu YES
-
-    - marginals (items, p_att, flags, pattern, [fill_missing])
-      - strategy 1: split NO| - ; flags x; combo
 
     TODO: counting with group?
 
@@ -76,7 +80,7 @@ class Counts:
         :param list p_atts: p-attribute(s) to fill position with
         :param bool ignore_missing: whether to return -1 for out-of-bounds
 
-        :return: p_att(s) 
+        :return: p_att(s)
         :rtype: tuple
 
         """
@@ -367,36 +371,4 @@ class Counts:
 
         # df = df.loc[df["freq"] != 0]
 
-        return df
-
-    @time_it
-    def marginals(self, items, p_att='word', flags=0, pattern=False):
-        """Extracts marginal frequencies for given unigram patterns.
-        0 if not in corpus.
-
-        :param list items: items to get marginals for
-        :param str p_att: p-attribute to get counts for
-        :param int flags: 1 = %c, 2 = %d, 3 = %cd
-        :param bool pattern: activate wildcards?
-
-        :return: counts of the items in the whole corpus
-        :rtype: DataFrame
-
-        """
-        tokens_all = self.attributes.attribute(p_att, 'p')
-        if flags:
-            pattern = True
-        counts = list()
-        for item in items:
-            if not pattern:
-                try:
-                    counts.append(tokens_all.frequency(item))
-                except KeyError:
-                    counts.append(0)
-            else:
-                cpos = tokens_all.find_pattern(item, flags=flags)
-                counts.append(len(cpos))
-        df = DataFrame(data=counts, index=items, columns=['freq'])
-        df.index.name = p_att
-        df = df.sort_values(by='freq', ascending=False)
         return df

@@ -62,7 +62,7 @@ class Keywords:
         f.index = f.index.get_level_values(self.p_query)
 
         # get marginals
-        f2 = self.corpus.counts.marginals(
+        f2 = self.corpus.marginals(
             f.index, self.p_query
         )
         f2.columns = ['f2']

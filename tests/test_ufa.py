@@ -1,5 +1,6 @@
 from pandas import read_csv, cut
 from ccc import Corpus
+from ccc.ufa import UFA
 import pytest
 
 
@@ -19,4 +20,3 @@ def test_ufa(sz_corpus):
     for s in set(meta[s_att]):
         ids[s] = set(meta.loc[meta[s_att] == s]['id'])
 
-    corpus.ufa(ids, 'lemma', )

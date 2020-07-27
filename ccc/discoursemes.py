@@ -5,6 +5,8 @@
 from ccc.utils import formulate_cqp_query
 from ccc.utils import merge_intervals
 from ccc.collocates import df_node_to_cooc, add_ams
+from ccc.concordances import Concordance
+from ccc.collocates import Collocates
 # requirements
 from pandas import merge, DataFrame
 # logging
@@ -52,9 +54,11 @@ class Disc:
 
         # run query
         query = formulate_cqp_query(items, p_query, s_query, flags, escape)
-        self.dump, self.idx = corpus.query(
-            query, context, s_context=s_context, return_name=True
+        dump = corpus.query(
+            query, context, context_break=s_context
         )
+        self.dump = dump.df
+        self.idx = dump.name_cache
 
         self._context = None
         self._matches = None
@@ -85,6 +89,7 @@ class Disc:
         if context is None:
             context = self.parameters['context']
 
+        # deal with context
         if context > self.parameters['context']:
             logger.warning(
                 "out of context; falling back to context=%d" %
@@ -103,8 +108,7 @@ class Disc:
         else:
             df = self.dump
 
-        # TODO: start independent CQP process
-        conc = self.corpus.concordance(df)
+        conc = Concordance(self.corpus, df)
         return conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
             p_text=None, p_slots=None, regions=[], order=order,
@@ -116,14 +120,14 @@ class Disc:
                         frequencies=True, flags=None):
 
         # TODO: start independent CQP process
-        coll = self.corpus.collocates(self.dump, p_query)
+        coll = Collocates(self.corpus, self.dump, p_query)
         return coll.show(
             window=window, order=order, cut_off=cut_off, ams=ams,
             min_freq=min_freq, frequencies=frequencies, flags=flags
         )
 
 
-class DiscPos:
+class DiscCon:
     """
     realization of a discursive position given a topic and discoursemes
     discoursemes can be added after initialization
@@ -163,9 +167,9 @@ class DiscPos:
             self.df_nodes = dict()  # reset df nodes
 
     def add_items(self, items):
-        # TODO: start independent CQP process
+
         disc = Disc(
-            corpus=self.corpus,
+            corpus=self.corpus.copy(),
             items=items,
             **self.parameters
         )
@@ -246,7 +250,7 @@ class DiscPos:
 
         logger.info("converting each line to dataframe")
         # TODO: start independent CQP process
-        conc = self.corpus.concordance(df)
+        conc = Concordance(self.corpus, df)
         lines = conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
             p_text=None, p_slots=None, regions=[], order=order,
@@ -305,7 +309,7 @@ class DiscPos:
         f.index = f.index.get_level_values(p_query)
 
         # get marginals
-        f2 = self.corpus.counts.marginals(
+        f2 = self.corpus.marginals(
             f.index, p_query
         )
         f2.columns = ['marginal']
