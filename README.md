@@ -279,11 +279,12 @@ print(collocates)
 
 | *item*          | O11  | O12   | O21      | O22       | E11         | E12          | E21          | E22          | log_likelihood | ... |
 |-----------------|------|-------|----------|-----------|-------------|--------------|--------------|--------------|----------------|-----|
-| die             | 1799 | 21033 | 25123530 | 275771340 | 1906.373430 | 20925.626570 | 2.512342e+07 | 2.757714e+08 | -2.459194      | ... |
-| Bundeskanzlerin | 1491 | 21341 | 7325     | 300887545 | 0.668910    | 22831.331090 | 8.815331e+03 | 3.008861e+08 | 1822.211827    | ... |
-| .               | 1123 | 21709 | 13676688 | 287218182 | 1037.797972 | 21794.202028 | 1.367677e+07 | 2.872181e+08 | 2.644804       | ... |
-| ,               | 814  | 22018 | 17561245 | 283333625 | 1332.513602 | 21499.486398 | 1.756073e+07 | 2.833341e+08 | -14.204447     | ... |
-| Kanzlerin       | 648  | 22184 | 16974    | 300877896 | 1.337062    | 22830.662938 | 1.762066e+04 | 3.008772e+08 | 559.245198     | ... |
+| die             | 1189 | 13461 | 22082331 | 233975249 | 1263.407469 | 13386.592531 | 2.208226e+07 | 2.339753e+08 | -4.883922      | ... |
+| Bundeskanzlerin | 1165 | 13485 | 5783     | 256051797 | 0.397498    | 14649.602502 | 6.947603e+03 | 2.560506e+08 | 16573.570027   | ... |
+| ,               | 603  | 14047 | 14436277 | 241621303 | 825.939978  | 13824.060022 | 1.443605e+07 | 2.416215e+08 | -70.046255     | ... |
+| Kanzlerin       | 492  | 14158 | 13274    | 256044306 | 0.787559    | 14649.212441 | 1.376521e+04 | 2.560438e+08 | 5386.275148    | ... |
+| haben           | 379  | 14271 | 2433866  | 253623714 | 139.264180  | 14510.735820 | 2.434106e+06 | 2.536235e+08 | 283.416865     | ... |
+| ...             | ...  | ...   | ...      | ...       | ...         | ...          | ...          | ...          | ...            | ... |
 
 
 By default, collocates are calculated on the "lemma"-layer, assuming
@@ -304,10 +305,10 @@ association measures depend on their implementation in the
 [association-measures](https://pypi.org/project/association-measures/)
 module.
 
-The dataframe is sorted by co-occurrence frequency (column "f"), and
+The dataframe is sorted by co-occurrence frequency (column "O11"), and
 only the first 100 most frequently co-occurring collocates are
-retrieved. You can change this behaviour via the `order` and `cut_off`
-parameters.
+retrieved. You can (and should) change this behaviour via the `order`
+and `cut_off` parameters.
 
 ### Keyword Analyses
 
