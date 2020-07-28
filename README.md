@@ -25,6 +25,11 @@ CWB-indexed corpora.
 If you want to run queries with more than two anchor points, the
 module requires CWB version 3.4.16 or later.
 
+The module requires the
+[association-measures](https://github.com/fau-klue/pandas-association-measures)
+module in version 0.1.4, which currently can only be installed
+directly from github.
+
 ### Installation ###
 You can install this module with pip from PyPI:
 
@@ -79,7 +84,7 @@ print(dump)
 The result is a `Dump` object. Its core is a pandas DataFrame
 multi-indexed by CQP's "match" and "matchend" (similar to a
 CQP dump). All entries of the DataFrame, including the index, are
-integers representing corpus positions.
+integers representing corpus positions:
 
 ```
 print(dump.df)
@@ -146,7 +151,6 @@ print(lines)
 | 543640  | 543644     | 543620  | 543664     | {'cpos': [543620, 543621, 543622, 543623, 5436... |
 | ...     | ...        | ...     | ...        | ...                                               |
 
-
 Column `raw` contains a dictionary with the following keys:
 - "match" (int)
 - "cpos" (list)
@@ -168,19 +172,19 @@ print(lines['df'].iloc[0])
 
 | *cpos* | offset | word                | match | matchend | context | contextend |
 |--------|--------|---------------------|-------|----------|---------|------------|
-| 48344  | -5     | Eine                | F     | F        | T       | F          |
-| 48345  | -4     | entsprechende       | F     | F        | F       | F          |
-| 48346  | -3     | Steuererleichterung | F     | F        | F       | F          |
-| 48347  | -2     | hat                 | F     | F        | F       | F          |
-| 48348  | -1     | Kanzlerin           | F     | F        | F       | F          |
-| 48349  | 0      | Angela              | T     | F        | F       | F          |
-| 48350  | 0      | Merkel              | F     | F        | F       | F          |
-| 48351  | 0      | (                   | F     | F        | F       | F          |
-| 48352  | 0      | CDU                 | F     | F        | F       | F          |
-| 48353  | 0      | )                   | F     | T        | F       | F          |
-| 48354  | 1      | bisher              | F     | F        | F       | F          |
-| 48355  | 2      | ausgeschlossen      | F     | F        | F       | F          |
-| 48356  | 3      | .                   | F     | F        | F       | T          |
+| 48344  | -5     | Eine                | False | False    | True    | False      |
+| 48345  | -4     | entsprechende       | False | False    | False   | False      |
+| 48346  | -3     | Steuererleichterung | False | False    | False   | False      |
+| 48347  | -2     | hat                 | False | False    | False   | False      |
+| 48348  | -1     | Kanzlerin           | False | False    | False   | False      |
+| 48349  | 0      | Angela              | True  | False    | False   | False      |
+| 48350  | 0      | Merkel              | False | False    | False   | False      |
+| 48351  | 0      | (                   | False | False    | False   | False      |
+| 48352  | 0      | CDU                 | False | False    | False   | False      |
+| 48353  | 0      | )                   | False | True     | False   | False      |
+| 48354  | 1      | bisher              | False | False    | False   | False      |
+| 48355  | 2      | ausgeschlossen      | False | False    | False   | False      |
+| 48356  | 3      | .                   | False | False    | False   | True       |
 
 
 Attribute selection is controlled via the `p_show` and `s_show`
@@ -191,34 +195,33 @@ lines = dump.concordance(
 	p_show=['word', 'lemma'],
 	s_show=['text_id']
 )
+print(lines)
+```
+| *match* | *matchend* | context | contextend | df  | text_id |
+|---------|------------|---------|------------|-----|---------|
+| 676     | 680        | 656     | 700        | ... | A113224 |
+| 1190    | 1194       | 1170    | 1214       | ... | A124124 |
+| 543640  | 543644     | 543620  | 543664     | ... | A423523 |
+| ...     | ...        | ...     | ...        | ... | ...     |
+
+```
 print(lines['df'].iloc[0])
 ```
 | *cpos* | offset | word                | lemma               | match | matchend | context | contextend |
 |--------|--------|---------------------|---------------------|-------|----------|---------|------------|
-| 48344  | -5     | Eine                | eine                | F     | F        | T       | F          |
-| 48345  | -4     | entsprechende       | entsprechende       | F     | F        | F       | F          |
-| 48346  | -3     | Steuererleichterung | Steuererleichterung | F     | F        | F       | F          |
-| 48347  | -2     | hat                 | haben               | F     | F        | F       | F          |
-| 48348  | -1     | Kanzlerin           | Kanzlerin           | F     | F        | F       | F          |
-| 48349  | 0      | Angela              | Angela              | T     | F        | F       | F          |
-| 48350  | 0      | Merkel              | Merkel              | F     | F        | F       | F          |
-| 48351  | 0      | (                   | (                   | F     | F        | F       | F          |
-| 48352  | 0      | CDU                 | CDU                 | F     | F        | F       | F          |
-| 48353  | 0      | )                   | )                   | F     | T        | F       | F          |
-| 48354  | 1      | bisher              | bisher              | F     | F        | F       | F          |
-| 48355  | 2      | ausgeschlossen      | ausschließen        | F     | F        | F       | F          |
-| 48356  | 3      | .                   | .                   | F     | F        | F       | T          |
-
-```
-print(lines)
-```
-| *match*  | *matchend* | context | contextend | df  | text_id |
-|--------|----------|---------|------------|-----|---------|
-| 676    | 680      | 656     | 700        | ... | A113224 |
-| 1190   | 1194     | 1170    | 1214       | ... | A124124 |
-| 543640 | 543644   | 543620  | 543664     | ... | A423523 |
-| ...    | ...      | ...     | ...        | ... | ...     |
-
+| 48344  | -5     | Eine                | eine                | False | False    | True    | False      |
+| 48345  | -4     | entsprechende       | entsprechende       | False | False    | False   | False      |
+| 48346  | -3     | Steuererleichterung | Steuererleichterung | False | False    | False   | False      |
+| 48347  | -2     | hat                 | haben               | False | False    | False   | False      |
+| 48348  | -1     | Kanzlerin           | Kanzlerin           | False | False    | False   | False      |
+| 48349  | 0      | Angela              | Angela              | True  | False    | False   | False      |
+| 48350  | 0      | Merkel              | Merkel              | False | False    | False   | False      |
+| 48351  | 0      | (                   | (                   | False | False    | False   | False      |
+| 48352  | 0      | CDU                 | CDU                 | False | False    | False   | False      |
+| 48353  | 0      | )                   | )                   | False | True     | False   | False      |
+| 48354  | 1      | bisher              | bisher              | False | False    | False   | False      |
+| 48355  | 2      | ausgeschlossen      | ausschließen        | False | False    | False   | False      |
+| 48356  | 3      | .                   | .                   | False | False    | False   | True       |
 
 
 You can decide which and how many concordance lines you want to
@@ -241,22 +244,21 @@ dump.concordance(form='dataframes')
 
 thus returns `DataFrame`s with additional columns for each anchor point.
 
-| *cpos* | offset | word                | match | matchend | context | contextend | 0 | 1 | 2 |
-|--------|--------|---------------------|-------|----------|---------|------------|---|---|---|
-| 48344  | -5     | Eine                | F     | F        | T       | F          | F | F | F |
-| 48345  | -4     | entsprechende       | F     | F        | F       | F          | F | F | F |
-| 48346  | -3     | Steuererleichterung | F     | F        | F       | F          | F | F | F |
-| 48347  | -2     | hat                 | F     | F        | F       | F          | F | F | F |
-| 48348  | -1     | Kanzlerin           | F     | F        | F       | F          | F | F | F |
-| 48349  | 0      | Angela              | T     | F        | F       | F          | T | F | F |
-| 48350  | 0      | Merkel              | F     | F        | F       | F          | F | T | F |
-| 48351  | 0      | (                   | F     | F        | F       | F          | F | F | F |
-| 48352  | 0      | CDU                 | F     | F        | F       | F          | F | F | T |
-| 48353  | 0      | )                   | F     | T        | F       | F          | F | F | F |
-| 48354  | 1      | bisher              | F     | F        | F       | F          | F | F | F |
-| 48355  | 2      | ausgeschlossen      | F     | F        | F       | F          | F | F | F |
-| 48356  | 3      | .                   | F     | F        | F       | T          | F | F | F |
-
+| *cpos* | offset | word                | match | matchend | context | contextend | 0     | 1     | 2     |
+|--------|--------|---------------------|-------|----------|---------|------------|-------|-------|-------|
+| 48344  | -5     | Eine                | False | False    | True    | False      | False | False | False |
+| 48345  | -4     | entsprechende       | False | False    | False   | False      | False | False | False |
+| 48346  | -3     | Steuererleichterung | False | False    | False   | False      | False | False | False |
+| 48347  | -2     | hat                 | False | False    | False   | False      | False | False | False |
+| 48348  | -1     | Kanzlerin           | False | False    | False   | False      | False | False | False |
+| 48349  | 0      | Angela              | True  | False    | False   | False      | True  | False | False |
+| 48350  | 0      | Merkel              | False | False    | False   | False      | False | True  | False |
+| 48351  | 0      | (                   | False | False    | False   | False      | False | False | False |
+| 48352  | 0      | CDU                 | False | False    | False   | False      | False | False | True  |
+| 48353  | 0      | )                   | False | True     | False   | False      | False | False | False |
+| 48354  | 1      | bisher              | False | False    | False   | False      | False | False | False |
+| 48355  | 2      | ausgeschlossen      | False | False    | False   | False      | False | False | False |
+| 48356  | 3      | .                   | False | False    | False   | True       | False | False | False |
 
 
 ### Collocation Analyses ###
