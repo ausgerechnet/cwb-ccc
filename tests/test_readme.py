@@ -113,6 +113,8 @@ def test_anchor():
     print(concordance)
 
 
+@pytest.mark.v1
+@pytest.mark.now
 @pytest.mark.collocates
 def test_collocates():
     corpus = Corpus(
@@ -122,10 +124,9 @@ def test_collocates():
     query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
     result = corpus.query(query, context=10, context_break='s')
     collocates = result.collocates()
-    print(collocates)
+    print(collocates[['O11', 'O12', 'O21', 'O22', 'E11', 'E12', 'E21', 'E22', 'log_likelihood']])
 
 
-@pytest.mark.now
 @pytest.mark.v1
 @pytest.mark.keywords
 def test_keywords():
