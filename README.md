@@ -152,11 +152,12 @@ print(lines)
 | ...     | ...        | ...     | ...        | ...                                               |
 
 Column `raw` contains a dictionary with the following keys:
-- "match" (int)
-- "cpos" (list)
-- "offset" (list)
-- "word" (list)
-- "anchors" (dict) 
+- "match" (int): the cpos of the match
+- "cpos" (list): the cpos of all tokens in the concordance line
+- "offset" (list): the offset to match/matchend of all tokens 
+- "word" (list): the words of all tokens
+- "anchors" (dict): a dictionary of {anchor: cpos} (see
+  [below](#anchored-queries))
 
 You can create your own formatting from this, or use the `form`
 parameter to define how your lines should be formatted ("raw",
@@ -185,7 +186,6 @@ print(lines['df'].iloc[0])
 | 48354  | 1      | bisher              | False | False    | False   | False      |
 | 48355  | 2      | ausgeschlossen      | False | False    | False   | False      |
 | 48356  | 3      | .                   | False | False    | False   | True       |
-
 
 Attribute selection is controlled via the `p_show` and `s_show`
 parameters (lists of p-attributes and s-attributes, respectively):
@@ -222,7 +222,6 @@ print(lines['df'].iloc[0])
 | 48354  | 1      | bisher              | bisher              | False | False    | False   | False      |
 | 48355  | 2      | ausgeschlossen      | ausschließen        | False | False    | False   | False      |
 | 48356  | 3      | .                   | .                   | False | False    | False   | True       |
-
 
 You can decide which and how many concordance lines you want to
 retrieve by means of the parameters `order` ("first", "last", or
