@@ -100,6 +100,7 @@ def test_concordancing_attributes():
 
 
 @pytest.mark.v1
+@pytest.mark.now
 @pytest.mark.anchor
 def test_anchor():
     corpus = Corpus(
@@ -109,12 +110,11 @@ def test_anchor():
     query = r'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]'
     result = corpus.query(query, context_break='s')
     concordance = result.concordance(matches=[18640085],
-                                     form='dataframes')['df'][0]
+                                     form='dataframes')['df'].iloc[0]
     print(concordance)
 
 
 @pytest.mark.v1
-@pytest.mark.now
 @pytest.mark.collocates
 def test_collocates():
     corpus = Corpus(
@@ -124,7 +124,9 @@ def test_collocates():
     query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
     result = corpus.query(query, context=10, context_break='s')
     collocates = result.collocates()
-    print(collocates[['O11', 'O12', 'O21', 'O22', 'E11', 'E12', 'E21', 'E22', 'log_likelihood']])
+    print(collocates[[
+        'O11', 'O12', 'O21', 'O22', 'E11', 'E12', 'E21', 'E22', 'log_likelihood'
+    ]])
 
 
 @pytest.mark.v1

@@ -1,5 +1,8 @@
 from ccc import Corpus
 from ccc.concordances import Concordance
+from ccc.concordances import line2simple
+from ccc.concordances import line2df
+from ccc.concordances import line2extended
 import pandas as pd
 import pytest
 
@@ -25,10 +28,73 @@ def test_concordance_line(sz_corpus):
     )
     result = corpus.query(query)
     concordance = Concordance(corpus, result.df)
-    for index, columns in concordance.df_dump.iterrows():
-        break
-    line = concordance.text_line(index, columns, p_show=['word', 'pos'])
-    assert(type(line) == dict)
+    line = result.df.iloc[0]
+    text_line = concordance.text_line(
+        line.name, line, p_show=['word', 'pos']
+    )
+    assert(type(text_line) == dict)
+
+
+@pytest.mark.line
+def test_concordance_line2simple(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    result = corpus.query(query)
+    concordance = Concordance(corpus, result.df)
+    line = result.df.iloc[0]
+    text_line = concordance.text_line(
+        line.name, line, ['word']
+    )
+    # simple
+    res = line2simple(text_line)
+    assert(type(res) == dict)
+    assert(type(res["text"]) == str)
+    # kwic
+    res = line2simple(text_line, kwic=True)
+    assert(type(res) == dict)
+    assert(type(res["left"]) == str)
+    assert(type(res["node"]) == str)
+    assert(type(res["right"]) == str)
+
+
+@pytest.mark.line
+def test_concordance_line2df(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    result = corpus.query(query)
+    concordance = Concordance(corpus, result.df)
+    line = result.df.iloc[0]
+    text_line = concordance.text_line(
+        line.name, line, ['word']
+    )
+    res = line2df(text_line)
+    assert(type(res) == dict)
+    assert(type(res['df']) == pd.DataFrame)
+
+
+@pytest.mark.line
+def test_concordance_line2extended(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'])
+    query = (
+        '[lemma="Angela"]? [lemma="Merkel"] '
+        '[word="\\("] [lemma="CDU"] [word="\\)"]'
+    )
+    result = corpus.query(query)
+    concordance = Concordance(corpus, result.df)
+    line = result.df.iloc[0]
+    text_line = concordance.text_line(
+        line.name, line, ['word']
+    )
+    res = line2extended(text_line, p_slots='word')
+    assert(type(res) == dict)
+    assert(type(res['df']) == pd.DataFrame)
+    assert(type(res['text']) == str)
 
 
 @pytest.mark.lines
@@ -65,7 +131,6 @@ def test_concordance_lines(sz_corpus):
     assert('text_id' in lines.columns)
 
 
-@pytest.mark.now
 @pytest.mark.lines
 def test_concordance_lines_dataframes(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
