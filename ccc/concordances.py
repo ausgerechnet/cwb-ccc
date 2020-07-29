@@ -4,7 +4,6 @@
 from random import sample
 # part of module
 from .utils import node2cooc
-from .utils import format_concordance_lines
 # requirements
 from pandas import DataFrame
 # logging
@@ -124,7 +123,7 @@ class Concordance:
             if form == 'raw':
                 concordance = df_lines
             else:
-                concordance = format_concordance_lines(
+                concordance = format_lines(
                     df_lines, p_show, p_text,
                     p_slots, regions, form=form
                 )
@@ -136,3 +135,183 @@ class Concordance:
             df = df.join(meta)
 
         return df
+
+
+##########################
+# CONCORDANCE FORMATTING #
+##########################
+def format_lines(df_lines,
+                 p_show=['word'],
+                 p_text=None,   # only for form == 'extended'
+                 p_slots=None,  # only for form == 'extended'
+                 regions=[],    # only for form == 'extended'
+                 form='dataframes'):
+
+    # select p-attribute for simple and kwic
+    if form == 'simple' or form == 'kwic':
+        if len(p_show) > 1:
+            logger.warning('cannot show more than one p-attribute in simple format')
+            logger.warning('showing p-attribute "%s"' % p_show[0])
+        p_show = p_show[0]
+
+    if form == 'simple':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: line2simple(row, p_show, kwic=False)
+            ).values
+        )
+
+    elif form == 'kwic':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: line2simple(row, p_show, kwic=True)
+            ).values
+        )
+
+    elif form == 'dataframes':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: line2df(row)
+            ).values
+        )
+
+    elif form == 'extended':
+        df = DataFrame.from_records(
+            index=df_lines.index,
+            data=df_lines.apply(
+                lambda row: line2extended(row, p_text, p_slots, regions)
+            ).values
+        )
+    else:
+        raise NotImplementedError('no support for format "%s"' % form)
+
+    return df
+
+
+def line2simple(line, p_show='word', kwic=False):
+    """transforms one text_line to dictionary to
+    {"text": str} (kwic=False) or
+    {"left": str, "node": str, "right": str} (kwic=True)
+    input is a dictionary {p_show: list, ("offset": list)}
+
+    :param dict line: dicionary with "p_show": list(), "offset": list()
+    :param str p_show: what layer to show
+    :param bool kwic: kwic view?
+
+    :return: dictionary with "text" or "left", "node", "right"
+    :rtype: dict
+
+    """
+
+    if not kwic:
+        return {
+            'text': " ".join(line[p_show])
+        }
+
+    # get and append left / node / right
+    left = list()
+    node = list()
+    right = list()
+    for offset, word in zip(line['offset'], line[p_show]):
+        if offset < 0:
+            left.append(word)
+        elif offset == 0:
+            node.append(word)
+        else:
+            right.append(word)
+
+    return {
+        'left': " ".join(left),
+        'node': " ".join(node),
+        'right': " ".join(right),
+    }
+
+
+def line2df(line):
+    """transforms one text_line to dictionary of {"df": DataFrame}. Pops
+    "anchors", "match"; everything else must be aligned.
+
+    :param dict line: dictionary
+
+    :return: {'df': DataFrame}
+    :rtype: dict
+
+    """
+
+    # pop non-lists
+    if 'anchors' in line.keys():
+        anchors = line.pop('anchors')
+    else:
+        anchors = []
+    if 'match' in line:
+        line.pop('match')           # not needed
+
+    # transform to df
+    df = DataFrame.from_records(line).set_index('cpos')
+
+    # append anchors
+    for a in anchors:
+        df[a] = False
+        if anchors[a] in df.index:
+            df.at[anchors[a], a] = True
+
+    return {
+        'df': df
+    }
+
+
+def line2extended(line, p_text=None, p_slots=None, regions=[]):
+    """transforms one text_line to dictionary of {"df": DataFrame,
+    "match_p_slots": str, ...}.
+
+    :param dict line: dictionary
+
+    :return: {'df': DataFrame, ...}
+    :rtype: dict
+
+    """
+
+    # get anchors
+    anchors = line['anchors']
+
+    # init dataframe
+    out = line2df(line)
+
+    # get full text
+    if p_text is None:
+        p_text = 'word'
+    out['text'] = " ".join(out['df'][p_text].to_list())
+
+    # process anchors and regions
+    if p_slots:
+        for a in anchors:
+            anchor_value = anchors[a]
+            anchor_exists = True in out['df'][a].values
+            if anchor_exists:
+                out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
+
+        for region in regions:
+            region_name = "_".join([str(x) for x in region])
+
+            anchor_left = True in out['df'][region[0]].values
+            anchor_right = True in out['df'][region[1]].values
+
+            if not anchor_left and not anchor_right:
+                slots_p = None
+            elif anchor_left and anchor_right:
+                start = out['df'].index[out['df'][region[0]]].tolist()[0]
+                end = out['df'].index[out['df'][region[1]]].tolist()[0]
+                slots_p = " ".join(out['df'][p_slots].loc[start: end].to_list())
+            elif anchor_right:
+                end = out['df'].index[out['df'][region[1]]].tolist()[0]
+                slots_p = out['df'][p_slots].loc[end]
+            elif anchor_left:
+                start = out['df'].index[out['df'][region[0]]].tolist()[0]
+                slots_p = out['df'][p_slots][start]
+
+            out["_".join([region_name, p_slots])] = slots_p
+
+    return out
