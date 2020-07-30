@@ -26,10 +26,10 @@ setuptools.setup(
     install_requires=[
         "cython",
         "numpy",
-        "pandas>=0.24.2",
+        "pandas",
+        "unidecode"
         "cwb-python>=0.2.2",
-        "association-measures>=0.1.4",
-        "unidecode>=1.1.1"
+        "association-measures>=0.1.5",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
