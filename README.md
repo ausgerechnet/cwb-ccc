@@ -25,17 +25,12 @@ CWB-indexed corpora.
 If you want to run queries with more than two anchor points, the
 module requires CWB version 3.4.16 or later.
 
-The module requires the
-[association-measures](https://github.com/fau-klue/pandas-association-measures)
-module in version 0.1.4, which currently can only be installed
-directly from github.
-
 ### Installation ###
 You can install this module with pip from PyPI:
 
 	pip3 install cwb-ccc
 
-You can also clone the repository from
+You can also clone the source from
 [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the
 respective folder, and use `setup.py`:
 
@@ -299,10 +294,10 @@ By default, the dataframe is annotated with "z_score", "t_score",
 "dice", "log_likelihood", and "mutual_information" (parameter `ams`).
 For notation and further information regarding association measures,
 see
-[collocations.de](http://www.collocations.de/AM/index.html). Available
-association measures depend on their implementation in the
-[association-measures](https://pypi.org/project/association-measures/)
-module.
+[collocations.de](http://www.collocations.de/AM/index.html). Availability
+of association measures depends on their implementation in the
+[pandas-association-measures](https://pypi.org/project/association-measures/)
+package.
 
 The dataframe is sorted by co-occurrence frequency (column "O11"), and
 only the first 100 most frequently co-occurring collocates are
@@ -311,8 +306,8 @@ and `cut_off` parameters.
 
 ### Keyword Analyses
 
-For keyword analyses, you will have to define a subcorpus. The natural
-way of doing so is by selecting text identifiers via spreadsheets or
+For keyword analyses, you have to define a subcorpus. The natural way
+of doing so is by selecting text identifiers via spreadsheets or
 relational databases. If you have collected an appropriate set of
 identifiers, you can use `corpus.dump_from_s_att()` method:
 
@@ -324,6 +319,13 @@ keywords = dump.keywords()
 Just as with collocates, the result is a `DataFrame` with lexical
 items (`p_query` layer) as index and frequency signatures and
 association measures as columns.
+
+NB: You can of course also define a subcorpus via a corpus query,
+e.g.
+```python
+dump = corpus.query('"Atomkraft" expand to s')
+keywords = dump.keywords()
+```
 
 ## Acknowledgements ##
 The module relies on
