@@ -20,6 +20,6 @@ build/
 .RData
 .Rhistory
 
-Pipfile*
+Pipfile.lock
 
 *CACHE*
