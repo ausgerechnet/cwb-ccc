@@ -53,16 +53,16 @@ This will raise a `KeyError` if the named corpus is not in the
 specified registry.
 
 If you are using macros and wordlists, you have to store them in a
-separate folder (with subfolders `wordlists` and `macros`).  Make sure
-you specify this folder via `lib_path` when initializing the
+separate folder (with subfolders "wordlists/" and "macros/").  Make
+sure you specify this folder via `lib_path` when initializing the
 corpus.
 
 You can use the `cqp_bin` to point the module to a specific version of
 `cqp` (this is also helpful if `cqp` is not in your `PATH`).
 
-By default, the `data_path` points to "/tmp/ccc-data". Make sure
-that "/tmp/" exists and appropriate rights are granted. Otherwise,
-change the parameter when initializing the corpus.
+By default, the `data_path` points to "/tmp/ccc-data/". Make sure that
+"/tmp/" exists and appropriate rights are granted. Otherwise, change
+the parameter when initializing the corpus.
 
 ## Usage ##
 
@@ -309,10 +309,10 @@ and `cut_off` parameters.
 For keyword analyses, you have to define a subcorpus. The natural way
 of doing so is by selecting text identifiers via spreadsheets or
 relational databases. If you have collected an appropriate set of
-identifiers, you can use `corpus.dump_from_s_att()` method:
+`ids`, you can use the `corpus.dump_from_s_att()` method:
 
 ```python
-dump = corpus.subcorpus_from_s_att('text_id', ids)
+dump = corpus.dump_from_s_att('text_id', ids)
 keywords = dump.keywords()
 ```
 
@@ -320,7 +320,7 @@ Just as with collocates, the result is a `DataFrame` with lexical
 items (`p_query` layer) as index and frequency signatures and
 association measures as columns.
 
-NB: You can of course also define a subcorpus via a corpus query,
+You can of course also define a subcorpus via a corpus query,
 e.g.
 ```python
 dump = corpus.query('"Atomkraft" expand to s')
