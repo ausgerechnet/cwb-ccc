@@ -18,3 +18,4 @@ pandas = "*"
 unidecode = "*"
 cwb-python = ">=0.2.2"
 association-measures = ">=0.1.5"
+cwb-ccc = {path = "./../cwb-ccc"}

@@ -27,9 +27,9 @@ setuptools.setup(
         "cython",
         "numpy",
         "pandas",
-        "unidecode"
+        "unidecode",
         "cwb-python>=0.2.2",
-        "association-measures>=0.1.5",
+        "association-measures>=0.1.5"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
