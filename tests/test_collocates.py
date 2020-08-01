@@ -140,7 +140,7 @@ def test_query_keywords_collocates(sz_corpus):
         r'[word="\("] [lemma="CDU"] [word="\)"] expand to s'
     )
     dump = corpus.query(query)
-    keywords = Keywords(corpus, name=dump.name_cache, df_dump=dump.df, p_query='lemma')
+    keywords = Keywords(corpus, df_dump=dump.df, p_query='lemma')
     assert('Angela' == keywords.show(order='log_likelihood').head(1).index[0])
 
 
@@ -172,3 +172,36 @@ def test_collocates_pp(sz_corpus):
     assert(c.loc['In']['O11'] < c.loc['in']['O11'])
     c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
     assert('in' in c.index and 'In' not in c.index)
+
+
+@pytest.mark.fail
+def test_collocates_empty(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="NAHH"]'
+    )
+    dump = corpus.query(query)
+    collocates = Collocates(corpus, dump.df, p_query='word')
+    collocates.show()
+
+
+@pytest.mark.fail
+def test_collocates_no_context(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    collocates = Collocates(corpus, dump.df, p_query='word', mws=0)
+    collocates.show()
+
+
+@pytest.mark.fail
+def test_collocates_no_mws(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    collocates = Collocates(corpus, dump.df, p_query='word', mws=None)
+    collocates.show()

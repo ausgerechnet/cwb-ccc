@@ -28,7 +28,7 @@ def test_disc_matches():
         's',
         's'
     )
-    print(topic.matches())
+    print(topic.dump.matches())
 
 
 @pytest.mark.discourseme
@@ -43,7 +43,7 @@ def test_disc_context():
         's',
         's'
     )
-    print(topic.context())
+    print(topic.dump.context())
 
 
 @pytest.mark.discourseme
@@ -56,9 +56,9 @@ def test_disc_concordance():
         's',
         's'
     )
-    print(topic.show_concordance(20))
-    print(topic.show_concordance(10))
-    print(topic.show_concordance(30))
+    print(topic.concordance(20))
+    print(topic.concordance(10))
+    print(topic.concordance(30))
 
 
 @pytest.mark.discourseme
@@ -71,8 +71,8 @@ def test_disc_concordance_form():
         's',
         's'
     )
-    print(topic.show_concordance(cut_off=None, form='kwic'))
-    print(topic.show_concordance(matches=[11057], cut_off=None, form='extended'))
+    print(topic.concordance(cut_off=None, form='kwic'))
+    print(topic.concordance(matches=[11057], cut_off=None, form='extended'))
 
 
 @pytest.mark.discourseme
@@ -86,7 +86,7 @@ def test_disc_collocates():
         's',
         's'
     )
-    print(topic.show_collocates())
+    print(topic.collocates())
 
 
 @pytest.mark.disccon
@@ -123,7 +123,7 @@ def test_disccon():
 
 
 @pytest.mark.disccon
-def test_discpos_2():
+def test_disccon_2():
 
     # init topic disc
     topic = Disc(
@@ -173,8 +173,8 @@ def test_disccon_concordance():
     # init discursive position
     disccon = DiscCon(topic, [disc1, disc2])
     # show concordance
-    print(disccon.show_concordance())
-    print(disccon.show_concordance(p_show=['word', 'lemma'])['df'].iloc[0])
+    print(disccon.concordance())
+    print(disccon.concordance(p_show=['word', 'lemma'])['df'].iloc[0])
 
 
 @pytest.mark.skip
@@ -205,7 +205,7 @@ def test_discpos_collocates():
     # init discursive position
     discpos = DiscCon(topic, [disc1, disc2])
     # show collocates
-    print(discpos.show_collocates())
+    print(discpos.collocates())
 
 
 @pytest.mark.disccon
@@ -236,7 +236,7 @@ def test_discpos_collocates_small():
     # init discursive position
     disccon = DiscCon(topic, [disc1, disc2])
     # show collocates
-    print(disccon.show_collocates())
+    print(disccon.collocates())
 
 
 @pytest.mark.disccon
@@ -253,4 +253,4 @@ def test_disccon_collocates_empty():
     disccon = DiscCon(topic)
     disccon.add_items(["Verhandlung"])
     # show collocates
-    print(disccon.show_collocates(window=5))
+    assert(disccon.collocates(window=5).empty)

@@ -24,6 +24,25 @@ def brexit_corpus():
         '<np>[]*</np> (<np>[]*</np> | <vp>[]*</vp> | <pp>[]*</pp>)+'
     )
 
+    query_argmin = {
+        'query': '("according" "to" | "as" [lemma = $verbs_communication] "by") <np> @0:[::][word != "(http.|www|t\\.co).+"]* (/name_any[] | [lemma = $nouns_experts | lemma = $nouns_person_profession]) [word != "(http.|www|t\\.co).+"]* </np>@1:[::] ","? <np>@2:[::][word != "(http.|www|t\\.co).+"]*</np> (<vp>[]*</vp>)+ (<np>[word != "(http.|www|t\\.co).+"]*</np> | <vp>[]*</vp> |<pp>[]*</pp> | [pos_simple = "I|R"])+ @3:[::]',
+        'anchors': [
+            [0, 0, None, None],
+            [1, -1, None, None],
+            [2, 0, None, None],
+            [3, -1, None, None]
+        ],
+        'corrections': {0: 0, 1: -1, 2: 0, 3: -1},
+        'regions': [(0, 1), (2, 3)],
+        'match_strategy': 'longest',
+        's_query': 'tweet',
+        's_context': 'tweet',
+        's_show': ['tweet_id'],
+        'p_text': 'word',
+        'p_slots': 'lemma',
+        'p_show': ['word', 'pos_ner', 'lemma', 'pos_ark']
+    }
+
     return {
         'registry_path': registry_path,
         'context': context,
@@ -33,7 +52,8 @@ def brexit_corpus():
         's_query': s_query,
         'query': query,
         'query_lib': query_lib,
-        'meta_path': meta_path
+        'meta_path': meta_path,
+        'query_argmin': query_argmin
     }
 
 

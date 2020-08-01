@@ -66,6 +66,7 @@ def test_dump_from_query(sz_corpus):
 
 
 @pytest.mark.dump
+@pytest.mark.skip
 def test_dump_from_query_lib(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'],
                     lib_path=brexit_corpus['lib_path'],
@@ -112,28 +113,34 @@ def test_dump_from_query_anchors(sz_corpus):
 @pytest.mark.subcorpus
 def test_subcorpus_from_query(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
-    assert(int(corpus.cqp.Exec('size SBCRPS1')) == 0)
-    corpus.subcorpus_from_query(
+    assert(int(corpus.start_cqp().Exec('size SBCRPS1')) == 0)
+    cqp = corpus.start_cqp()
+    cqp.nqr_from_query(
         query="[lemma='test*']",
-        name='SBCRPS1'
+        name='SBCRPS1',
+        return_dump=False
     )
-    assert(int(corpus.cqp.Exec('size SBCRPS1')) > 0)
+    assert(int(cqp.Exec('size SBCRPS1')) > 0)
+    cqp.__kill__()
 
 
 @pytest.mark.subcorpus
 def test_subcorpus_from_df(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
-    assert(int(corpus.cqp.Exec('size SBCRPS2')) == 0)
+    cqp = corpus.start_cqp()
+    assert(int(cqp.Exec('size SBCRPS2')) == 0)
     df = corpus.dump_from_query(
         query=brexit_corpus['query']
     )
-    corpus.subcorpus_from_dump(
+    cqp.nqr_from_dump(
         df_dump=df,
-        name='SBCRPS2'
+        name='SBCRPS2',
     )
-    assert(int(corpus.cqp.Exec('size SBCRPS2')) > 0)
+    assert(int(cqp.Exec('size SBCRPS2')) > 0)
+    cqp.__kill__()
 
 
+@pytest.mark.now
 @pytest.mark.subcorpus
 def test_deactivate_subcorpus(brexit_corpus):
 
@@ -142,19 +149,21 @@ def test_deactivate_subcorpus(brexit_corpus):
         brexit_corpus['query'], brexit_corpus['s_query']
     )
 
-    # activation
-    corpus.subcorpus_from_query(
-        query="[lemma='be'] expand to tweet",
-        name='SBCRPS3'
+    # define subcorpus
+    corpus.query(
+        cqp_query="[lemma='be'] expand to tweet",
+        name='SBCRPS3',
+        save=True
     )
-    corpus.activate_subcorpus('SBCRPS3')
 
+    # activate subcorpus
+    corpus.subcorpus = 'SBCRPS3'
     df2 = corpus.dump_from_query(
         brexit_corpus['query'], brexit_corpus['s_query']
     )
 
-    # deactivation
-    corpus.activate_subcorpus()
+    # deactivate subcorpus
+    corpus.subcorpus = corpus.corpus_name
     df3 = corpus.dump_from_query(
         brexit_corpus['query'], brexit_corpus['s_query']
     )
@@ -163,6 +172,7 @@ def test_deactivate_subcorpus(brexit_corpus):
     assert(len(df1) > len(df2))
 
 
+@pytest.mark.now
 @pytest.mark.subcorpus
 def test_subcorpus_anchor(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
@@ -172,13 +182,10 @@ def test_subcorpus_anchor(sz_corpus):
     df_anchor = corpus.dump_from_query(
         sz_corpus['anchor_query'],
         sz_corpus['s_query'],
-        sz_corpus['anchors']
-    )
-    corpus.subcorpus_from_dump(
-        df_dump=df_anchor,
+        sz_corpus['anchors'],
         name='SBCRPS5'
     )
-    corpus.activate_subcorpus('SBCRPS5')
+    corpus.subcorpus = 'SBCRPS5'
     df2 = corpus.dump_from_query(
         "[lemma='Angela']", None
     )
@@ -186,16 +193,16 @@ def test_subcorpus_anchor(sz_corpus):
 
 
 @pytest.mark.subcorpus
-def test_subcorpus_from_s_att(sz_corpus):
+def test_dump_from_s_att(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att('text_id', ['A44320331'])
+    corpus.dump_from_s_att('text_id', ['A44320331'])
 
 
 @pytest.mark.skip
 @pytest.mark.subcorpus
-def test_subcorpus_from_s_att_wo(brexit_corpus):
+def test_dump_from_s_att_wo(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att('np', [True])
+    corpus.dump_from_s_att('np', [True])
 
 
 #####################################################

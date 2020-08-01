@@ -5,25 +5,28 @@ import pandas as pd
 import pytest
 
 
+@pytest.mark.now
 @pytest.mark.cwb_counts
 def test_cwb_scan_corpus(brexit_corpus):
     from tempfile import NamedTemporaryFile
     corpus = Corpus(brexit_corpus['corpus_name'])
-    corpus.query('[lemma="test"]', name='tmp')
-
+    cqp = corpus.start_cqp()
+    cqp.nqr_from_query('[lemma="test"]', name='tmp')
     with NamedTemporaryFile(mode="wt") as f:
-        corpus.cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump tmp > "%s"' % f.name)
         df1 = cwb_scan_corpus(f.name, brexit_corpus['corpus_name'])
 
-    corpus.subcorpus_from_query(query='[lemma="farage"] expand to tweet',
-                                name='farage')
-    corpus.activate_subcorpus('farage')
-    corpus.query('[lemma="test"]', name='tmp')
+    cqp.nqr_from_query(query='[lemma="farage"] expand to tweet',
+                       name='farage')
+
+    cqp.nqr_activate(corpus.corpus_name, 'farage')
+    cqp.nqr_from_query('[lemma="test"]', name='tmp')
 
     with NamedTemporaryFile(mode="wt") as f:
-        corpus.cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump tmp > "%s"' % f.name)
         df2 = cwb_scan_corpus(f.name, brexit_corpus['corpus_name'])
 
+    cqp.__kill__()
     assert(sum(df2['freq']) != sum(df1['freq']))
 
 
@@ -62,26 +65,29 @@ def test_marginals_patterns(sz_corpus):
 def test_count_items(sz_corpus):
 
     corpus = Corpus(sz_corpus['corpus_name'])
+    cqp = corpus.start_cqp()
 
     # whole corpus
     counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    counts2 = corpus.counts.mwus(cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
     # subcorpus
-    corpus.subcorpus_from_query(query='[lemma="Bundesregierung"] expand to s',
-                                name='Bundesregierung')
-    corpus.activate_subcorpus('Bundesregierung')
+    cqp.nqr_from_query(query='[lemma="Bundesregierung"] expand to s',
+                       name='Bundesregierung')
+    cqp.nqr_activate(corpus.corpus_name, 'Bundesregierung')
 
     counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    counts2 = corpus.counts.mwus(cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(counts1.loc['Angela', 'freq'] > counts2.loc['"Angela"', 'freq'])
 
     # whole corpus
-    corpus.activate_subcorpus()
+    cqp.nqr_activate(corpus.corpus_name)
     counts1 = corpus.marginals(["Angela", "Merkel", "CDU"])
-    counts2 = corpus.counts.mwus(corpus.cqp, ['"Angela"', '"Merkel"', '"CDU"'])
+    counts2 = corpus.counts.mwus(cqp, ['"Angela"', '"Merkel"', '"CDU"'])
     assert(list(counts1["freq"]) == list(counts2["freq"]))
+
+    cqp.__kill__()
 
 
 @pytest.mark.cwb_counts
@@ -91,9 +97,11 @@ def test_count_matches(brexit_corpus):
         cqp_query='[lemma="nigel"]',
         context=10,
         context_break='tweet',
-        name='Test'
+        name='Test',
+        save=True
     )
-    counts = corpus.counts.matches(corpus.cqp, 'Test')
+    cqp = corpus.start_cqp()
+    counts = corpus.counts.matches(cqp, 'Test')
     assert("Nigel" in counts.index)
 
 
@@ -107,12 +115,14 @@ def test_count_mwus_3(sz_corpus):
         formulate_cqp_query([item]) for item in items
     ]
 
+    cqp = corpus.start_cqp()
     counts3 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=3,
         fill_missing=False
     )
+    cqp.__kill__()
 
     print(counts3)
 
@@ -128,8 +138,9 @@ def test_count_mwus_strategies(sz_corpus):
         formulate_cqp_query([item]) for item in items
     ]
 
+    cqp = corpus.start_cqp()
     counts1 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=1,
         fill_missing=False
@@ -137,19 +148,20 @@ def test_count_mwus_strategies(sz_corpus):
     assert('([word="CSU"])' in counts1.index)
 
     counts2 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=2,
         fill_missing=False
     )
 
     counts3 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=3,
         fill_missing=False
     )
 
+    cqp.__kill__()
     assert(counts2.equals(counts3))
     assert(sum(counts1['freq']) == sum(counts2['freq']))
 
@@ -159,13 +171,15 @@ def test_count_items_subcorpora(sz_corpus):
 
     # subcorpus
     corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_s_att("text_year", ["2011"], name='c2011')
-    corpus.activate_subcorpus('c2011')
+    cqp = corpus.start_cqp()
+    dump = corpus.dump_from_s_att("text_year", ["2011"])
+    cqp.nqr_from_dump(dump.df, 'c2011')
+    cqp.nqr_activate(corpus.corpus_name, 'c2011')
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
     queries = [formulate_cqp_query([item]) for item in items]
 
     counts1 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=1,
         fill_missing=False
@@ -173,19 +187,20 @@ def test_count_items_subcorpora(sz_corpus):
     assert(sum(counts1['freq']) > 0)
 
     counts2 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=2,
         fill_missing=False
     )
 
     counts3 = corpus.counts.mwus(
-        corpus.cqp,
+        cqp,
         queries,
         strategy=3,
         fill_missing=False
     )
     print(counts2.equals(counts3))
+    cqp.__kill__()
 
 
 # @pytest.mark.now
@@ -326,25 +341,29 @@ def test_counts_matches_1(sz_corpus):
     strategy = 1
 
     corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+    cqp = corpus.start_cqp()
+    cqp.nqr_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+    cqp.nqr_activate(corpus.corpus_name, 'Last')
 
     print("\n\n\nno split\n")
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                flags="%cd", strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                strategy=strategy)
     print(df)
 
     print("\n\n\n split\n")
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
     print(df)
+
+    cqp.__kill__()
 
 
 @pytest.mark.cwb_counts
@@ -352,25 +371,28 @@ def test_counts_matches_2(sz_corpus):
     strategy = 2
 
     corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
 
+    cqp = corpus.start_cqp()
+    cqp.nqr_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+    cqp.nqr_activate(corpus.corpus_name, 'Last')
     print("\n\n\nno split\n")
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                flags="%cd", strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=False,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                strategy=strategy)
     print(df)
 
     print("\n\n\n split\n")
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
     print(df)
+    cqp.__kill__()
 
 
 @pytest.mark.cwb_counts
@@ -378,50 +400,55 @@ def test_counts_matches_3(sz_corpus):
     strategy = 3
 
     corpus = Corpus(sz_corpus['corpus_name'])
-    corpus.subcorpus_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
-
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    cqp = corpus.start_cqp()
+    cqp.nqr_from_query('[lemma="Angela"%cd] [lemma="Merkel"%cd]', name='Last')
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
     print(df)
 
-    df = corpus.counts.matches(corpus.cqp, 'Last', p_atts=['word', 'pos'], split=True,
+    df = corpus.counts.matches(cqp, 'Last', p_atts=['word', 'pos'], split=True,
                                strategy=strategy)
     print(df)
+    cqp.__kill__()
 
 
 @pytest.mark.cwb_counts
 def test_counts_mwus(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
-    df = corpus.counts.mwus(corpus.cqp,
+    cqp = corpus.start_cqp()
+    df = corpus.counts.mwus(cqp,
                             ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
                              '[lemma="Horst"]'],
                             strategy=1)
     print(df)
 
-    df = corpus.counts.mwus(corpus.cqp,
+    df = corpus.counts.mwus(cqp,
                             ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
                              '[lemma="Horst"]'],
                             strategy=3,
                             p_atts=['lemma', 'pos'])
     print(df)
 
-    df = corpus.counts.mwus(corpus.cqp,
+    df = corpus.counts.mwus(cqp,
                             ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
                              '[lemma="Horst"]'],
                             strategy=3,
                             p_atts=['lemma'])
 
     print(df)
+    cqp.__kill__()
 
 
 @pytest.mark.cwb_counts
 def test_cwb_counts(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'])
-    df = corpus.counts.mwus(corpus.cqp,
+    cqp = corpus.start_cqp()
+    df = corpus.counts.mwus(cqp,
                             ['[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"]',
                              '[lemma="Horst"]'])
     print(df)
+    cqp.__kill__()

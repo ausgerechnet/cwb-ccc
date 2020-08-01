@@ -1,6 +1,8 @@
 from ccc.cwb import Corpus
+import pytest
 
 
+@pytest.mark.nocache
 def test_query2dump_nocache(sz_corpus):
     corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
     dump = corpus.query(sz_corpus['query'])
@@ -70,3 +72,38 @@ def test_context_matches(sz_corpus):
     dump = corpus.query('"Angela"')
     print(dump.matches())
     print(dump.context())
+
+
+def test_argmin_query(brexit_corpus):
+    corpus = Corpus(
+        brexit_corpus['corpus_name'],
+        lib_path=brexit_corpus['lib_path']
+    )
+
+    query = brexit_corpus['query_argmin']
+
+    dump = corpus.query(
+        cqp_query=query['query'],
+        context=query.get('context', None),
+        context_break=query.get('s_context', None),
+        corrections=query['corrections'],
+        match_strategy=query['match_strategy']
+    )
+
+    conc = dump.concordance(
+        p_show=query['p_show'],
+        s_show=query['s_show'],
+        p_text=query['p_text'],
+        p_slots=query['p_slots'],
+        regions=query['regions'],
+        order='first',
+        cut_off=None,
+        form='extended'
+    )
+
+    print(conc)
+    print(conc['df'].iloc[0])
+
+
+def test_dumps(brexit_corpus):
+    pass

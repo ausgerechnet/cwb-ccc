@@ -19,8 +19,10 @@ def test_macro(brexit_corpus):
     corpus = Corpus(brexit_corpus['corpus_name'],
                     lib_path=brexit_corpus['lib_path'],
                     registry_path=brexit_corpus['registry_path'])
-    corpus.cqp.Exec("Last=/ap();")
-    counts = corpus.counts.matches(corpus.cqp, name="Last")
+    cqp = corpus.start_cqp()
+    cqp.Exec("Last=/ap();")
+    counts = corpus.counts.matches(cqp, name="Last")
+    cqp.__kill__()
     print(counts)
 
 

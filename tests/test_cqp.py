@@ -1,5 +1,6 @@
 from ccc.cqp import CQP
 import pandas as pd
+import pytest
 
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 corpus_name = "BREXIT_V20190522"
@@ -38,3 +39,16 @@ def test_cqp_group():
     cqp.Query('[lemma="angela"] [lemma="merkel"]')
     counts = cqp.Group(spec1="match.lemma", spec2="matchend.lemma")
     assert(type(counts) == str)
+
+
+def test_cqp_many():
+
+    from time import sleep
+    for i in range(10):
+        cqp = CQP(
+            bin="cqp",
+            options='-c -r ' + registry_path
+        )
+        print(i, cqp.CQP_process.pid)
+        cqp.__kill__()
+        sleep(.1)

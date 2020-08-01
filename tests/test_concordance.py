@@ -284,3 +284,83 @@ def test_concordance_persistence(sz_corpus):
 
     assert(df_1.equals(df_2))
     assert(not df_2.equals(df_3))
+
+
+@pytest.mark.fail
+def test_concordance_empty(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="NAHH"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    assert(conc.lines() is None)
+
+
+@pytest.mark.fail
+def test_concordance_p_text(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    assert(conc.lines(p_text='lemma') is None)
+
+
+@pytest.mark.fail
+def test_concordance_p_slots(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    assert(conc.lines(p_slots='lemma') is None)
+
+
+@pytest.mark.fail
+def test_concordance_form(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    with pytest.raises(NotImplementedError):
+        conc.lines(form='bla')
+
+
+@pytest.mark.fail
+def test_concordance_order(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    with pytest.raises(NotImplementedError):
+        conc.lines(order='fail')
+
+
+def test_concordance_last(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    assert(type(conc.lines(order='last')) == pd.DataFrame)
+
+
+@pytest.mark.now
+def test_concordance_fallback(sz_corpus):
+    corpus = Corpus(sz_corpus['corpus_name'], data_path=None)
+    query = (
+        '[lemma="Gerhard"]? [lemma="Schröder"]'
+    )
+    dump = corpus.query(query)
+    conc = Concordance(corpus, dump.df)
+    assert(type(
+        conc.lines(order='last', form='simple', p_show=['word', 'lemma'])
+    ) == pd.DataFrame)
