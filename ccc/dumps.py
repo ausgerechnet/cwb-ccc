@@ -18,16 +18,6 @@ class Dump:
 
     def __init__(self, corpus, df_dump, name_cache, name_cqp):
 
-        # parameters = {
-        #     'query': query,
-        #     'context_left': context_left,
-        #     'context_right': context_right,
-        #     'context_break': context_break,
-        #     'corrections': corrections,
-        #     'match_strategy': match_strategy
-        # }
-        # self.parameters = parameters
-
         # TODO: check context against collocates.mws
 
         self.df = df_dump
@@ -107,8 +97,8 @@ class Dump:
         return self._context
 
     def concordance(self, matches=None, p_show=['word'], s_show=[],
-                    p_text=None, p_slots=None, regions=[], order='first',
-                    cut_off=100, form='raw'):
+                    p_text=None, p_slots=None, regions=[],
+                    order='first', cut_off=100, form='raw'):
 
         conc = Concordance(
             self.corpus.copy(),
@@ -128,8 +118,8 @@ class Dump:
         )
 
     def collocates(self, p_query='lemma', mws=10, window=5, order='f',
-                   cut_off=100, ams=None, min_freq=2, frequencies=True,
-                   flags=None):
+                   cut_off=100, ams=None, min_freq=2,
+                   frequencies=True, flags=None, marginals='corpus'):
 
         coll = Collocates(
             self.corpus.copy(),
@@ -145,7 +135,8 @@ class Dump:
             ams=ams,
             min_freq=min_freq,
             frequencies=frequencies,
-            flags=flags
+            flags=flags,
+            marginals=marginals
         )
 
     def keywords(self, p_query='lemma', order='f', cut_off=100,
@@ -153,7 +144,6 @@ class Dump:
 
         kw = Keywords(
             self.corpus.copy(),
-            self.name_cqp,
             self.df,
             p_query
         )
@@ -166,3 +156,10 @@ class Dump:
             frequencies=frequencies,
             flags=flags
         )
+
+
+class Dumps:
+    """ several dumps """
+
+    def __init__(self):
+        pass

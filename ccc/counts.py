@@ -110,7 +110,7 @@ class Counts:
 
     @time_it
     def dump(self, df_dump, start='match', end='matchend',
-             p_atts=['word'], split=False, strategy=1):
+             p_atts=['word'], split=False, strategy=2):
         """Counts tokens in [start .. end] (columns in df_dump).
 
         :param list df_dump: corpus positions to fill

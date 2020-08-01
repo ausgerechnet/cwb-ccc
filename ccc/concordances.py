@@ -16,11 +16,7 @@ class Concordance:
 
     def __init__(self, corpus, df_dump):
 
-        if len(df_dump) == 0:
-            logger.warning('no concordance lines to show')
-            return
-
-        # TODO: start independent CQP process
+        # bind corpus
         self.corpus = corpus
 
         # what's in the dump?
@@ -29,6 +25,9 @@ class Concordance:
         anchors = [i for i in range(10) if i in df_dump.columns]
         anchors += ['match', 'matchend', 'context', 'contextend']
         self.anchors = anchors
+
+        if len(df_dump) == 0:
+            logger.warning('empty dump')
 
     def text_line(self, index, columns, p_show=['word']):
         """Translates one row of self.df_dump into a concordance_line.
@@ -80,10 +79,15 @@ class Concordance:
         """
 
         # check parameter consistency
+        if self.df_dump.empty:
+            logger.error("no concordance lines to show")
+            return
         if p_text is not None and p_text not in p_show:
             logger.error('p_text not in p_show')
+            return
         if p_slots is not None and p_slots not in p_show:
             logger.error('p_slots not in p_show')
+            return
 
         # select appropriate subset of matches
         logger.info('lines: selecting matches')
@@ -150,8 +154,12 @@ def format_lines(df_lines,
     # select p-attribute for simple and kwic
     if form == 'simple' or form == 'kwic':
         if len(p_show) > 1:
-            logger.warning('cannot show more than one p-attribute in simple format')
-            logger.warning('showing p-attribute "%s"' % p_show[0])
+            logger.warning(
+                'cannot show more than one p-attribute in simple/kwic format'
+            )
+            logger.info(
+                'showing p-attribute "%s"' % p_show[0]
+            )
         p_show = p_show[0]
 
     if form == 'simple':
@@ -242,12 +250,11 @@ def line2df(line):
     """
 
     # pop non-lists
+    anchors = []
     if 'anchors' in line.keys():
         anchors = line.pop('anchors')
-    else:
-        anchors = []
     if 'match' in line:
-        line.pop('match')           # not needed
+        line.pop('match')       # not needed
 
     # transform to df
     df = DataFrame.from_records(line).set_index('cpos')

@@ -22,7 +22,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None):
+def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
+              lib_path=None, subcorpus=None):
+
     cqp = CQP(
         bin=cqp_bin,
         options='-c -r ' + registry_path
@@ -31,6 +33,33 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None):
         cqp.Exec('set DataDirectory "%s"' % data_path)
     if corpus_name is not None:
         cqp.Exec(corpus_name)
+    if subcorpus is not None:
+        cqp.Exec(subcorpus)
+
+    if lib_path is not None:
+
+        # wordlists
+        wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
+        for wordlist in wordlists:
+            name = wordlist.split('/')[-1].split('.')[0]
+            abs_path = os.path.abspath(wordlist)
+            cqp_exec = 'define $%s < "%s";' % (
+                name, abs_path
+            )
+            cqp.Exec(cqp_exec)
+
+        # macros
+        macros = glob(os.path.join(lib_path, 'macros', '*'))
+        for macro in macros:
+            abs_path = os.path.abspath(macro)
+            cqp_exec = 'define macro < "%s";' % abs_path
+            cqp.Exec(cqp_exec)
+
+        # execute each macro once (avoids CQP shortcoming for nested macros)
+        macros = cqp.Exec("show macro;")
+        for macro in macros:
+            cqp.Exec(macro)
+
     return cqp
 
 
@@ -110,7 +139,9 @@ class Corpus:
 
         # process data path
         if data_path is not None:
-            self.data_path = os.path.join(data_path, corpus_name)
+            if not data_path.endswith(corpus_name):
+                data_path = os.path.join(data_path, corpus_name)
+            self.data_path = data_path
             if not os.path.isdir(self.data_path):
                 os.makedirs(self.data_path)
             cache_path = os.path.join(self.data_path, "CACHE")
@@ -126,6 +157,9 @@ class Corpus:
         self.corpus_name = corpus_name
         self.subcorpus = None
 
+        # macros and wordlists
+        self.lib_path = lib_path
+
         # init Attributes
         self.attributes = Crps(
             self.corpus_name,
@@ -134,19 +168,13 @@ class Corpus:
         # get corpus size
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
-        # init CQP
-        self.cqp = start_cqp(
-            self.cqp_bin, self.registry_path, self.data_path, self.corpus_name
-        )
         # get available corpus attributes
+        cqp = self.start_cqp()
         self.attributes_available = read_csv(
-            StringIO(self.cqp.Exec('show cd;')),
+            StringIO(cqp.Exec('show cd;')),
             sep='\t', names=['att', 'name', 'annotation', 'active']
         ).fillna(False)
-        # load macros and wordlists
-        self.lib_path = lib_path
-        if self.lib_path:
-            self.read_lib(self.lib_path)
+        cqp.__kill__()
 
         # init Cache
         self.cache = Cache(
@@ -168,37 +196,15 @@ class Corpus:
             self.attributes_available.to_string(),
         ])
 
-    def read_lib(self, lib_path):
-        """Reads macros and worldists. Folder has to contain two sub-folders
-        ("macros" and "wordlists").
-
-        :param str lib_path: path/to/macros/and/wordlists
-
-        """
-
-        logger.info("enter read_lib")
-
-        # wordlists
-        wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
-        for wordlist in wordlists:
-            name = wordlist.split('/')[-1].split('.')[0]
-            abs_path = os.path.abspath(wordlist)
-            cqp_exec = 'define $%s < "%s";' % (
-                name, abs_path
-            )
-            self.cqp.Exec(cqp_exec)
-
-        # macros
-        macros = glob(os.path.join(lib_path, 'macros', '*'))
-        for macro in macros:
-            abs_path = os.path.abspath(macro)
-            cqp_exec = 'define macro < "%s";' % abs_path
-            self.cqp.Exec(cqp_exec)
-
-        # execute each macro once (avoids CQP shortcoming for nested macros)
-        macros = self.cqp.Exec("show macro;")
-        for macro in macros:
-            self.cqp.Exec(macro)
+    def start_cqp(self):
+        return start_cqp(
+            self.cqp_bin,
+            self.registry_path,
+            self.data_path,
+            self.corpus_name,
+            self.lib_path,
+            self.subcorpus
+        )
 
     def copy(self):
         return Corpus(
@@ -398,7 +404,8 @@ class Corpus:
         :rtype: DataFrame
 
         """
-        cqp_return = self.cqp.Exec("show named;")
+        cqp = self.start_cqp()
+        cqp_return = cqp.Exec("show named;")
         try:
             df = read_csv(StringIO(cqp_return), sep="\t", header=None)
             df.columns = ["storage", "corpus:subcorpus", "size"]
@@ -407,80 +414,84 @@ class Corpus:
             df['subcorpus'] = crpssbcrps[1]
             df.drop('corpus:subcorpus', axis=1, inplace=True)
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
-            return df
         except EmptyDataError:
             logger.warning("no subcorpora defined")
-            return DataFrame()
+            df = DataFrame()
 
-    def activate_subcorpus(self, subcorpus=None):
-        """Activates subcorpus or switches to main corpus.
+        cqp.__kill_()
+        return df
 
-        :param str subcorpus: named subcorpus to activate
+    # def activate_subcorpus(self, cqp, subcorpus=None, save=True):
+    #     """Activates subcorpus or switches to main corpus.
 
-        """
-        if subcorpus is not None:
-            self.cqp.Exec(subcorpus)
-            self.subcorpus = subcorpus
-            logger.info('CQP switched to subcorpus "%s"' % subcorpus)
-        else:
-            self.cqp.Exec(self.corpus_name)
-            self.subcorpus = self.corpus_name
-            logger.info('CQP switched to corpus "%s"' % self.corpus_name)
+    #     :param str subcorpus: named subcorpus to activate
 
-    def save_subcorpus(self, name='Last'):
-        """Saves subcorpus to disk.
+    #     """
+    #     if subcorpus is not None:
+    #         self.subcorpus = subcorpus
+    #         cqp.Exec(self.subcorpus)
+    #         if save:
+    #             self.save_subcorpus(cqp, subcorpus)
+    #         logger.info('switched to subcorpus "%s"' % subcorpus)
+    #     else:
+    #         self.subcorpus = self.corpus_name
+    #         cqp.Exec(self.subcorpus)
+    #         logger.info('switched to corpus "%s"' % self.corpus_name)
 
-        :param str name: named subcorpus to save
+    # def save_subcorpus(self, cqp, name='Last'):
+    #     """Saves subcorpus to disk.
 
-        """
-        self.cqp.Exec("save %s;" % name)
-        logger.info(
-            'CQP saved subcorpus "%s:%s" to disk' % (self.corpus_name, name)
-        )
+    #     :param str name: named subcorpus to save
 
-    def subcorpus_from_query(self, query, name='Last',
-                             match_strategy='longest',
-                             return_dump=True):
-        """Defines subcorpus from query, returns dump.
+    #     """
+    #     cqp.Exec("save %s;" % name)
+    #     logger.info(
+    #         'CQP saved subcorpus "%s:%s" to disk' % (self.corpus_name, name)
+    #     )
 
-        :param str query: valid CQP query
-        :param str name: subcorpus name
-        :param str match_strategy: CQP matching strategy
+    # def subcorpus_from_query(self, cqp, query, name='Last',
+    #                          match_strategy='longest',
+    #                          return_dump=True):
+    #     """Defines subcorpus from query, returns dump.
 
-        :return: df_dump
-        :rtype: DataFrame
+    #     :param str query: valid CQP query
+    #     :param str name: subcorpus name
+    #     :param str match_strategy: CQP matching strategy
 
-        """
+    #     :return: df_dump
+    #     :rtype: DataFrame
 
-        logger.info('defining subcorpus "%s" from query' % name)
-        subcorpus_query = '%s=%s;' % (name, query)
-        self.cqp.Query(subcorpus_query)
-        if return_dump:
-            logger.info('dumping result')
-            df_dump = self.cqp.Dump(name)
-            return df_dump
+    #     """
 
-    def subcorpus_from_dump(self, df_dump, name='Last'):
-        """Defines subcorpus from dump.
+    #     logger.info('defining subcorpus "%s" from query' % name)
+    #     subcorpus_query = '%s=%s;' % (name, query)
+    #     cqp.Query(subcorpus_query)
+    #     if return_dump:
+    #         logger.info('dumping result')
+    #         df_dump = cqp.Dump(name)
+    #         return df_dump
 
-        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-                                  with optional columns 'target' and 'keyword'
-        :param str name: subcorpus name
+    # def subcorpus_from_dump(self, cqp, df_dump, name='Last'):
+    #     """Defines subcorpus from dump.
 
-        """
-        logger.info('defining subcorpus "%s" from dump ' % name)
-        self.cqp.Undump(name, df_dump)
+    #     :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+    #                               with optional columns 'target' and 'keyword'
+    #     :param str name: subcorpus name
 
-    def subcorpus_from_s_att(self, s_att, values, name='Last'):
-        """Defines a subcorpus via s-attribute restriction.
+    #     """
+    #     logger.info('defining subcorpus "%s" from dump ' % name)
+    #     cqp.Undump(name, df_dump)
 
-        :param str s_att: s-att that stores values
-        :param set values: set (or list) of values
-        :param str name: subcorpus name to create
+    # def subcorpus_from_s_att(self, cqp, s_att, values, name='Last'):
+    #     """Defines a subcorpus via s-attribute restriction.
 
-        """
-        extents = self.dump_from_s_att(s_att, values).df
-        self.subcorpus_from_dump(extents, name=name)
+    #     :param str s_att: s-att that stores values
+    #     :param set values: set (or list) of values
+    #     :param str name: subcorpus name to create
+
+    #     """
+    #     extents = self.dump_from_s_att(s_att, values).df
+    #     self.subcorpus_from_dump(cqp, extents, name=name)
 
     def dump_from_s_att(self, s_att, values):
         values = set(values)
@@ -499,7 +510,8 @@ class Corpus:
     # query #
     #########
     def dump_from_query(self, query, s_query=None, anchors=[],
-                        match_strategy='standard', name='Last'):
+                        match_strategy='standard', name='Last',
+                        save=False):
         """Executes query, gets DataFrame of corpus positions (dump of CWB).
         df_dump is indexed by (match, matchend).  Optional columns for
         each anchor:
@@ -517,7 +529,8 @@ class Corpus:
         """
 
         # match strategy
-        self.cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
+        cqp = self.start_cqp()
+        cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
 
         # optional within statement
         if s_query is None:
@@ -527,36 +540,38 @@ class Corpus:
 
         # first run: 0 and 1 (considering within statement)
         logger.info("running CQP query")
-        self.cqp.Exec('set ant 0; ank 1;')
-        self.subcorpus_from_query(
-            query=start_query, name=name
+        cqp.Exec('set ant 0; ank 1;')
+        df_dump = cqp.nqr_from_query(
+            query=start_query,
+            name=name,
+            match_strategy=match_strategy,
+            return_dump=True
         )
-        df_dump = self.cqp.Dump(name)
         df_dump.columns = [0, 1]
         logger.info("found %d matches" % len(df_dump))
 
         # if there's nothing to return ...
         if df_dump.empty:
+            cqp.__kill__()
             return df_dump
 
         # join all other anchors
         if len(anchors) > 0:
 
             # restrict subsequent queries on initial matches
-            current_subcorpus = self.subcorpus
-            self.activate_subcorpus(name)
+            cqp.nqr_activate(self.corpus_name, name)
 
             for pair in chunk_anchors(anchors, 2):
                 logger.info(".. running query for anchor(s) %s" % str(pair))
                 # set appropriate anchors
-                self.cqp.Exec('set ant %d;' % pair[0])
+                cqp.Exec('set ant %d;' % pair[0])
                 if len(pair) == 2:
-                    self.cqp.Exec('set ank %d;' % pair[1])
+                    cqp.Exec('set ank %d;' % pair[1])
                 else:
-                    self.cqp.Exec('set ank %d;' % 1)
+                    cqp.Exec('set ank %d;' % 1)
                 # dump new anchors
-                self.cqp.Query('tmp = <match> ( %s );' % query)
-                df = self.cqp.Dump("tmp")
+                cqp.Query('tmp = <match> ( %s );' % query)
+                df = cqp.Dump("tmp")
                 # select columns and join to global df
                 if len(pair) == 2:
                     df.columns = [pair[0], pair[1]]
@@ -571,12 +586,13 @@ class Corpus:
             df_dump = df_dump.apply(to_numeric, downcast='integer')
             df_dump.fillna(-1, inplace=True)
 
-            # re-set CQP
-            self.cqp.Exec('set ant 0; ank 1;')
-            self.activate_subcorpus(current_subcorpus)
-
         # drop constant columns (contain only -1)
         df_dump = df_dump.loc[:, (df_dump != df_dump.iloc[0]).any()]
+
+        if save:
+            cqp.nqr_save(self.corpus_name, name)
+
+        cqp.__kill__()
 
         return df_dump
 
@@ -660,7 +676,9 @@ class Corpus:
 
         # check subcorpus size to avoid confusion when re-naming
         if self.subcorpus is not None:
-            subcorpus = self.cqp.Exec("size %s" % self.subcorpus)
+            cqp = self.start_cqp()
+            subcorpus = cqp.Exec("size %s" % self.subcorpus)
+            cqp.__kill__()
             subcorpus = str(subcorpus) + self.subcorpus
         else:
             subcorpus = None
@@ -670,26 +688,25 @@ class Corpus:
                        context_break, corrections, match_strategy, subcorpus]
         name_cache = self.cache.generate_idx(identifiers)
 
-        # retrieve from cache
         df_dump = self.cache.get(name_cache)
         if df_dump is not None:
+            # retrieve from cache
             logger.info('using version "%s" of df_dump' % name_cache)
             logger.info('df_dump has %d matches' % len(df_dump))
-            return df_dump, name_cache
-
-        # compute
-        dump = self.query(query, None, context_left, context_right,
-                          context_break, corrections, match_strategy, name_cache)
-        df_dump = dump.df
-
-        # put into cache
-        self.cache.set(name_cache, df_dump)
+        else:
+            # compute
+            dump = self.query(query, None, context_left,
+                              context_right, context_break,
+                              corrections, match_strategy, name_cache)
+            df_dump = dump.df
+            # put into cache
+            self.cache.set(name_cache, df_dump)
 
         return df_dump, name_cache
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name='mnemosyne'):
+              match_strategy='standard', name='mnemosyne', save=False):
         """Queries the corpus, computes df_dump.
 
         === (match, matchend), 0*, ..., 9*, context*, contextend* ===
@@ -716,6 +733,7 @@ class Corpus:
 
         name_cache = None
         name_cqp = None
+        cqp = self.start_cqp()
 
         # preprocess input
         query, s_query, anchors = preprocess_query(cqp_query)
@@ -731,8 +749,7 @@ class Corpus:
                 query, context_left, context_right,
                 context_break, corrections, match_strategy
             )
-            self.cqp.Exec("%s = %s;" % (name, name_cache))
-            self.cqp.Exec("save %s;" % name_cache)  # save to disk
+            cqp.Exec("save %s;" % name_cache)  # save to disk
 
         else:
             # get df_dump
@@ -742,7 +759,8 @@ class Corpus:
                 s_query=s_query,
                 anchors=anchors,
                 match_strategy=match_strategy,
-                name=name
+                name=name,
+                save=save
             )
             # empty return?
             if len(df_dump) == 0:
@@ -763,5 +781,7 @@ class Corpus:
             name_cache,
             name_cqp
         )
+
+        cqp.__kill__()
 
         return dump

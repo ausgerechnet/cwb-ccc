@@ -16,15 +16,16 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ collocation analysis """
 
-    def __init__(self, corpus, df_dump, p_query, mws=10):
+    def __init__(self, corpus, df_dump, p_query='lemma', mws=10):
 
         # consistency check
         if len(df_dump) == 0:
-            logger.warning('cannot calculate collocates of 0 contexts')
+            self.f1_set = set()
+            logger.warning('empty dump')
             return
 
-        # TODO: start independent CQP process
-        self.corpus = corpus
+        # init corpus
+        self.corpus = corpus.copy()
 
         # what's in the dump?
         self.df_dump = df_dump
@@ -43,14 +44,17 @@ class Collocates:
 
         # collect context and save result
         logger.info('collecting contexts')
-        deflated, f1_set = df_node_to_cooc(self.df_dump)
+        deflated, f1_set = df_node_to_cooc(self.df_dump, self.mws)
         logger.info('collected %d token positions' % len(deflated))
         self.deflated = deflated
         self.f1_set = f1_set
 
     def count(self, window):
 
-        mws = self.mws
+        if self.mws is None:
+            mws = window
+        else:
+            mws = self.mws
         if window > mws:
             logger.warning(
                 'requested window outside maximum window size,'
@@ -74,7 +78,8 @@ class Collocates:
         return counts, f1_inflated
 
     def show(self, window=5, order='f', cut_off=100, ams=None,
-             min_freq=2, frequencies=True, flags=None):
+             min_freq=2, frequencies=True, flags=None,
+             marginals='corpus'):
 
         # consistency check
         if len(self.f1_set) == 0:
@@ -84,11 +89,21 @@ class Collocates:
         # get frequencies
         f, f1_inflated = self.count(window)
 
-        # get marginals
-        f2 = self.corpus.marginals(
-            f.index, self.p_query
-        )
-        f2.columns = ['marginal']
+        # determine reference frequency
+        if type(marginals) == str and marginals == 'corpus':
+            # get marginals
+            f2 = self.corpus.marginals(
+                f.index, self.p_query
+            )
+            f2.columns = ['marginal']
+            N = self.corpus.corpus_size - len(self.f1_set)
+
+        elif type(marginals) == DataFrame:
+            f2 = marginals
+            f2.columns = ['marginal']
+
+            # get corpus size
+            N = f2['marginal'].sum() - len(self.f1_set)
 
         # deduct node frequencies from marginals
         node_freq = self.corpus.counts.cpos(self.f1_set, [self.p_query])
@@ -102,9 +117,6 @@ class Collocates:
         # get sub-corpus size
         f1 = f1_inflated
 
-        # get corpus size
-        N = self.corpus.corpus_size - len(self.f1_set)
-
         collocates = add_ams(
             f, f1, f2, N,
             min_freq, order, cut_off, flags, ams, frequencies
@@ -115,13 +127,9 @@ class Collocates:
 
 # utilities ####################################################################
 def df_node_to_cooc(df_dump, context=None):
-    """ converts df_dump to df_cooc
+    """ converts df_dump to df_cooc + f1_set
 
-    df_node: [match, matchend] + [context_id, context, contextend]
-    df_cooc: [match, cpos, offset] (dedpulicated)
-    f1_set: cpos of nodes
-
-    deduplication strategy:
+    strategy:
     (1a) create overlapping contexts with nodes
     (1b) concatenate local contexts
     (2a) sort by abs(offset)
@@ -130,10 +138,16 @@ def df_node_to_cooc(df_dump, context=None):
     (3b) remove rows where cpos in f1_set
 
     NB: equivalent to UCS when switching steps 3a and 3b
+
+    :param DataFrame df_dump: [match, matchend] + [context_id, context, contextend]
+    :param int context: confine context?
+
+    :return: deduplicated df_cooc [match, cpos, offset] + f1_set (cpos of nodes)
+    :rtype: tuple(DataFrame, set)
     """
 
-    # can't work on 0 context
     if context == 0:
+        logger.warning("can't work on 0 context")
         return DataFrame(), set()
 
     # reset the index to be able to work with it
@@ -191,6 +205,27 @@ def add_ams(f, f1, f2, N,
             flags=None,
             ams=None,
             frequencies=True):
+    """ create a table of co-occurrence counts and association measures.
+    for frequency signature notation see Evert (2004: 36)
+
+    :param DataFrame f: co-occurrence freq. of token and node
+    :param int f1: number of tokens in W(node)
+    :param DataFrame f2: marginal freq. of tokens
+    :param int N: size of corpus
+
+    :param int min_freq: minimum number of co-occurrences for item to be included
+    :param str order: 'f' / 'f2' / assoc-measure
+    :param int cut_off: number of collocates to retrieve
+    :param str flags: '%c' / '%d' / '%cd'
+    :param list ams: assoc-measures to calculate (None=all)
+    :param bool frequencies: add raw frequencies to result?
+
+    :return: table of counts and measures, indexed by item
+    :rtype: DataFrame
+
+    """
+
+    logger.info('creating table of association measures')
 
     # drop items that occur less than min-freq
     f = f.loc[~(f['f'] < min_freq)]
@@ -204,10 +239,8 @@ def add_ams(f, f1, f2, N,
     # add constant columns
     contingencies['N'] = N
     contingencies['f1'] = f1
-    # NB: frequency signature notation (Evert 2004: 36)
 
     # add measures
-    logger.info("calculating measures")
     measures = calculate_measures(contingencies, ams)
     contingencies = contingencies.join(measures)
 
@@ -222,9 +255,8 @@ def add_ams(f, f1, f2, N,
     contingencies.index.name = 'item'
 
     # sort dataframe
-    contingencies.sort_values(
-        by=[order, 'item'],
-        ascending=False, inplace=True
+    contingencies = contingencies.sort_values(
+        by=[order, 'item'], ascending=False
     )
 
     if cut_off is not None:

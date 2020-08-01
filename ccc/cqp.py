@@ -13,14 +13,32 @@ import random
 import time
 import subprocess
 import select
+import signal
 from io import StringIO
 from pandas import read_csv, DataFrame
 from tempfile import NamedTemporaryFile
-from six.moves import _thread as thread
+import threading
+import logging
+logger = logging.getLogger(__name__)
+
+
+class StoppableThread(threading.Thread):
+    """Thread class with a stop() method. The thread itself has to check
+    regularly for the stopped() condition."""
+
+    def __init__(self,  *args, **kwargs):
+        super(StoppableThread, self).__init__(*args, **kwargs)
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
 
 
 # GLOBAL CONSTANTS OF MODULE:
-cProgressControlCycle = 30  # secs between each progress control cycle
+cProgressControlCycle = 5   # secs between each progress control cycle
 cMaxRequestProcTime = 500   # max secs for processing a user request
 
 
@@ -69,10 +87,16 @@ class CQP:
                     self.CQPrunning = False
                     break
 
+    def __kill__(self):
+        self.Terminate()
+        os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
+        self.__del__()
+
     def __init__(self, bin="/usr/local/bin/cqp", options='-c'):
         """Class constructor."""
         self.execStart = time.time()
         self.maxProcCycles = 1.0
+
         # start CQP as a child process of this wrapper
         if bin is None:
             print("ERROR: Path to CQP binaries undefined", file=sys.stderr)
@@ -83,9 +107,17 @@ class CQP:
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE,
                                             universal_newlines=True,
-                                            close_fds=True)
+                                            close_fds=True,
+                                            preexec_fn=os.setsid)
         self.CQPrunning = True
-        thread.start_new_thread(self._progressController, ())
+
+        # init progress controller
+        progressthread = threading.Thread(
+            target=self._progressController, args=()
+        )
+        progressthread.setDaemon(True)
+        progressthread.start()
+
         # "cqp -c" should print version on startup:
         version_string = self.CQP_process.stdout.readline()
         version_string = version_string.rstrip()  # Equivalent to Perl's chomp
@@ -393,3 +425,59 @@ class CQP:
         prev = self.debug
         self.debug = on
         return prev
+
+    def nqr_activate(self, corpus_name, name=None):
+
+        if name is not None:
+            logger.info('activating NQR "%s:%s"' % (corpus_name, name))
+            self.Exec(name)
+        else:
+            logger.info('activating corpus "%s"' % corpus_name)
+            self.Exec(corpus_name)
+
+    def nqr_save(self, corpus_name, name='Last'):
+        """Saves subcorpus to disk.
+
+        :param str name: named subcorpus to save
+
+        """
+        logger.info(
+            'saving NQR "%s:%s" to disk' % (corpus_name, name)
+        )
+        self.Exec("save %s;" % name)
+
+    def nqr_from_query(self, query, name='Last',
+                       match_strategy='longest',
+                       return_dump=True):
+        """Defines subcorpus from query, returns dump.
+
+        :param str query: valid CQP query
+        :param str name: subcorpus name
+        :param str match_strategy: CQP matching strategy
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
+        logger.info(
+            'defining NQR "%s" from query' % name
+        )
+        self.Query('%s=%s;' % (name, query))
+
+        if return_dump:
+            logger.info('dumping result')
+            df_dump = self.Dump(name)
+            return df_dump
+
+    def nqr_from_dump(self, df_dump, name='Last'):
+        """Defines subcorpus from dump.
+
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+                                  with optional columns 'target' and 'keyword'
+        :param str name: subcorpus name
+
+        """
+        logger.info(
+            'defining NQR "%s" from dump ' % name
+        )
+        self.Undump(name, df_dump)

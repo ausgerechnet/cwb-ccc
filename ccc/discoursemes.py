@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # part of module
-from ccc.utils import formulate_cqp_query
-from ccc.utils import merge_intervals
+from ccc.utils import formulate_cqp_query, calculate_offset
 from ccc.collocates import df_node_to_cooc, add_ams
 from ccc.concordances import Concordance
 from ccc.collocates import Collocates
@@ -22,25 +21,12 @@ class Disc:
     def __init__(self, corpus, items, p_query, s_query, s_context,
                  context=20, flags="%cd", escape=False):
         """
-        .corpus
         .items
-
-        .parameters:
-          p_query
-          s_query
-          s_context
-          context
-          flags
-          escape
-
-        .dump
+        .parameters
         .idx
-        ._context = None
-        ._matches = None
+        .dump
         """
 
-        # TODO: start independent CQP process
-        self.corpus = corpus
         self.items = items
 
         self.parameters = {
@@ -53,52 +39,34 @@ class Disc:
         }
 
         # run query
-        query = formulate_cqp_query(items, p_query, s_query, flags, escape)
+        query = formulate_cqp_query(
+            items, p_query, s_query, flags, escape
+        )
         dump = corpus.query(
             query, context, context_break=s_context
         )
-        self.dump = dump.df
+        self.dump = dump
         self.idx = dump.name_cache
 
         self._context = None
         self._matches = None
 
-    def matches(self):
-
-        if self._matches is None:
-            f1 = set()
-            for match, matchend in self.dump.index:
-                f1.update(range(match, matchend + 1))
-            self._matches = f1
-
-        return self._matches
-
-    def context(self):
-
-        if self._context is None:
-            self._context = DataFrame.from_records(merge_intervals(
-                self.dump[['context', 'contextend']].values.tolist()
-            ), columns=['context', 'contextend'])
-
-        return self._context
-
-    def show_concordance(self, context=None, matches=None,
-                         p_show=['word'], s_show=[], order='random',
-                         cut_off=100, form='dataframes'):
-
-        if context is None:
-            context = self.parameters['context']
+    def concordance(self, context=None, matches=None,
+                    p_show=['word'], s_show=[], order='random',
+                    cut_off=100, form='dataframes'):
 
         # deal with context
+        if context is None:
+            context = self.parameters['context']
         if context > self.parameters['context']:
             logger.warning(
                 "out of context; falling back to context=%d" %
                 self.parameters['context']
             )
             context = self.parameters['context']
-            df = self.dump
+            df = self.dump.df
         elif context < self.parameters['context']:
-            df = self.dump.reset_index()
+            df = self.dump.df.reset_index()
             df['context_new'] = df['match'] - context
             df['contextend_new'] = df['matchend'] + context
             df['context'] = df[['context', 'context_new']].max(axis=1)
@@ -106,21 +74,20 @@ class Disc:
             df = df.drop(['context_new', 'contextend_new'], axis=1)
             df = df.set_index(['match', 'matchend'])
         else:
-            df = self.dump
+            df = self.dump.df
 
-        conc = Concordance(self.corpus, df)
+        conc = Concordance(self.dump.corpus.copy(), df)
         return conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
             p_text=None, p_slots=None, regions=[], order=order,
             cut_off=cut_off, form=form
         )
 
-    def show_collocates(self, window=5, order='f', cut_off=100,
-                        p_query="lemma", ams=None, min_freq=2,
-                        frequencies=True, flags=None):
+    def collocates(self, window=5, order='f', cut_off=100,
+                   p_query="lemma", ams=None, min_freq=2,
+                   frequencies=True, flags=None):
 
-        # TODO: start independent CQP process
-        coll = Collocates(self.corpus, self.dump, p_query)
+        coll = Collocates(self.dump.corpus.copy(), self.dump.df, p_query)
         return coll.show(
             window=window, order=order, cut_off=cut_off, ams=ams,
             min_freq=min_freq, frequencies=frequencies, flags=flags
@@ -148,7 +115,7 @@ class DiscCon:
         self.topic = topic
 
         # TODO: start independent CQP process
-        self.corpus = topic.corpus
+        self.corpus = topic.dump.corpus
         self.parameters = topic.parameters
         self.name = name
 
@@ -185,11 +152,11 @@ class DiscCon:
         if window is None:
             window = self.topic.parameters['context']
 
-        df_nodes = self.topic.dump.reset_index()
+        df_nodes = self.topic.dump.df.reset_index()
 
         for disc in self.discoursemes.values():
             # get dump
-            df = disc.dump.reset_index()
+            df = disc.dump.df.reset_index()
             df = df.drop(['context', 'contextend'], axis=1)
             # merge nodes; NB: this adds duplicates where necessary
             df_nodes = merge(df_nodes, df, on='context_id')
@@ -210,9 +177,9 @@ class DiscCon:
 
         return df_nodes
 
-    def show_concordance(self, window=5, matches=None,
-                         p_show=['word'], s_show=[], order='random',
-                         cut_off=100, form='dataframes'):
+    def concordance(self, window=5, matches=None,
+                    p_show=['word'], s_show=[], order='random',
+                    cut_off=100, form='dataframes'):
 
         """ self.df_nodes has duplicate entries
         (1) convert to (match matchend) disc_1_set disc_2_set ...
@@ -249,8 +216,7 @@ class DiscCon:
         df = df.set_index(["match", "matchend"])
 
         logger.info("converting each line to dataframe")
-        # TODO: start independent CQP process
-        conc = Concordance(self.corpus, df)
+        conc = Concordance(self.corpus.copy(), df)
         lines = conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
             p_text=None, p_slots=None, regions=[], order=order,
@@ -274,9 +240,9 @@ class DiscCon:
 
         return lines
 
-    def show_collocates(self, window=5, order='f', cut_off=100,
-                        p_query="lemma", ams=None, min_freq=2,
-                        frequencies=True, flags=None):
+    def collocates(self, window=5, order='f', cut_off=100,
+                   p_query="lemma", ams=None, min_freq=2,
+                   frequencies=True, flags=None):
 
         # make sure we're having the right context
         if window not in self.df_nodes.keys():
@@ -291,7 +257,7 @@ class DiscCon:
             return DataFrame()
         for idx in self.discoursemes:
             logger.info('excluding discourseme "%s" from context' % idx)
-            matches = self.discoursemes[idx].matches()
+            matches = self.discoursemes[idx].dump.matches()
             f1_set.update(matches)
             df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
@@ -300,7 +266,6 @@ class DiscCon:
         # number of possible occurrence positions within window
         f1_inflated = len(relevant)
 
-        # TODO: start independent CQP process
         # get frequency counts
         f = self.corpus.counts.cpos(
             relevant['cpos'], [p_query]
@@ -336,33 +301,3 @@ class DiscCon:
         )
 
         return collocates
-
-
-def calculate_offset(row):
-    """ calculates offset of y to x """
-
-    # necessary values
-    match_x = row['match_x']
-    match_y = row['match_y']
-
-    # init matchends if necessary
-    if 'matchend_x' in row.keys():
-        matchend_x = row['matchend_x']
-    else:
-        matchend_x = match_x
-    if 'matchend_y' in row.keys():
-        matchend_y = row['matchend_y']
-    else:
-        matchend_y = match_y
-
-    # y ... x
-    if match_x > matchend_y:
-        offset = matchend_y - match_x
-    # x ... y
-    elif matchend_x < match_y:
-        offset = matchend_x - match_y
-    # overlap
-    else:
-        offset = 0
-
-    return offset

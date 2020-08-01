@@ -11,21 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class Keywords:
-    """ calculating keywords """
+    """ keyword analysis """
 
-    def __init__(self, corpus, name, df_dump, p_query):
+    def __init__(self, corpus, df_dump, p_query='lemma'):
 
-        # TODO: start independent CQP process
         self.corpus = corpus
 
-        # get subcorpus info
-        if name is not None:
-            self.name = name
-            self.size = int(corpus.cqp.Exec("size %s" % name))
-        elif df_dump is not None:
-            self.name = 'tmp_keywords'
-            self.corpus.subcorpus_from_dump(df_dump, name=self.name)
-            self.size = len(df_dump)
+        # activate dump
+        self.name = 'tmp_keywords'
+        self.size = len(df_dump)
 
         # consistency check
         if self.size == 0:
@@ -42,8 +36,8 @@ class Keywords:
 
         # collect context and save result
         logger.info('collecting token counts of subcorpus')
-        counts = corpus.counts.matches(
-            corpus.cqp, name=self.name, p_atts=[p_query], split=True
+        counts = corpus.counts.dump(
+            df_dump, start='match', end='matchend', p_atts=[p_query], split=True
         )
         counts.columns = ['f']
 
