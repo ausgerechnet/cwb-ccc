@@ -27,7 +27,8 @@ def test_collocates(sz_corpus):
     s_att = 'month'
     meta = read_csv(sz_corpus['meta_path'], dtype=str, sep="\t")
     ids = dict()
-    for s in set(meta[s_att]):
+    s_atts = list(set(meta[s_att]))[:10]
+    for s in s_atts:
         ids[s] = set(meta.loc[meta[s_att] == s]['id'])
 
     # keywords

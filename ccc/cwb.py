@@ -418,7 +418,7 @@ class Corpus:
             logger.warning("no subcorpora defined")
             df = DataFrame()
 
-        cqp.__kill_()
+        cqp.__kill__()
         return df
 
     # def activate_subcorpus(self, cqp, subcorpus=None, save=True):

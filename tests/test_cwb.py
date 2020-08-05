@@ -140,7 +140,6 @@ def test_subcorpus_from_df(brexit_corpus):
     cqp.__kill__()
 
 
-@pytest.mark.now
 @pytest.mark.subcorpus
 def test_deactivate_subcorpus(brexit_corpus):
 
@@ -179,12 +178,11 @@ def test_subcorpus_anchor(sz_corpus):
     df1 = corpus.dump_from_query(
         "[lemma='Angela']", sz_corpus['s_break']
     )
-    df_anchor = corpus.dump_from_query(
+    df_anchor = corpus.query(
         sz_corpus['anchor_query'],
-        sz_corpus['s_query'],
-        sz_corpus['anchors'],
-        name='SBCRPS5'
-    )
+        name='SBCRPS5',
+        save=True
+    ).df
     corpus.subcorpus = 'SBCRPS5'
     df2 = corpus.dump_from_query(
         "[lemma='Angela']", None
