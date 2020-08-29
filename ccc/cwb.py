@@ -499,9 +499,13 @@ class Corpus:
         extents = self.get_s_extents(s_att)
         extents = extents.loc[extents[s_att].isin(values)]
         extents = extents.drop(extents.columns, axis=1)
+        # what a waste of lines that follows here ...
+        cotext = extents.reset_index()
+        cotext.index = extents.index
+        cotext.columns = ['context', 'contextend']
         return Dump(
             self.copy(),
-            extents,
+            cotext,
             name_cache=None,
             name_cqp=None
         )
