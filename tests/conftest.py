@@ -33,7 +33,7 @@ def brexit_corpus():
             [3, -1, None, None]
         ],
         'corrections': {0: 0, 1: -1, 2: 0, 3: -1},
-        'regions': [(0, 1), (2, 3)],
+        'regions': {'region_1': [0, 1], 'region_2': [2, 3]},
         'match_strategy': 'longest',
         's_query': 'tweet',
         's_context': 'tweet',

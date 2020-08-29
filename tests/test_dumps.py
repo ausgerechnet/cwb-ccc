@@ -95,7 +95,7 @@ def test_argmin_query(brexit_corpus):
         s_show=query['s_show'],
         p_text=query['p_text'],
         p_slots=query['p_slots'],
-        regions=query['regions'],
+        slots=query['regions'],
         order='first',
         cut_off=None,
         form='extended'
@@ -106,4 +106,22 @@ def test_argmin_query(brexit_corpus):
 
 
 def test_dumps(brexit_corpus):
-    pass
+
+    corpus = Corpus(
+        brexit_corpus['corpus_name']
+    )
+    ids = {
+        't740982320711249920',
+        't731037753241112576',
+        't729363812802039814',
+        't733648546881277953',
+        't741216447595220992',
+        't705780723018539012',
+        't745930343627243520',
+        't730870826178904065',
+        't745691821477605377',
+        't730419966818783232',
+        't746069538693750784'
+    }
+    dump = corpus.dump_from_s_att('tweet_id', ids)
+    print(dump.concordance())
