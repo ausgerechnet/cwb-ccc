@@ -95,7 +95,7 @@ def test_argmin_query(brexit_corpus):
         s_show=query['s_show'],
         p_text=query['p_text'],
         p_slots=query['p_slots'],
-        regions=query['regions'],
+        slots=query['regions'],
         order='first',
         cut_off=None,
         form='extended'
@@ -105,7 +105,6 @@ def test_argmin_query(brexit_corpus):
     print(conc['df'].iloc[0])
 
 
-@pytest.mark.now
 def test_dumps(brexit_corpus):
 
     corpus = Corpus(

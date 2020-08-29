@@ -157,11 +157,11 @@ def test_concordance_lines_extended(sz_corpus):
                           match_strategy='longest')
     concordance = Concordance(corpus, result.df)
     p_slots = 'lemma'
-    region = (3, 4)
+    slots = {'test': [3, 4]}
     lines = concordance.lines(form='extended',
                               p_show=['word', 'lemma'],
                               s_show=['text_id'],
-                              regions=[region],
+                              slots=slots,
                               p_text='word',
                               p_slots=p_slots,
                               cut_off=10)
@@ -169,9 +169,6 @@ def test_concordance_lines_extended(sz_corpus):
     assert('df' in lines.columns)
     assert(type(lines['df'].iloc[0]) == pd.DataFrame)
 
-    assert('_'.join(['_'.join([
-        str(region[0]), str(region[1])
-    ]), p_slots]) in lines.columns)
     assert(3 in lines.columns)
 
     assert('text' in lines.columns)
