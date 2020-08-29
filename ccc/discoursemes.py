@@ -79,7 +79,7 @@ class Disc:
         conc = Concordance(self.dump.corpus.copy(), df)
         return conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
-            p_text=None, p_slots=None, regions=[], order=order,
+            p_text=None, p_slots=None, slots=[], order=order,
             cut_off=cut_off, form=form
         )
 
@@ -219,7 +219,7 @@ class DiscCon:
         conc = Concordance(self.corpus.copy(), df)
         lines = conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
-            p_text=None, p_slots=None, regions=[], order=order,
+            p_text=None, p_slots=None, slots=[], order=order,
             cut_off=cut_off, form=form
         )
 
