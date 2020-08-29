@@ -70,7 +70,7 @@ class Concordance:
         return out
 
     def lines(self, matches=None, p_show=['word'], s_show=[],
-              p_text=None, p_slots=None, regions=[], order='first',
+              p_text=None, p_slots=None, slots=[], order='first',
               cut_off=100, form='raw'):
         """ creates concordance lines from self.df_dump
 
@@ -79,7 +79,7 @@ class Concordance:
         """
 
         # check parameter consistency
-        if self.df_dump.empty:
+        if len(self.df_dump) == 0:
             logger.error("no concordance lines to show")
             return
         if p_text is not None and p_text not in p_show:
@@ -93,7 +93,6 @@ class Concordance:
         logger.info('lines: selecting matches')
         if matches is None:
             matches = set(self.df_dump.index.droplevel('matchend'))
-
         # pre-process cut_off if necessary
         if (cut_off is None) or (len(matches) < cut_off):
             cut_off = len(matches)
@@ -129,7 +128,7 @@ class Concordance:
             else:
                 concordance = format_lines(
                     df_lines, p_show, p_text,
-                    p_slots, regions, form=form
+                    p_slots, slots, form=form
                 )
             df = df.join(DataFrame(concordance))
 
@@ -148,7 +147,7 @@ def format_lines(df_lines,
                  p_show=['word'],
                  p_text=None,   # only for form == 'extended'
                  p_slots=None,  # only for form == 'extended'
-                 regions=[],    # only for form == 'extended'
+                 slots=[],    # only for form == 'extended'
                  form='dataframes'):
 
     # select p-attribute for simple and kwic
@@ -190,7 +189,7 @@ def format_lines(df_lines,
         df = DataFrame.from_records(
             index=df_lines.index,
             data=df_lines.apply(
-                lambda row: line2extended(row, p_text, p_slots, regions)
+                lambda row: line2extended(row, p_text, p_slots, slots)
             ).values
         )
     else:
@@ -270,7 +269,7 @@ def line2df(line):
     }
 
 
-def line2extended(line, p_text=None, p_slots=None, regions=[]):
+def line2extended(line, p_text=None, p_slots=None, slots=dict()):
     """transforms one text_line to dictionary of {"df": DataFrame,
     "match_p_slots": str, ...}.
 
@@ -281,9 +280,6 @@ def line2extended(line, p_text=None, p_slots=None, regions=[]):
 
     """
 
-    # get anchors
-    anchors = line['anchors']
-
     # init dataframe
     out = line2df(line)
 
@@ -292,16 +288,14 @@ def line2extended(line, p_text=None, p_slots=None, regions=[]):
         p_text = 'word'
     out['text'] = " ".join(out['df'][p_text].to_list())
 
-    # process anchors and regions
+    # process slots
     if p_slots:
-        for a in anchors:
-            anchor_value = anchors[a]
-            anchor_exists = True in out['df'][a].values
-            if anchor_exists:
-                out["_".join([str(a), p_slots])] = out['df'][p_slots][anchor_value]
+        for slot in slots.keys():
 
-        for region in regions:
-            region_name = "_".join([str(x) for x in region])
+            region = slots[slot]
+
+            if type(region) == int:
+                region = [region, region]
 
             anchor_left = True in out['df'][region[0]].values
             anchor_right = True in out['df'][region[1]].values
@@ -319,6 +313,6 @@ def line2extended(line, p_text=None, p_slots=None, regions=[]):
                 start = out['df'].index[out['df'][region[0]]].tolist()[0]
                 slots_p = out['df'][p_slots][start]
 
-            out["_".join([region_name, p_slots])] = slots_p
+            out["_".join([str(slot), p_slots])] = slots_p
 
     return out

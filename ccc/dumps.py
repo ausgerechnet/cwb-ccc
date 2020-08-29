@@ -97,7 +97,7 @@ class Dump:
         return self._context
 
     def concordance(self, matches=None, p_show=['word'], s_show=[],
-                    p_text=None, p_slots=None, regions=[],
+                    p_text=None, p_slots=None, slots=[],
                     order='first', cut_off=100, form='raw'):
 
         conc = Concordance(
@@ -111,7 +111,7 @@ class Dump:
             s_show=s_show,
             p_text=p_text,
             p_slots=p_slots,
-            regions=regions,
+            slots=slots,
             order=order,
             cut_off=cut_off,
             form=form
