@@ -1,0 +1,45 @@
+{
+    "name": "according_to_experts_x",
+    "query": "(\"according\" \"to\" | \"as\" [lemma = $verbs_communication] \"by\") <np> @0:[::][word != \"(http.|www|t\\.co).+\"]* (/name_any[] | [lemma = $nouns_experts | lemma = $nouns_person_profession]) [word != \"(http.|www|t\\.co).+\"]* </np>@1:[::] \",\"? <np>@2:[::][word != \"(http.|www|t\\.co).+\"]*</np> (<vp>[]*</vp>)+ (<np>[word != \"(http.|www|t\\.co).+\"]*</np> | <vp>[]*</vp> |<pp>[]*</pp> | [pos_simple = \"I|R\"])+ @3:[::]",
+    "pattern": "0",
+    "anchors": [
+        [
+            0,
+            0,
+            null,
+            null
+        ],
+        [
+            1,
+            -1,
+            null,
+            null
+        ],
+        [
+            2,
+            0,
+            null,
+            null
+        ],
+        [
+            3,
+            -1,
+            null,
+            null
+        ]
+    ],
+    "regions": [
+        [
+            0,
+            1,
+            "0",
+            null
+        ],
+        [
+            2,
+            3,
+            "1",
+            null
+        ]
+    ]
+}

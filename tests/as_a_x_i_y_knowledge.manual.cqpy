@@ -1,0 +1,43 @@
+# --- # CQPY query file
+# meta:
+#   name: according_to_experts_x
+#   pattern: 0
+# corpus:
+#   corpus_name: BREXIT_V20190522_DEDUP
+#   lib_path: null
+# display:
+#   p_show: [word, lemma]
+#   s_show: [tweet_id]
+#   p_slots: lemma
+#   p_text: word
+# anchors:
+#   corrections:
+#     1: -1
+#     3: -1
+#   slots:
+#     region_1: [0, 1]
+#     lonely_anchor: 1
+#     region_2: [2, 3]
+# query:
+#   context: null
+#   s_context: tweet
+# ---
+
+[lemma = "as|being"]
+<np>@0:[::]
+  []*
+  @6:[lemma = $nouns_common_people | lemma = $nouns_person_origin | lemma = $nouns_profession_people | lemma = $nouns_person_support]
+  []*
+</np>
+@1:[::]
+","?
+@5:[::]
+(/name_any[] | [pos_ark = "O|N|^|Z"])
+<vp>
+  [lemma!="don't|dont|.*not|would|want|do|wouldn't|won't|to"]*
+@2
+  [lemma=$verbs_know] []*
+</vp>
+@3:[::]
+(/region[vp] | /region[np] | /be_ap[] | /region[pp] | /region[advp] | /region[adjp])+
+@4:[::]
