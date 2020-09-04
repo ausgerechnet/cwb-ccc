@@ -1,6 +1,5 @@
 from ccc.cqp import CQP
 import pandas as pd
-import pytest
 
 registry_path = "/home/ausgerechnet/corpora/cwb/registry/"
 corpus_name = "BREXIT_V20190522"
@@ -41,14 +40,30 @@ def test_cqp_group():
     assert(type(counts) == str)
 
 
-def test_cqp_many():
+def test_cqp_version():
+
+    CQP(print_version=True)
+
+
+def test_cqp_kill():
 
     from time import sleep
-    for i in range(10):
+    n = 100
+    rate = 50                   # per second
+    print()
+    print(
+        "creating and killing cqp processes, check htop or equivalent"
+    )
+    for i in range(n):
         cqp = CQP(
             bin="cqp",
             options='-c -r ' + registry_path
         )
-        print(i, cqp.CQP_process.pid)
+        print("process_id = %d, run = %d/%d" % (
+            cqp.CQP_process.pid,
+            i + 1, n
+            ), end="\r"
+        )
         cqp.__kill__()
-        sleep(.1)
+        sleep(1/rate)
+    print()
