@@ -196,6 +196,7 @@ class DiscCon:
         disc_ids = set(self.discoursemes.keys())
 
         logger.info("converting discourse nodes to regular dump")
+        # TODO SPEEEEEEED UPPPP!!!!!
         all_matches = set(df_nodes['match'])
         rows = list()
         for match in all_matches:
