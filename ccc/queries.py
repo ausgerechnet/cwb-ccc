@@ -13,7 +13,6 @@
 import re
 import yaml
 import json
-from . import Corpus
 
 
 def load_query_json(query_path):
@@ -122,7 +121,7 @@ def cqpy_load(path):
 
 def cqpy_dump(query, comment=True):
     cqp = query.pop('cqp')
-    out = "--- CQPY query file\n"
+    out = "--- # CQPY query file\n"
     out += yaml.dump(query, default_flow_style=False)
     out += "---"
     if comment:
