@@ -429,7 +429,7 @@ class CQP:
         return prev
 
     def nqr_activate(self, corpus_name, name=None):
-        """Activates nqr. """
+        """Activates named query result or switches back to corpus. """
 
         if name is not None:
             logger.info('activating NQR "%s:%s"' % (corpus_name, name))
@@ -439,9 +439,9 @@ class CQP:
             self.Exec(corpus_name)
 
     def nqr_save(self, corpus_name, name='Last'):
-        """Saves nqr to disk.
+        """Saves named query result to disk.
 
-        :param str name: named subcorpus to save
+        :param str name: nqr to save
 
         """
         logger.info(
