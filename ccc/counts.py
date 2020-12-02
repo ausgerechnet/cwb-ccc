@@ -15,15 +15,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def cwb_scan_corpus(path, corpus_name, p_atts=['word'], cmd='cwb-scan-corpus'):
+def cwb_scan_corpus(path, corpus_name, registry_path,
+                    p_atts=['word'], cmd='cwb-scan-corpus'):
 
     logger.info("running cwb-scan-corpus ...")
     scan = subprocess.Popen(
-        [cmd, '-R', path, corpus_name] + p_atts,
+        [cmd, '-r', registry_path, '-R', path, corpus_name] + p_atts,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     ret = scan.communicate()[0].decode()
-
     logger.info("... collecting results")
     df_counts = read_csv(StringIO(ret), sep="\t", header=None,
                          quoting=3, keep_default_na=False)
@@ -68,6 +68,7 @@ class Counts:
                  registry_path='/usr/local/share/cwb/registry/'):
 
         self.corpus_name = corpus_name
+        self.registry_path = registry_path
         self.attributes = Crps(
             self.corpus_name,
             registry_dir=registry_path
@@ -161,11 +162,12 @@ class Counts:
             )
 
         elif strategy == 2:
-
+            df_dump = df_dump.reset_index()
             with NamedTemporaryFile(mode="wt") as f:
-                logger.info("... writing dump to disk")
+                logger.info("... writing dump temporarily to disk")
                 df_dump[[start, end]].to_csv(f.name, sep="\t", header=None, index=False)
-                df_counts = cwb_scan_corpus(f.name, self.corpus_name, p_atts)
+                df_counts = cwb_scan_corpus(f.name, self.corpus_name,
+                                            self.registry_path, p_atts)
 
         df_counts = df_counts.sort_values(by='freq', ascending=False)
 
@@ -278,9 +280,10 @@ class Counts:
             # split YES; flags NO; combo YES
             # generally fastest
             with NamedTemporaryFile(mode="wt") as f:
-                logger.info("... writing dump to disk")
+                logger.info("... writing dump temporarily to disk")
                 cqp.Exec('dump %s > "%s";' % (name, f.name))
-                df_counts = cwb_scan_corpus(f.name, self.corpus_name, p_atts)
+                df_counts = cwb_scan_corpus(f.name, self.corpus_name,
+                                            self.registry_path, p_atts)
 
         df_counts = df_counts.sort_values(by='freq', ascending=False)
 
