@@ -31,12 +31,12 @@ class Dump:
         self._context = None
 
     def __str__(self):
-        desc = ['Object "Dump"']
+        desc = ['a ccc.Dump.']
         if self.corpus.subcorpus:
             crpssbcrps = self.corpus.corpus_name + ":" + self.corpus.subcorpus
         else:
             crpssbcrps = self.corpus.corpus_name
-        desc.append('- corpus "%s" (%d tokens)' % (
+        desc.append('- corpus "%s" (%d tokens in whole corpus)' % (
             crpssbcrps, self.corpus.corpus_size
         ))
         desc.append('- %d matches' % self.size)
