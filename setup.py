@@ -28,6 +28,7 @@ setuptools.setup(
         "numpy",
         "pandas",
         "unidecode",
+        "pyyaml",
         "cwb-python>=0.2.2",
         "association-measures>=0.1.5"
     ],
@@ -35,7 +36,7 @@ setuptools.setup(
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-        "Operating System :: OS Independent",
+        "Operating System :: Linux",
     ],
     python_requires='>=3.5',
 )

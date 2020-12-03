@@ -4,8 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest = "==4.1.1"
-pytest-cov = "==2.6.1"
+pytest = "==6.1.2"
+pytest-cov = "==2.10.1"
 attrs = "==19.1.0"
 setuptools = "*"
 wheel = "*"
@@ -16,6 +16,6 @@ cython = "*"
 numpy = "*"
 pandas = "*"
 unidecode = "*"
+pyyaml = "*"
 cwb-python = ">=0.2.2"
 association-measures = ">=0.1.5"
-pyyaml = "*"
