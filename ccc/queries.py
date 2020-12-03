@@ -5,19 +5,20 @@
 
 - a CQPY file contains a YAML header and the actual CQP input
 - YAML header *can* be commented
-- YAML needs following sections: meta, corpus, display, anchors, query
-- query formatting (linebreaks, whitespace) is preserved
+- query formatting (whitespace incl. linebreaks) is preserved
 
 """
 
 import re
 import yaml
 import json
-from . import Corpus
+# logging
+import logging
+logger = logging.getLogger(__name__)
 
 
 def load_query_json(query_path):
-    """ support for json files pre 2020-08-29 """
+    """ support for query.json files pre 2020-08-29 """
 
     # read file
     with open(query_path, "rt") as f:
@@ -101,37 +102,67 @@ def load_query_json(query_path):
 
 
 def cqpy_load(path):
+    """
+    load cqpy query file from path, return string
+    """
 
     doc = open(path, 'rt').read()
+
     try:
         # commented YAML header
-        header, query = doc.split("# ---\n")
+        header, cqp = doc.split("# ---\n")
     except ValueError:
         # uncommented YAML header
-        header, query = doc.split("---\n")
+        header, cqp = doc.split("---\n")
+    except yaml.scanner.ScannerError:
+        logger.error("could not parse CQPY file")
+        return dict()
 
     # read header
     header_list = [re.sub(r"\A# ", "", h) for h in header.split("\n")]
-    header = yaml.load("\n".join(header_list), Loader=yaml.FullLoader)
+    query = yaml.load("\n".join(header_list), Loader=yaml.FullLoader)
 
     # add CQP
-    header['cqp'] = query.lstrip().rstrip()
+    query['cqp'] = cqp.lstrip().rstrip()
 
-    return header
+    return query
 
 
 def cqpy_dump(query, comment=True):
+    """
+    serialize query as cqpy-string
+    """
+
+    # get actual query
     cqp = query.pop('cqp')
-    out = "--- CQPY query file\n"
+
+    # header
+    out = "--- # CQPY query file\n"
     out += yaml.dump(query, default_flow_style=False)
     out += "---"
+    # comment header?
     if comment:
         out = "\n".join(["# " + line for line in out.split("\n")])
+    # actual cqp query
     out += "\n\n" + cqp
+
     return out
 
 
-def run_query(corpus, query, match_strategy='longest'):
+def run_query(corpus, query, match_strategy='longest',
+              cut_off=None, form='extended'):
+    """
+    query needs following sections:
+    - cqp
+    - query > context
+    - query > s_context
+    - anchors > corrections
+    - anchors > slots
+    - display > p_show
+    - display > s_show
+    - display > p_text
+    - display > p_slots
+    """
 
     dump = corpus.query(
         cqp_query=query['cqp'],
@@ -148,8 +179,8 @@ def run_query(corpus, query, match_strategy='longest'):
         p_text=query['display']['p_text'],
         p_slots=query['display']['p_slots'],
         slots=query['anchors']['slots'],
-        cut_off=None,
-        form='extended'
+        cut_off=cut_off,
+        form=form
     )
 
     return lines

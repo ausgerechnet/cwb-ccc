@@ -87,12 +87,7 @@ class CQP:
                     self.CQPrunning = False
                     break
 
-    def __kill__(self):
-        self.Terminate()
-        os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
-        self.__del__()
-
-    def __init__(self, bin="/usr/local/bin/cqp", options='-c'):
+    def __init__(self, bin="/usr/local/bin/cqp", options='-c', print_version=False):
         """Class constructor."""
         self.execStart = time.time()
         self.maxProcCycles = 1.0
@@ -122,7 +117,8 @@ class CQP:
         version_string = self.CQP_process.stdout.readline()
         version_string = version_string.rstrip()  # Equivalent to Perl's chomp
         self.CQP_process.stdout.flush()
-        print(version_string, file=sys.stderr)
+        if print_version:
+            print(version_string, file=sys.stderr)
         version_regexp = re.compile(
             r'^CQP\s+(?:\w+\s+)*([0-9]+)\.([0-9]+)(?:\.b?([0-9]+))?(?:\s+(.*))?$'
         )
@@ -184,6 +180,12 @@ class CQP:
                 print("Done\nCQP object deleted.")
             self.execStart = None
             # print "Finished"
+
+    def __kill__(self):
+        """ like self.__del__, but correct """
+        self.Terminate()
+        os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
+        self.__del__()
 
     def Exec(self, cmd):
         """Execute CQP command.
@@ -427,6 +429,7 @@ class CQP:
         return prev
 
     def nqr_activate(self, corpus_name, name=None):
+        """Activates named query result or switches back to corpus. """
 
         if name is not None:
             logger.info('activating NQR "%s:%s"' % (corpus_name, name))
@@ -436,9 +439,9 @@ class CQP:
             self.Exec(corpus_name)
 
     def nqr_save(self, corpus_name, name='Last'):
-        """Saves subcorpus to disk.
+        """Saves named query result to disk.
 
-        :param str name: named subcorpus to save
+        :param str name: nqr to save
 
         """
         logger.info(
@@ -449,7 +452,7 @@ class CQP:
     def nqr_from_query(self, query, name='Last',
                        match_strategy='longest',
                        return_dump=True):
-        """Defines subcorpus from query, returns dump.
+        """Defines nqr from query, returns dump.
 
         :param str query: valid CQP query
         :param str name: subcorpus name
@@ -470,7 +473,7 @@ class CQP:
             return df_dump
 
     def nqr_from_dump(self, df_dump, name='Last'):
-        """Defines subcorpus from dump.
+        """Alias for Undump. Defines subcorpus from dump.
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
                                   with optional columns 'target' and 'keyword'

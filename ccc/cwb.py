@@ -174,6 +174,9 @@ class Corpus:
             StringIO(cqp.Exec('show cd;')),
             sep='\t', names=['att', 'name', 'annotation', 'active']
         ).fillna(False)
+        self.attributes_available['annotation'] = (
+            self.attributes_available['annotation'] == '-V'
+        )
         cqp.__kill__()
 
         # init Cache
@@ -188,10 +191,10 @@ class Corpus:
 
     def __str__(self):
         return "\n".join([
-            "name     : %s" % self.corpus_name,
-            "size     : %s" % str(self.corpus_size),
-            "subcorpus: %s" % str(self.subcorpus),
-            "data     : %s" % str(self.data_path),
+            'a ccc.Corpus: "%s"' % self.corpus_name,
+            "size      : %s" % str(self.corpus_size),
+            "data      : %s" % str(self.data_path),
+            "subcorpus : %s" % str(self.subcorpus),
             "available attributes:",
             self.attributes_available.to_string(),
         ])
