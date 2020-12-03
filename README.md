@@ -43,10 +43,9 @@ connection to your CWB-indexed corpus:
 ```python
 from ccc import Corpus
 corpus = Corpus(
-	corpus_name="EXAMPLE_CORPUS",
-	registry_path='/usr/local/share/cwb/registry/'
+  corpus_name="GERMAPARL1386",
+  registry_path='/usr/local/share/cwb/registry/'
 )
-print(corpus)
 ```
 
 This will raise a `KeyError` if the named corpus is not in the
@@ -67,23 +66,18 @@ the parameter when initializing the corpus.
 ## Usage ##
 
 ### Queries and Dumps
-Before you can display anything, you have to run a query with the
-`corpus.query()` method, which accepts valid CQP queries such as
+The normal starting point for analyzing a corpus is to run a query
+with the `corpus.query()` method, which accepts valid CQP queries such
+as
 ```python
-query = '[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
-dump = corpus.query(
-	cqp_query=query
-)
-print(dump)
+query = r'"\[" ([pos="NE"] "/"?)+ "\]"'
+dump = corpus.query(cqp_query=query)
 ```
-The result is a `Dump` object. Its core is a pandas DataFrame
-multi-indexed by CQP's "match" and "matchend" (similar to a
-CQP dump). All entries of the DataFrame, including the index, are
-integers representing corpus positions:
 
-```
-print(dump.df)
-```
+The result is a `Dump` object. Its core is a pandas DataFrame
+(`dump.df`) multi-indexed by CQP's "match" and "matchend" (similar to
+a CQP dump). All entries of the DataFrame, including the index, are
+integers representing corpus positions.
 
 You can provide one or more parameters to define the context around
 the matches: a parameter `context` specifying the context window
@@ -92,14 +86,11 @@ the matches: a parameter `context` specifying the context window
 `context_left` and `context_right`.
 ```python
 dump = corpus.query(
-	cqp_query=query,
-	context=20,
-	context_break='s'
+  cqp_query=query,
+  context=20,
+  context_break='s'
 )
 ```
-In this case, the `dump.df` will contain two further columns,
-specifying the context: "context" and "contextend".
-
 Note that queries _may_ end on a "within" clause, which will limit the
 matches to regions defined by this structural attribute. If you
 provide a `context_break` parameter, the query will be automatically
@@ -117,16 +108,16 @@ accessed directly by later queries with the same parameters on the
 same (sub)corpus, without the need for CQP to run again.  You can
 disable caching by providing a `name` other than "mnemosyne".
 
-Now you are set up to analyze your query result. Let's start with the
+We are set up to analyze your query result. Let's start with the
 frequency breakdown:
 ```
 print(dump.breakdown())
 ```
-| *word*                 | freq |
-|------------------------|------|
-| Angela Merkel ( CDU )  | 2253 |
-| Merkel ( CDU )         | 29   |
-| Angela Merkels ( CDU ) | 2    |
+| *word*        | freq |
+|---------------|------|
+| [ SPD ]       | 18   |
+| [ CDU / CSU ] | 13   |
+| [ PDS ]       | 6    |
 
 
 ### Concordancing ###
@@ -141,10 +132,11 @@ print(lines)
 ```
 | *match* | *matchend* | context | contextend | raw                                               |
 |---------|------------|---------|------------|---------------------------------------------------|
-| 676     | 680        | 656     | 700        | {'cpos': [656, 657, 658, 659, 660, 661, 662, 6... |
-| 1190    | 1194       | 1170    | 1214       | {'cpos': [1170, 1171, 1172, 1173, 1174, 1175, ... |
-| 543640  | 543644     | 543620  | 543664     | {'cpos': [543620, 543621, 543622, 543623, 5436... |
+| 8213    | 8217       | 8193    | 8237       | {'cpos': [8193, 8194, 8195, 8196, 8197, 8198, ... |
+| 15999   | 16001      | 15979   | 16021      | {'cpos': [15979, 15980, 15981, 15982, 15983, 1... |
+| 25471   | 25473      | 25451   | 25493      | {'cpos': [25451, 25452, 25453, 25454, 25455, 2... |
 | ...     | ...        | ...     | ...        | ...                                               |
+
 
 Column `raw` contains a dictionary with the following keys:
 - "match" (int): the cpos of the match
@@ -163,60 +155,57 @@ each token as index:
 
 ```
 lines = dump.concordance(form="dataframes")
-print(lines['df'].iloc[0])
+print(lines['df'].iloc[1])
 ```
 
-| *cpos* | offset | word                | match | matchend | context | contextend |
-|--------|--------|---------------------|-------|----------|---------|------------|
-| 48344  | -5     | Eine                | False | False    | True    | False      |
-| 48345  | -4     | entsprechende       | False | False    | False   | False      |
-| 48346  | -3     | Steuererleichterung | False | False    | False   | False      |
-| 48347  | -2     | hat                 | False | False    | False   | False      |
-| 48348  | -1     | Kanzlerin           | False | False    | False   | False      |
-| 48349  | 0      | Angela              | True  | False    | False   | False      |
-| 48350  | 0      | Merkel              | False | False    | False   | False      |
-| 48351  | 0      | (                   | False | False    | False   | False      |
-| 48352  | 0      | CDU                 | False | False    | False   | False      |
-| 48353  | 0      | )                   | False | True     | False   | False      |
-| 48354  | 1      | bisher              | False | False    | False   | False      |
-| 48355  | 2      | ausgeschlossen      | False | False    | False   | False      |
-| 48356  | 3      | .                   | False | False    | False   | True       |
+| *cpos* | offset | word    | match | matchend | context | contextend |
+|--------|--------|---------|-------|----------|---------|------------|
+| 15992  | -7     | (       | False | False    | True    | False      |
+| 15993  | -6     | Beifall | False | False    | False   | False      |
+| 15994  | -5     | des     | False | False    | False   | False      |
+| 15995  | -4     | Abg.    | False | False    | False   | False      |
+| 15996  | -3     | Dr.     | False | False    | False   | False      |
+| 15997  | -2     | Peter   | False | False    | False   | False      |
+| 15998  | -1     | Struck  | False | False    | False   | False      |
+| 15999  | 0      | [       | True  | False    | False   | False      |
+| 16000  | 0      | SPD     | False | False    | False   | False      |
+| 16001  | 0      | ]       | False | True     | False   | False      |
+| 16002  | 1      | )       | False | False    | False   | True       |
+
 
 Attribute selection is controlled via the `p_show` and `s_show`
 parameters (lists of p-attributes and s-attributes, respectively):
 ```
 lines = dump.concordance(
-	form="dataframes",
-	p_show=['word', 'lemma'],
-	s_show=['text_id']
+  form="dataframes",
+  p_show=['word', 'lemma'],
+  s_show=['text_id']
 )
-print(lines)
 ```
-| *match* | *matchend* | context | contextend | df  | text_id |
-|---------|------------|---------|------------|-----|---------|
-| 676     | 680        | 656     | 700        | ... | A113224 |
-| 1190    | 1194       | 1170    | 1214       | ... | A124124 |
-| 543640  | 543644     | 543620  | 543664     | ... | A423523 |
-| ...     | ...        | ...     | ...        | ... | ...     |
+|-------------------|-----------------------|
+| context\_id       | 905                   |
+| context           | 15992                 |
+| contextend        | 16002                 |
+| df                | lemma offset word ... |
+| text\_role\_CWBID | 7                     |
+| text\_role        | mp                    |
 
 ```
-print(lines['df'].iloc[0])
+print(lines['df'].iloc[1])
 ```
-| *cpos* | offset | word                | lemma               | match | matchend | context | contextend |
-|--------|--------|---------------------|---------------------|-------|----------|---------|------------|
-| 48344  | -5     | Eine                | eine                | False | False    | True    | False      |
-| 48345  | -4     | entsprechende       | entsprechende       | False | False    | False   | False      |
-| 48346  | -3     | Steuererleichterung | Steuererleichterung | False | False    | False   | False      |
-| 48347  | -2     | hat                 | haben               | False | False    | False   | False      |
-| 48348  | -1     | Kanzlerin           | Kanzlerin           | False | False    | False   | False      |
-| 48349  | 0      | Angela              | Angela              | True  | False    | False   | False      |
-| 48350  | 0      | Merkel              | Merkel              | False | False    | False   | False      |
-| 48351  | 0      | (                   | (                   | False | False    | False   | False      |
-| 48352  | 0      | CDU                 | CDU                 | False | False    | False   | False      |
-| 48353  | 0      | )                   | )                   | False | True     | False   | False      |
-| 48354  | 1      | bisher              | bisher              | False | False    | False   | False      |
-| 48355  | 2      | ausgeschlossen      | ausschließen        | False | False    | False   | False      |
-| 48356  | 3      | .                   | .                   | False | False    | False   | True       |
+| *cpos* | lemma   | offset | word    | match | matchend | context | contextend |
+|--------|---------|--------|---------|-------|----------|---------|------------|
+| 15992  | (       | -7     | (       | False | False    | True    | False      |
+| 15993  | Beifall | -6     | Beifall | False | False    | False   | False      |
+| 15994  | die     | -5     | des     | False | False    | False   | False      |
+| 15995  | Abg.    | -4     | Abg.    | False | False    | False   | False      |
+| 15996  | Dr.     | -3     | Dr.     | False | False    | False   | False      |
+| 15997  | Peter   | -2     | Peter   | False | False    | False   | False      |
+| 15998  | Struck  | -1     | Struck  | False | False    | False   | False      |
+| 15999  | [       | 0      | [       | True  | False    | False   | False      |
+| 16000  | SPD     | 0      | SPD     | False | False    | False   | False      |
+| 16001  | ]       | 0      | ]       | False | True     | False   | False      |
+| 16002  | )       | 1      | )       | False | False    | False   | True       |
 
 You can decide which and how many concordance lines you want to
 retrieve by means of the parameters `order` ("first", "last", or
@@ -228,31 +217,28 @@ get only specific concordance lines.
 
 The concordancer detects anchored queries automatically. The following
 query
-
 ```python
 dump = corpus.query(
-	'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]',
+  query = r'@1[pos="NE"]? @2[pos="NE"] "\[" (@3[word="[A-Z]+"]+ "/"?)+ "\]"'
 )
-dump.concordance(form='dataframes')
+lines = dump.concordance(form='dataframes')
+print(lines['df'].iloc[1])
 ```
-
 thus returns `DataFrame`s with additional columns for each anchor point.
 
-| *cpos* | offset | word                | match | matchend | context | contextend | 0     | 1     | 2     |
-|--------|--------|---------------------|-------|----------|---------|------------|-------|-------|-------|
-| 48344  | -5     | Eine                | False | False    | True    | False      | False | False | False |
-| 48345  | -4     | entsprechende       | False | False    | False   | False      | False | False | False |
-| 48346  | -3     | Steuererleichterung | False | False    | False   | False      | False | False | False |
-| 48347  | -2     | hat                 | False | False    | False   | False      | False | False | False |
-| 48348  | -1     | Kanzlerin           | False | False    | False   | False      | False | False | False |
-| 48349  | 0      | Angela              | True  | False    | False   | False      | True  | False | False |
-| 48350  | 0      | Merkel              | False | False    | False   | False      | False | True  | False |
-| 48351  | 0      | (                   | False | False    | False   | False      | False | False | False |
-| 48352  | 0      | CDU                 | False | False    | False   | False      | False | False | True  |
-| 48353  | 0      | )                   | False | True     | False   | False      | False | False | False |
-| 48354  | 1      | bisher              | False | False    | False   | False      | False | False | False |
-| 48355  | 2      | ausgeschlossen      | False | False    | False   | False      | False | False | False |
-| 48356  | 3      | .                   | False | False    | False   | True       | False | False | False |
+| *cpos* | offset | word    | 1     | 2     | 3     | match | matchend | context | contextend |
+|--------|--------|---------|-------|-------|-------|-------|----------|---------|------------|
+| 15992  | -5     | (       | False | False | False | False | False    | True    | False      |
+| 15993  | -4     | Beifall | False | False | False | False | False    | False   | False      |
+| 15994  | -3     | des     | False | False | False | False | False    | False   | False      |
+| 15995  | -2     | Abg.    | False | False | False | False | False    | False   | False      |
+| 15996  | -1     | Dr.     | False | False | False | False | False    | False   | False      |
+| 15997  | 0      | Peter   | True  | False | False | True  | False    | False   | False      |
+| 15998  | 0      | Struck  | False | True  | False | False | False    | False   | False      |
+| 15999  | 0      | [       | False | False | False | False | False    | False   | False      |
+| 16000  | 0      | SPD     | False | False | True  | False | False    | False   | False      |
+| 16001  | 0      | ]       | False | False | False | False | True     | False   | False      |
+| 16002  | 1      | )       | False | False | False | False | False    | False   | True       |
 
 
 ### Collocation Analyses ###
@@ -264,25 +250,25 @@ columns.
 
 ```python
 dump = corpus.query(
-    '[lemma="Angela"] [lemma="Merkel"]',
-	context=10, context_break='s'
+  '[lemma="Angela"] [lemma="Merkel"]',
+  context=10, context_break='s'
 )
 collocates = dump.collocates()
 print(collocates)
 ```
 
-| *item*          | O11  | O12   | O21      | O22       | E11         | E12          | E21          | E22          | log_likelihood | ... |
-|-----------------|------|-------|----------|-----------|-------------|--------------|--------------|--------------|----------------|-----|
-| die             | 1189 | 13461 | 22082331 | 233975249 | 1263.407469 | 13386.592531 | 2.208226e+07 | 2.339753e+08 | -4.883922      | ... |
-| Bundeskanzlerin | 1165 | 13485 | 5783     | 256051797 | 0.397498    | 14649.602502 | 6.947603e+03 | 2.560506e+08 | 16573.570027   | ... |
-| ,               | 603  | 14047 | 14436277 | 241621303 | 825.939978  | 13824.060022 | 1.443605e+07 | 2.416215e+08 | -70.046255     | ... |
-| Kanzlerin       | 492  | 14158 | 13274    | 256044306 | 0.787559    | 14649.212441 | 1.376521e+04 | 2.560438e+08 | 5386.275148    | ... |
-| haben           | 379  | 14271 | 2433866  | 253623714 | 139.264180  | 14510.735820 | 2.434106e+06 | 2.536235e+08 | 283.416865     | ... |
-| ...             | ...  | ...   | ...      | ...       | ...         | ...          | ...          | ...          | ...            | ... |
+| *item* | O11 | O12  | O21   | O22    | E11        | E12         | E21          | E22           | log_likelihood | ... |
+|--------|-----|------|-------|--------|------------|-------------|--------------|---------------|----------------|-----|
+| die    | 813 | 4373 | 12952 | 131030 | 478.556326 | 4707.443674 | 13286.443674 | 130695.556326 | 226.512603     | ... |
+| bei    | 366 | 4820 | 991   | 142991 | 47.177692  | 5138.822308 | 1309.822308  | 142672.177692 | 967.728153     | ... |
+| (      | 314 | 4872 | 1444  | 142538 | 61.118926  | 5124.881074 | 1696.881074  | 142285.118926 | 574.853985     | ... |
+| [      | 221 | 4965 | 477   | 143505 | 24.266786  | 5161.733214 | 673.733214   | 143308.266786 | 654.834131     | ... |
+| )      | 207 | 4979 | 1620  | 142362 | 63.517792  | 5122.482208 | 1763.482208  | 142218.517792 | 218.340710     | ... |
+| ...    | ... | ...  | ...   | ...    | ...        | ...         | ...          | ...           | ...            | ... |
 
 
 By default, collocates are calculated on the "lemma"-layer, assuming
-that this is a valid p-attribute in the corpus. The corresponding
+that this is an available p-attribute in the corpus. The corresponding
 parameter is `p_query` (which will fall back to "word" if the
 specified attribute is not annotated in the corpus).
 
@@ -290,10 +276,10 @@ For improved performance, all hapax legomena in the context are
 dropped after calculating the context size. You can change this
 behaviour via the `min_freq` parameter.
 
-By default, the dataframe is annotated with "z_score", "t_score",
-"dice", "log_likelihood", and "mutual_information" (parameter `ams`).
-For notation and further information regarding association measures,
-see
+By default, the dataframe is annotated with "z\_score", "t\_score",
+"dice", "log\_likelihood", and "mutual\_information" (parameter
+`ams`).  For notation and further information regarding association
+measures, see
 [collocations.de](http://www.collocations.de/AM/index.html). Availability
 of association measures depends on their implementation in the
 [pandas-association-measures](https://pypi.org/project/association-measures/)
@@ -308,11 +294,13 @@ and `cut_off` parameters.
 
 For keyword analyses, you have to define a subcorpus. The natural way
 of doing so is by selecting text identifiers via spreadsheets or
-relational databases. If you have collected an appropriate set of
-`ids`, you can use the `corpus.dump_from_s_att()` method:
+relational databases, or by directly using the annotated
+s-attributes. If you have collected an appropriate set of attribute
+values, you can use the `corpus.dump_from_s_att()` method:
 
 ```python
-dump = corpus.dump_from_s_att('text_id', ids)
+party = {"CDU", "CSU"}
+dump = corpus.dump_from_s_att('text_party', party)
 keywords = dump.keywords()
 ```
 
@@ -323,9 +311,35 @@ association measures as columns.
 You can of course also define a subcorpus via a corpus query,
 e.g.
 ```python
-dump = corpus.query('"Atomkraft" expand to s')
+dump = corpus.query('"SPD" expand to s')
 keywords = dump.keywords()
 ```
+
+## Testing ##
+The module is shipped with a small test corpus ("GERMAPARL8613"),
+which contains all speeches of the 86th session of the 13th German
+Bundestag on Feburary 8, 1996. The corpus consists of 149,800 tokens
+in 7332 paragraphs (s-attribute `p` with annotation _type_ ("regular"
+or "interjection")split into 11,364 sentences (s-attribute `s`).
+Public domain. The p-attributes are `pos` and `lemma`. The
+s-attributes are 1 `sitzung` (with annotations _date_, _period_,
+_session_), 10 `div`s corresponding to different agenda items
+(annotations _desc_, _n_, _type_, _what_), 346 `text`s corresponding
+to all speeches (annotations _name_, _parliamentary\_group_, _party_,
+_position_, _role_, _who_).
+
+The module is tested using pytest. Make sure you install all
+development dependencies:
+	
+	pip install --dev
+
+You can then
+
+	make test
+	
+and
+
+	make coverage
 
 ## Acknowledgements ##
 The module relies on
@@ -334,6 +348,11 @@ Versley and Jorg Asmussen for the implementation. Special thanks to
 Markus Opolka for the implementation of
 [association-measures](https://pypi.org/project/association-measures/)
 and for forcing me to write tests.
+
+The test corpus was extracted from the
+[GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the
+[PolMine Project](https://polmine.github.io/)); many thanks to Andreas
+Blätte.
 
 This work was supported by the [Emerging Fields Initiative
 (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/)
