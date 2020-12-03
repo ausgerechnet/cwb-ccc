@@ -1,0 +1,70 @@
+##
+## registry entry for corpus GERMAPARL1386
+##
+
+# long descriptive name for the corpus
+NAME ""
+# corpus ID (must be lowercase in registry!)
+ID   germaparl1386
+# path to binary data files
+HOME /home/ausgerechnet/repositories/cwb-ccc/tests/test-corpora/data/germaparl1386
+# optional info file (displayed by "info;" command in CQP)
+INFO /home/ausgerechnet/repositories/cwb-ccc/tests/test-corpora/data/germaparl1386/.info
+
+# corpus properties provide additional information about the corpus:
+##:: charset = "utf8"	# character encoding of corpus data
+##:: language = "??"	# insert ISO code for language (de, en, fr, ...)
+#========================================================================#
+
+
+##
+## p-attributes (token annotations)
+##
+
+ATTRIBUTE word
+ATTRIBUTE pos
+
+
+##
+## s-attributes (structural markup)
+##
+
+# <corpus name=".."> ... </corpus>
+# (no recursive embedding allowed)
+STRUCTURE corpus
+STRUCTURE corpus_name	# [annotations]
+
+# <sitzung date=".." period=".." session=".."> ... </sitzung>
+# (no recursive embedding allowed)
+STRUCTURE sitzung
+STRUCTURE sitzung_date	# [annotations]
+STRUCTURE sitzung_period	# [annotations]
+STRUCTURE sitzung_session	# [annotations]
+
+# <div desc=".." n=".." type=".." what=".."> ... </div>
+# (no recursive embedding allowed)
+STRUCTURE div
+STRUCTURE div_desc	# [annotations]
+STRUCTURE div_n	# [annotations]
+STRUCTURE div_type	# [annotations]
+STRUCTURE div_what	# [annotations]
+
+# <text id=".." name=".." parliamentary_group=".." party=".." position=".." role=".." who=".."> ... </text>
+# (no recursive embedding allowed)
+STRUCTURE text
+STRUCTURE text_id	# [annotations]
+STRUCTURE text_name	# [annotations]
+STRUCTURE text_parliamentary_group	# [annotations]
+STRUCTURE text_party	# [annotations]
+STRUCTURE text_position	# [annotations]
+STRUCTURE text_role	# [annotations]
+STRUCTURE text_who	# [annotations]
+
+# <p type=".."> ... </p>
+# (no recursive embedding allowed)
+STRUCTURE p
+STRUCTURE p_type	# [annotations]
+
+# <s> ... </s>
+STRUCTURE s
+ATTRIBUTE lemma
