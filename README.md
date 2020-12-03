@@ -69,6 +69,7 @@ the parameter when initializing the corpus.
 The normal starting point for analyzing a corpus is to run a query
 with the `corpus.query()` method, which accepts valid CQP queries such
 as
+
 ```python
 query = r'"\[" ([pos="NE"] "/"?)+ "\]"'
 dump = corpus.query(cqp_query=query)
@@ -84,6 +85,7 @@ the matches: a parameter `context` specifying the context window
 (defaults to 20) and an s-attribute defining the context
 (`context_break`). You can specify asymmetric windows via
 `context_left` and `context_right`.
+
 ```python
 dump = corpus.query(
   cqp_query=query,
@@ -91,6 +93,7 @@ dump = corpus.query(
   context_break='s'
 )
 ```
+
 Note that queries _may_ end on a "within" clause, which will limit the
 matches to regions defined by this structural attribute. If you
 provide a `context_break` parameter, the query will be automatically
@@ -110,9 +113,11 @@ disable caching by providing a `name` other than "mnemosyne".
 
 We are set up to analyze your query result. Let's start with the
 frequency breakdown:
+
 ```
 print(dump.breakdown())
 ```
+
 | *word*        | freq |
 |---------------|------|
 | [ SPD ]       | 18   |
@@ -130,13 +135,13 @@ the query matches in context:
 lines = dump.concordance()
 print(lines)
 ```
+
 | *match* | *matchend* | context | contextend | raw                                               |
 |---------|------------|---------|------------|---------------------------------------------------|
 | 8213    | 8217       | 8193    | 8237       | {'cpos': [8193, 8194, 8195, 8196, 8197, 8198, ... |
 | 15999   | 16001      | 15979   | 16021      | {'cpos': [15979, 15980, 15981, 15982, 15983, 1... |
 | 25471   | 25473      | 25451   | 25493      | {'cpos': [25451, 25452, 25453, 25454, 25455, 2... |
 | ...     | ...        | ...     | ...        | ...                                               |
-
 
 Column `raw` contains a dictionary with the following keys:
 - "match" (int): the cpos of the match
@@ -175,6 +180,7 @@ print(lines['df'].iloc[1])
 
 Attribute selection is controlled via the `p_show` and `s_show`
 parameters (lists of p-attributes and s-attributes, respectively):
+
 ```
 lines = dump.concordance(
   form="dataframes",
@@ -182,6 +188,8 @@ lines = dump.concordance(
   s_show=['text_id']
 )
 ```
+
+|                   |                       |
 |-------------------|-----------------------|
 | context\_id       | 905                   |
 | context           | 15992                 |
@@ -193,6 +201,7 @@ lines = dump.concordance(
 ```
 print(lines['df'].iloc[1])
 ```
+
 | *cpos* | lemma   | offset | word    | match | matchend | context | contextend |
 |--------|---------|--------|---------|-------|----------|---------|------------|
 | 15992  | (       | -7     | (       | False | False    | True    | False      |
@@ -320,13 +329,13 @@ The module is shipped with a small test corpus ("GERMAPARL8613"),
 which contains all speeches of the 86th session of the 13th German
 Bundestag on Feburary 8, 1996. The corpus consists of 149,800 tokens
 in 7332 paragraphs (s-attribute `p` with annotation _type_ ("regular"
-or "interjection")split into 11,364 sentences (s-attribute `s`).
-Public domain. The p-attributes are `pos` and `lemma`. The
-s-attributes are 1 `sitzung` (with annotations _date_, _period_,
-_session_), 10 `div`s corresponding to different agenda items
-(annotations _desc_, _n_, _type_, _what_), 346 `text`s corresponding
-to all speeches (annotations _name_, _parliamentary\_group_, _party_,
-_position_, _role_, _who_).
+or "interjection")) split into 11,364 sentences (s-attribute `s`).
+The p-attributes are `pos` and `lemma`. The s-attributes are 1
+`sitzung` (with annotations _date_, _period_, _session_), 10 `div`s
+corresponding to different agenda items (annotations _desc_, _n_,
+_type_, _what_), and 346 `text`s corresponding to all speeches
+(annotations _name_, _parliamentary\_group_, _party_, _position_,
+_role_, _who_).
 
 The module is tested using pytest. Make sure you install all
 development dependencies:
@@ -343,25 +352,27 @@ and
 
 ## Acknowledgements ##
 The module relies on
-[cwb-python](https://pypi.org/project/cwb-python/), thanks to Yannick
-Versley and Jorg Asmussen for the implementation. Special thanks to
-Markus Opolka for the implementation of
+[cwb-python](https://pypi.org/project/cwb-python/), thanks to **Yannick
+Versley** and **Jorg Asmussen** for the implementation. Special thanks to
+**Markus Opolka** for the implementation of
 [association-measures](https://pypi.org/project/association-measures/)
 and for forcing me to write tests.
 
 The test corpus was extracted from the
 [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the
-[PolMine Project](https://polmine.github.io/)); many thanks to Andreas
-Blätte.
+[PolMine Project](https://polmine.github.io/)); many thanks to **Andreas
+Blätte**.
 
 This work was supported by the [Emerging Fields Initiative
 (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/)
 of Friedrich-Alexander-Universität Erlangen-Nürnberg, project title
 [Exploring the *Fukushima
-Effect*](https://www.linguistik.phil.fau.de/projects/efe/).
+Effect*](https://www.linguistik.phil.fau.de/projects/efe/)
+(2017-2020).
 
 Further development of the package has been funded by the Deutsche
-Forschungsgemeinschaft (DFG) within the project *Reconstructing
-Arguments from Noisy Text*, grant number 377333057, as part of the
-Priority Program [Robust Argumentation
+Forschungsgemeinschaft (DFG) within the project [Reconstructing
+Arguments from Noisy
+Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number
+377333057, as part of the Priority Program [Robust Argumentation
 Machines](http://www.spp-ratio.de/home/) (SPP-1999).
