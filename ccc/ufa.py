@@ -56,7 +56,7 @@ class UFA:
 
     def collocates(self, cqp_query, window=5, p_query='lemma',
                    order='log_likelihood', cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, subset=None):
+                   frequencies=True, flags=None, subset=None, context_break=None):
         """
         :return: dictionary of {subcorpus_name: table}
         :rtype: dict
@@ -66,11 +66,14 @@ class UFA:
 
         tables = dict()
 
+        if context_break is None:
+            context_break = self.s_att
+
         # run query and de-construct dump
         dump_glob = self.corpus.query(
             cqp_query,
             context=window,
-            context_break=self.s_att
+            context_break=context_break
         )
         df_glob = dump_glob.df.join(
             self.corpus.get_s_annotations(
