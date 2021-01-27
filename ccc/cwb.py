@@ -17,6 +17,7 @@ from .dumps import Dump
 from CWB.CL import Corpus as Crps
 from pandas import DataFrame, read_csv, to_numeric
 from pandas.errors import EmptyDataError
+from numpy import minimum, maximum
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -634,12 +635,12 @@ class Corpus:
             if context_left is None:
                 df['context'] = df.match
             else:
-                df['context'] = df.match - context_left
+                df['context'] = maximum(0, df.match - context_left)
             # right
             if context_right is None:
                 df['contextend'] = df.matchend
             else:
-                df['contextend'] = df.matchend + context_right
+                df['contextend'] = minimum(self.corpus_size - 1, df.matchend + context_right)
         else:
             # get context confined by s-attribute if necessary
             s_regions = self.attributes.attribute(context_break, 's')
