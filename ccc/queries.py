@@ -39,7 +39,7 @@ def load_query_json(query_path):
     if 'name' not in query.keys():
         query['name'] = query_path.split("/")[-1].split(".")[0]
     if 'pattern' not in query.keys():
-        query['pattern'] = -1
+        query['pattern'] = 9999
     out['meta'] = {
         'name': query['name'],
         'pattern': int(query['pattern'])
