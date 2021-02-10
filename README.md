@@ -370,9 +370,9 @@ of Friedrich-Alexander-Universität Erlangen-Nürnberg, project title
 Effect*](https://www.linguistik.phil.fau.de/projects/efe/)
 (2017-2020).
 
-Further development of the package has been funded by the Deutsche
+Further development of the package is funded by the Deutsche
 Forschungsgemeinschaft (DFG) within the project [Reconstructing
 Arguments from Noisy
 Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number
-377333057, as part of the Priority Program [Robust Argumentation
-Machines](http://www.spp-ratio.de/home/) (SPP-1999).
+377333057 (2018-2023), as part of the Priority Program [Robust
+Argumentation Machines](http://www.spp-ratio.de/home/) (SPP-1999).
