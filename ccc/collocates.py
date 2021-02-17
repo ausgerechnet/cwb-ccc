@@ -35,7 +35,7 @@ class Collocates:
         self.mws = mws
 
         # determine layer to work on
-        if p_query not in self.corpus.attributes_available['name'].values:
+        if p_query not in self.corpus.attributes_available['attribute'].values:
             logger.warning(
                 'p_att "%s" not available, falling back to primary layer' % p_query
             )
@@ -103,7 +103,7 @@ class Collocates:
             f2.columns = ['marginal']
 
             # get corpus size
-            N = f2['marginal'].sum() - len(self.f1_set)
+            N = f2['marginal'].sum()  # - len(self.f1_set)
 
         # deduct node frequencies from marginals
         node_freq = self.corpus.counts.cpos(self.f1_set, [self.p_query])
@@ -259,6 +259,7 @@ def add_ams(f, f1, f2, N,
         by=[order, 'item'], ascending=False
     )
 
+    # apply cut-off
     if cut_off is not None:
         contingencies = contingencies.head(cut_off)
 
