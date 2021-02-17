@@ -27,7 +27,7 @@ class Keywords:
             return
 
         # determine layer to work on
-        if p_query not in corpus.attributes_available['name'].values:
+        if p_query not in corpus.attributes_available['attribute'].values:
             logger.warning(
                 'p_att "%s" not available, falling back to primary layer' % p_query
             )
