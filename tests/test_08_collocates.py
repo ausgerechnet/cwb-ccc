@@ -207,3 +207,19 @@ def test_collocates_no_mws(germaparl):
     dump = corpus.query(query)
     collocates = Collocates(corpus, dump.df, p_query='word', mws=None)
     collocates.show()
+
+
+def test_collocates_nodes(germaparl):
+
+    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+
+    query = (
+        '[lemma=","] | [lemma="\\."] | [lemma="\\)"] | [lemma="\\("]'
+    )
+    # three discoursemes
+    dump = corpus.query(query)
+    print(dump.df)
+    collocates = Collocates(corpus, dump.df)
+    df = collocates.show(cut_off=None)
+    assert("," not in df.index)
+    assert("(" not in df.index)

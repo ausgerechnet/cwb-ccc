@@ -112,6 +112,7 @@ def test_argmin_query(brexit):
     print(conc['df'].iloc[0])
 
 
+@pytest.mark.skipif(not local, reason='works on my machine')
 @pytest.mark.brexit
 def test_dumps(brexit):
 

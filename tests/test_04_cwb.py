@@ -1,4 +1,5 @@
 from ccc import Corpus
+from ccc import Corpora
 import pandas as pd
 import pytest
 
@@ -326,3 +327,10 @@ def test_query_s_atts_brexit(brexit):
     columns += ['ner_type', 'tweet_id']
     print(df['ner_type'].value_counts())
     assert(all(elem in df.columns for elem in columns))
+
+
+# CORPORA
+@pytest.mark.corpus_init
+def test_corpora():
+    corpora = Corpora()
+    assert(type(corpora.show()) == pd.DataFrame)
