@@ -127,10 +127,10 @@ class DiscCon:
     def add_disc(self, disc):
 
         if disc.idx in self.discoursemes.keys():
-            logger.warning("discourseme already associated to discursive position")
+            logger.warning("discourseme already included in constellation")
         else:
             self.discoursemes[disc.idx] = disc
-            self.df_nodes = dict()  # reset df nodes
+            self.df_nodes = dict()  # reset df_nodes
 
     def add_items(self, items):
 
@@ -165,11 +165,11 @@ class DiscCon:
                 abs(df_nodes['offset']) <= window
             ]
             df_nodes = df_nodes.rename(columns={
-                    'match_x': 'match',
-                    'matchend_x': 'matchend',
-                    'match_y': 'match_' + disc.idx,
-                    'matchend_y': 'matchend_' + disc.idx,
-                    'offset': 'offset_' + disc.idx
+                'match_x': 'match',
+                'matchend_x': 'matchend',
+                'match_y': 'match_' + disc.idx,
+                'matchend_y': 'matchend_' + disc.idx,
+                'offset': 'offset_' + disc.idx
             })
 
         self.df_nodes[window] = df_nodes
@@ -252,15 +252,28 @@ class DiscCon:
 
         # get and correct df_cooc, f1_set
         df_cooc, f1_set = df_node_to_cooc(df_nodes)
+
         if len(f1_set) == 0:
             logger.warning("no matches")
             return DataFrame()
+
+        # check for presence of topic in topic context
+        # NB: this is necessary since we might have excluded
+        # some occurrences of the topic from df_nodes
+        # when selecting relevant instances in the constellation
+        logger.info('searching for topic discourseme in topic context')
+        f1_set = self.topic.dump.matches()
+
+        # check for presence of discoursemes in topic context
         for idx in self.discoursemes:
-            logger.info('excluding discourseme "%s" from context' % idx)
+            logger.info('searching for discourseme "%s" in topic context' % idx)
             matches = self.discoursemes[idx].dump.matches()
             f1_set.update(matches)
-            df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
+        logger.info("excluding all discourseme matches from context")
+        df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
+
+        # moving to requested window
         relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
 
         # number of possible occurrence positions within window
@@ -302,70 +315,88 @@ class DiscCon:
 
         return collocates
 
-    def collocates_range(self, windows=[3, 5, 7, 10], order='f', cut_off=100,
-                         p_query="lemma", ams=None, min_freq=2,
-                         frequencies=True, flags=None):
+    # def collocates_range(self, windows=[3, 5, 7, 10], order='f', cut_off=100,
+    #                      p_query="lemma", ams=None, min_freq=2,
+    #                      frequencies=True, flags=None):
 
-        # sort windows and start with largest
-        windows = sorted(windows, reverse=True)
-        max_window = windows[0]
+    #     # sort windows and start with largest
+    #     windows = sorted(windows, reverse=True)
+    #     max_window = windows[0]
 
-        # make sure we're having the right context
-        if max_window not in self.df_nodes.keys():
-            df_nodes = self.slice_discs(max_window)
-        else:
-            df_nodes = self.df_nodes[max_window]
+    #     # make sure we're having the right context
+    #     if max_window not in self.df_nodes.keys():
+    #         df_nodes = self.slice_discs(max_window)
+    #     else:
+    #         df_nodes = self.df_nodes[max_window]
 
-        # get and correct df_cooc, f1_set
-        df_cooc, f1_set = df_node_to_cooc(df_nodes)
-        if len(f1_set) == 0:
-            logger.warning("no matches")
-            return DataFrame()
+    #     # get and correct df_cooc, f1_set
+    #     df_cooc, f1_set = df_node_to_cooc(df_nodes)
 
-        # check for discoursemes in topic context
-        for idx in self.discoursemes:
-            logger.info('excluding discourseme "%s" from context' % idx)
-            matches = self.discoursemes[idx].dump.matches()
-            f1_set.update(matches)
-            df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
+    #     if len(f1_set) == 0:
+    #         logger.warning("no matches")
+    #         return DataFrame()
 
-        relevant = df_cooc.loc[abs(df_cooc['offset']) <= max_window]
+    #     # check for presence of topic in topic context
+    #     # NB: this is necessary since we might have excluded
+    #     # some occurrences of the topic from df_nodes
+    #     # when selecting relevant instances in the constellation
+    #     logger.info('searching for topic discourseme in topic context')
+    #     f1_set = self.topic.dump.matches()
 
-        # number of possible occurrence positions within window
-        f1_inflated = len(relevant)
+    #     # check for discoursemes in topic context
+    #     for idx in self.discoursemes:
+    #         logger.info('searching for discourseme "%s" in topic context' % idx)
+    #         matches = self.discoursemes[idx].dump.matches()
+    #         f1_set.update(matches)
+    #         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-        # get frequency counts
-        f = self.corpus.counts.cpos(
-            relevant['cpos'], [p_query]
-        )
-        f.columns = ['f']
-        f.index = f.index.get_level_values(p_query)
+    #     logger.info("excluding all discourseme matches from context")
+    #     df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-        # get marginals
-        f2 = self.corpus.marginals(
-            f.index, p_query
-        )
-        f2.columns = ['marginal']
+    #     # 
+        
+    #     # do it once for max_window
+    #     relevant = df_cooc.loc[abs(df_cooc['offset']) <= max_window]
 
-        # deduct node frequencies from marginals
-        logger.info("deducting node frequencies")
-        node_freq = self.corpus.counts.cpos(f1_set, [p_query])
-        node_freq.index = node_freq.index.get_level_values(p_query)
-        node_freq.columns = ['in_nodes']
-        f2 = f2.join(node_freq)
-        f2 = f2.fillna(0)
-        f2['in_nodes'] = f2['in_nodes'].astype(int)
-        f2['f2'] = f2['marginal'] - f2['in_nodes']
+    #     # number of possible occurrence positions within window
+    #     f1_inflated = len(relevant)
 
-        # get sub-corpus size
-        f1 = f1_inflated
+    #     # get frequency counts
+    #     f = self.corpus.counts.cpos(
+    #         relevant['cpos'], [p_query]
+    #     )
+    #     f.columns = ['f']
+    #     f.index = f.index.get_level_values(p_query)
 
-        # get corpus size
-        N = self.corpus.corpus_size - len(f1_set)
+    #     # get marginals
+    #     f2 = self.corpus.marginals(
+    #         f.index, p_query
+    #     )
+    #     f2.columns = ['marginal']
 
-        collocates = add_ams(
-            f, f1, f2, N,
-            min_freq, order, cut_off, flags, ams, frequencies
-        )
-        # TODO repeat for each window size
-        return collocates
+    #     # deduct node frequencies from marginals
+    #     logger.info("deducting node frequencies")
+    #     node_freq = self.corpus.counts.cpos(f1_set, [p_query])
+    #     node_freq.index = node_freq.index.get_level_values(p_query)
+    #     node_freq.columns = ['in_nodes']
+    #     f2 = f2.join(node_freq)
+    #     f2 = f2.fillna(0)
+    #     f2['in_nodes'] = f2['in_nodes'].astype(int)
+    #     f2['f2'] = f2['marginal'] - f2['in_nodes']
+
+    #     # get sub-corpus size
+    #     f1 = f1_inflated
+
+    #     # get corpus size
+    #     N = self.corpus.corpus_size - len(f1_set)
+
+    #     collocates = add_ams(
+    #         f, f1, f2, N,
+    #         min_freq, order, cut_off, flags, ams, frequencies
+    #     )
+
+    #     # repeat for all other window sizes
+    #     for w in windows[1:]:
+    #         print(w)
+
+    #     return collocates
