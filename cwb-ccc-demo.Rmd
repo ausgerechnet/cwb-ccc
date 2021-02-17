@@ -1,0 +1,502 @@
+---
+title: "cwb-ccc demo"
+author: "Philipp Heinrich"
+date: "February 17, 2021"
+output:
+  html_document:
+    theme: readable
+    highlight: tango
+    df_print: paged
+    toc: true
+    toc_float: true
+    collapsed: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(OutDec = ".")
+```
+
+```{r message=FALSE}
+library(tidyverse)
+library(kableExtra)
+```
+
+## Python-R interaction
+```{r}
+library(reticulate)
+use_python("/usr/bin/python", required = TRUE)
+py_config()
+```
+
+```{python}
+# python in R markdown
+# cwb-ccc is available from PyPI (pip3 install cwb-ccc)
+import ccc
+print(ccc.__version__)
+```
+
+
+```{python}
+# get overview of indexed corpora
+from ccc import Corpora
+corpora = Corpora()  # cqp_bin, registry_path
+corpora.show()
+```
+
+```{python}
+# select corpus
+from ccc import Corpus
+corpus = Corpus("BREXIT_V20190522_DEDUP")
+print(corpus)
+```
+
+```{python}
+# indexed attributes
+attributes = corpus.attributes_available
+print(type(attributes))
+```
+
+
+```{r}
+# access python objects from R
+df.att <- py$attributes
+str(df.att)
+df.att
+```
+
+## Queries and matches
+
+```{python}
+# python
+matches = corpus.query('[lemma="harm"]')
+matches.breakdown()
+```
+
+```{python}
+# python
+matches.df
+```
+
+```{python}
+# python
+matches = corpus.query(
+  '[lemma="harm"]',
+  context_left=0,
+  context_right=50,
+  context_break="tweet"
+)
+matches.df
+```
+
+## Concordancing
+
+### Basic formats
+
+```{python}
+# python
+matches = corpus.query(
+  '[lemma="harm"]',
+  context_break = 'tweet',
+  context = None
+)
+conc = matches.concordance()
+```
+
+```{r}
+# R
+head(py$conc)
+py$conc$raw[[1]]
+```
+
+#### just the (con)text
+```{python}
+conc = matches.concordance(form='simple')
+```
+
+```{r}
+head(py$conc)
+```
+
+#### kwic format
+```{python}
+conc = matches.concordance(form='kwic')
+```
+
+```{r}
+head(py$conc)
+```
+
+```{r}
+# some post-processing with R
+py$conc %>%
+  head(10) %>%
+  select(c("left", "node", "right")) %>%
+  kbl(booktabs = T, align = c("rcl"), longtable = T,
+      col.names = c("left context", "node", "right context")) %>%
+  row_spec(0, bold = T) %>%
+  column_spec(c(1, 3), width = "8cm") %>%
+  column_spec(2, bold=T) %>%
+  kable_styling(latex_options = "striped")
+```
+
+### Accessing annotation layers
+
+```{python}
+corpus.attributes_available
+```
+
+#### s-attributes
+```{python}
+conc = matches.concordance(form='simple', s_show=["tweet_id", "tweet_screen_name"])
+```
+
+```{r}
+head(py$conc)
+```
+
+#### p-attributes
+
+```{python}
+conc = matches.concordance(p_show=["word", "lemma", "pos_ark"])
+```
+
+```{r}
+head(py$conc)
+py$conc$raw[1]
+```
+
+```{python}
+conc = matches.concordance(
+  form='simple',
+  p_show=["word", "lemma", "pos_ark"]
+)
+```
+
+```{python}
+conc = matches.concordance(
+  form='dataframes',
+  p_show=["word", "lemma", "pos_ark"]
+)
+one_match = conc.iloc[0]['df']
+```
+
+```{r}
+py$one_match
+```
+
+### Selection and export
+
+- order: first, last, random
+- cut_off: `int` or `None`
+
+```{python}
+# select via order and cut_off
+conc = matches.concordance(
+  form='simple',
+  s_show=["tweet_id", "tweet_ymd"],
+  cut_off=10,
+  order="random"
+)
+```
+
+```{python}
+conc = matches.concordance(
+  form='simple',
+  s_show=["tweet_id", "tweet_ymd"],
+  cut_off=None
+)
+```
+
+```{r}
+# more than one match per region possible
+ids <- py$conc$tweet_id
+length(ids)
+length(unique(ids))
+```
+
+```{python}
+# use simple or kwic formatting for exporting
+conc = matches.concordance(
+  form='simple', 
+  s_show=["tweet_id", "tweet_ymd"], 
+  cut_off=100, 
+  order="random"
+)
+```
+
+```{python}
+# export from python pandas
+conc[["tweet_id", "text"]].to_csv(
+  "test-export-python.tsv", 
+  sep="\t", index=False
+)
+```
+
+```{r}
+# export from R
+py$conc[, c("tweet_id", "text")] %>%
+  write_tsv("test-export-r.tsv")
+```
+
+
+## Quantitative analyses
+
+### Meta data analysis
+
+```{r}
+meta <- read_tsv(
+  "~/corpora/cwb/upload/brexit/brexit-preref-rant/brexit_v20190522_dedup.tsv.gz",
+  col_types = cols_only(id = col_character(),
+                        ymd = col_date(format = "%Y%m%d"))
+)
+head(meta)
+```
+
+```{python}
+matches = corpus.query('[lemma="vote"]')
+matches.breakdown()
+conc = matches.concordance(
+  form='simple', s_show=["tweet_id"], cut_off=None
+)
+```
+
+```{r}
+# count frequencies per tweet in R
+counts <- py$conc$tweet_id %>% table() %>% as_tibble()
+names(counts) <- c("id", "nr_hits")
+meta <- meta %>% left_join(counts)
+meta$nr_hits[is.na(meta$nr_hits)] <- 0
+```
+
+```{r}
+# visualize distribution over time
+meta %>%
+  mutate(week = lubridate::floor_date(ymd, "week")) %>%
+  group_by(week) %>%
+  filter(week >= as.Date("2016-05-01")) %>%
+  summarise(rel.freq=sum(nr_hits) / n()) %>%
+  ggplot(aes(x=as.Date(week), y=rel.freq)) + 
+  geom_bar(stat="identity") + 
+  ylab("relative frequency per tweet") + xlab("")
+```
+
+### Anchored queries
+
+```{python}
+# read a library: folder must contain sub-folder 'macros' and 'wordlists'
+from ccc import Corpus
+corpus = Corpus(
+  "BREXIT_V20190522_DEDUP",
+  lib_path="/home/ausgerechnet/corpora/cwb/lib/"
+)
+cqp = corpus.start_cqp()
+print(cqp.Exec("show var;"))
+```
+
+```{python}
+# one of ND's argument queries: entity says 1 harms 2
+matches = corpus.query(
+  '@0:[::] [lemma = $nouns_person | pos_ark = "[@OZ#^NJ]" & lemma != "it"]+ @1[::]'
+  '[lemma = "have"]? [word = ":" | lemma = $verbs_communication & lemma != "post"]'
+  '@2:[]+ @3:"will|would" [lemma = $verbs_destruction]'
+  '@4:[::] [word !="[\.\?\!]"]+ @5[::]',
+  match_strategy="longest",
+  context_break="tweet",
+  corrections={1: -1, 3: -1, 5: -1}
+)
+matches.breakdown()
+```
+
+
+```{python}
+# define 'slots' for automatic summaries
+conc = matches.concordance(
+  p_show=["word", "lemma"],
+  cut_off=None,
+  form="extended",
+  slots={'entity': [0, 1], 'wrecker': [2, 3], 'wreckee': [4, 5]},
+  p_slots="lemma"
+)
+one_match = conc.iloc[0]['df']
+```
+
+
+```{r}
+head(py$conc)
+```
+
+
+```{r}
+# one result:
+py$one_match
+```
+
+
+```{r}
+# what's in the slots?
+data.frame(table(py$conc$entity_lemma)) %>% arrange(desc(Freq))
+data.frame(table(py$conc$wrecker_lemma)) %>% arrange(desc(Freq))
+data.frame(table(py$conc$wreckee_lemma)) %>% arrange(desc(Freq))
+```
+
+### Collocates
+```{python}
+matches = corpus.query(
+  '[lemma="harm"]',
+  context_break="tweet",
+  context=None
+)
+coll = matches.collocates() # p_query = 'lemma', window = 5, order = 'f', cut_off = 100, min_freq = 2
+```
+
+```{r}
+head(py$coll)
+```
+
+implemented association measures ([pandas-association-measures](https://github.com/fau-klue/pandas-association-measures)):
+
+- t-score
+- z-score
+- Dice
+- log-likelihood
+- mutual information
+- log-ratio
+
+easy to extend using frequency columns
+
+- O11, O12, O21, O22 (and E11, E12, E21, E22)
+- or "frequency signature" f, f1, f2, N
+
+```{python}
+# query a different annotation layer:
+coll = matches.collocates(p_query="word")
+```
+
+```{python}
+# set cut-off to None to score all items
+coll = matches.collocates(cut_off=None)
+```
+
+```{r}
+head(py$coll)
+```
+
+
+```{python}
+# use reasonable measure for cut-off
+coll = matches.collocates(min_freq=20, order="log_likelihood", cut_off=200)
+```
+
+```{r}
+head(py$coll)
+```
+
+### Keywords
+
+```{r}
+# natural way of creating subcorpora
+meta.may <- meta %>%
+  filter(lubridate::floor_date(ymd, "month") == as.Date("2016-05-01"))
+ids_may <- meta.may$id
+meta.june <- meta %>%
+  filter(lubridate::floor_date(ymd, "month") == as.Date("2016-06-01"))
+ids_june <- meta.june$id
+```
+
+
+```{python}
+regions = corpus.dump_from_s_att('tweet_id', r.ids_may)
+kw_may = regions.keywords(cut_off=None)
+regions = corpus.dump_from_s_att('tweet_id', r.ids_june)
+kw_june = regions.keywords(cut_off=None)
+```
+
+```{r}
+py$kw_may %>% arrange(desc(log_likelihood)) %>%
+  select(log_ratio, log_likelihood)
+py$kw_june %>% arrange(desc(log_likelihood)) %>%
+  select(log_ratio, log_likelihood)
+```
+
+### Visualization
+```{r}
+# function for plotting collocates (or keywords)
+coll.plot <- function(df.plot,
+                      amplitude='log_ratio', 
+                      significance='log_likelihood', 
+                      size='marginal'){
+  
+  # make sure items exist as a column
+  if (!("item" %in% names(df.plot))){
+    df.plot$item <- row.names(df.plot)
+  }
+  
+  # encode significance thresholds
+  df.plot <- df.plot %>% mutate(
+    significance = factor(
+      cut(
+        eval(as.name(significance)),
+        breaks = c(-Inf, qchisq(.95, 1), qchisq(.99, 1), qchisq(.999, 1), Inf),
+        labels = c("-", "*", "**", "***")
+      ),
+      levels = rev(c("-", "*", "**", "***"))
+    )
+  )
+
+  # plot
+  df.plot %>% ggplot(aes_string(x = nrow(df.plot):1,
+                                y = amplitude,
+                                colour = "significance",
+                                size = size)) +
+    geom_point() +
+    coord_flip() +
+    scale_color_manual(values = colorspace::sequential_hcl(5, palette = "Grays"),
+                       drop = FALSE) +
+    scale_x_continuous(breaks = nrow(df.plot):1,
+                       labels = df.plot$item) +
+    labs(x=NULL, y=amplitude)
+}
+```
+
+```{python}
+# no cut-off
+coll5 = matches.collocates(window=5, cut_off=None)
+```
+
+```{r}
+# visualization of top collocates
+py$coll5 %>% 
+  filter(marginal > 10) %>%  # post-hoc filter
+  arrange(desc(log_ratio)) %>% 
+  head(20) %>% 
+  coll.plot()
+
+py$coll5 %>% 
+  filter(marginal > 10) %>%
+  arrange(desc(log_likelihood)) %>% 
+  head(20) %>% 
+  coll.plot(amplitude = "log_likelihood")
+```
+
+```{python}
+# different window size
+coll10 = matches.collocates(window=10, cut_off=None)
+```
+
+```{r}
+py$coll10 %>% 
+  filter(marginal > 10) %>%
+  arrange(desc(log_likelihood)) %>% 
+  head(20) %>% 
+  coll.plot(amplitude = "log_likelihood")
+```
+
+```{r}
+# further down the road ...
+py$coll5 %>% 
+  filter(marginal > 10) %>%
+  arrange(desc(log_ratio)) %>% 
+  head(500) %>% tail(20) %>% 
+  coll.plot()
+```
