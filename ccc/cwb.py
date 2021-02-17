@@ -17,6 +17,7 @@ from .dumps import Dump
 from CWB.CL import Corpus as Crps
 from pandas import DataFrame, read_csv, to_numeric
 from pandas.errors import EmptyDataError
+from numpy import minimum, maximum
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -73,12 +74,37 @@ class Corpora:
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
-    def start_cqp(self):
+    def cqp(self):
         return start_cqp(self.cqp_bin, self.registry_path)
 
-    def show_corpora(self):
-        cqp = self.start_cqp()
+    def show(self):
+
+        cqp = self.cqp()
+
+        # get all corpora defined in registry
         corpora = cqp.Exec("show corpora;").split("\n")
+
+        # check availability and corpus sizes
+        corpora_available = list()
+        sizes = list()
+        for corpus_name in corpora:
+
+            try:
+                corpus = Corpus(corpus_name,
+                                cqp_bin=self.cqp_bin,
+                                registry_path=self.registry_path,
+                                data_path=None)
+
+                corpora_available.append(corpus_name)
+                sizes.append(corpus.corpus_size)
+
+            except SystemError:
+                logger.warning(
+                    "corpus %s defined in registry but not available" % corpus_name
+                )
+        corpora = DataFrame({'corpus': corpora_available,
+                             'tokens': sizes})
+        corpora = corpora.set_index('corpus')
         return corpora
 
 
@@ -169,15 +195,7 @@ class Corpus:
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
         # get available corpus attributes
-        cqp = self.start_cqp()
-        self.attributes_available = read_csv(
-            StringIO(cqp.Exec('show cd;')),
-            sep='\t', names=['att', 'name', 'annotation', 'active']
-        ).fillna(False)
-        self.attributes_available['annotation'] = (
-            self.attributes_available['annotation'] == '-V'
-        )
-        cqp.__kill__()
+        self.attributes_available = self._get_attributes()
 
         # init Cache
         self.cache = Cache(
@@ -189,13 +207,27 @@ class Corpus:
             self.corpus_name, self.registry_path
         )
 
+    def _get_attributes(self):
+        cqp = self.start_cqp()
+        cqp_ret = cqp.Exec('show cd;')
+        cqp.__kill__()
+
+        attributes = read_csv(
+            StringIO(cqp_ret), sep='\t',
+            names=['type', 'attribute', 'annotation', 'active']
+        ).fillna(False)
+
+        attributes['active'] = (attributes['active'] == "*")
+        attributes['annotation'] = (attributes['annotation'] == '-V')
+        return attributes
+
     def __str__(self):
         return "\n".join([
             'a ccc.Corpus: "%s"' % self.corpus_name,
-            "size      : %s" % str(self.corpus_size),
-            "data      : %s" % str(self.data_path),
-            "subcorpus : %s" % str(self.subcorpus),
-            "available attributes:",
+            "size        : %s" % str(self.corpus_size),
+            "data        : %s" % str(self.data_path),
+            "subcorpus   : %s" % str(self.subcorpus),
+            "attributes  :",
             self.attributes_available.to_string(),
         ])
 
@@ -246,7 +278,7 @@ class Corpus:
 
         # check if there's annotations
         annotation = self.attributes_available.loc[
-            self.attributes_available['name'] == s_att
+            self.attributes_available['attribute'].values == s_att
         ]['annotation'].values[0]
 
         records = list()
@@ -296,7 +328,7 @@ class Corpus:
 
         # check if there is any annotation
         annotation = self.attributes_available.loc[
-            self.attributes_available['name'] == s_att
+            self.attributes_available['attribute'].values == s_att
         ]['annotation'].values[0]
         if not annotation:
             logger.info('no annotation in s-att "%s"' % s_att)
@@ -634,12 +666,12 @@ class Corpus:
             if context_left is None:
                 df['context'] = df.match
             else:
-                df['context'] = df.match - context_left
+                df['context'] = maximum(0, df.match - context_left)
             # right
             if context_right is None:
                 df['contextend'] = df.matchend
             else:
-                df['contextend'] = df.matchend + context_right
+                df['contextend'] = minimum(self.corpus_size - 1, df.matchend + context_right)
         else:
             # get context confined by s-attribute if necessary
             s_regions = self.attributes.attribute(context_break, 's')

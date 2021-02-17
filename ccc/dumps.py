@@ -65,7 +65,7 @@ class Dump:
                 breakdown = self.corpus.counts.dump(
                     df_dump=self.df,
                     start='match', end='matchend',
-                    p_atts=['word']
+                    p_atts=['word'], strategy=1
                 )
                 self._breakdown = breakdown
 
@@ -117,9 +117,11 @@ class Dump:
             form=form
         )
 
-    def collocates(self, p_query='lemma', mws=10, window=5, order='f',
+    def collocates(self, p_query='lemma', mws=20, window=5, order='f',
                    cut_off=100, ams=None, min_freq=2,
                    frequencies=True, flags=None, marginals='corpus'):
+
+        mws = max(mws, window)
 
         coll = Collocates(
             self.corpus.copy(),

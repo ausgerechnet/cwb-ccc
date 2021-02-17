@@ -199,7 +199,7 @@ def test_disccon_concordance(germaparl):
 
 
 @pytest.mark.disccon
-def test_discpos_collocates(germaparl):
+def test_disccon_collocates(germaparl):
 
     corpus = Corpus(germaparl['corpus_name'],
                     registry_path=germaparl['registry_path'])
@@ -252,3 +252,63 @@ def test_disccon_collocates_empty(germaparl):
     disccon.add_items(["Verhandlung"])
     # show collocates
     assert(disccon.collocates(window=5).empty)
+
+
+def test_disccon_collocates_nodes(germaparl):
+    corpus = Corpus(
+        germaparl['corpus_name'],
+        registry_path=germaparl['registry_path'],
+        # data_path=None
+    )
+    topic = Disc(
+        corpus,
+        [",", ".", ")", "("],
+        'lemma',
+        's',
+        's',
+        escape=True
+    )
+    df = topic.collocates(cut_off=None)
+    assert("," not in df.index)
+    assert("(" not in df.index)
+
+    topic2 = DiscCon(topic)
+    df2 = topic2.collocates(cut_off=None)
+    assert(df2.equals(df))
+
+
+@pytest.mark.disccon
+def test_disccon_collocates_range(germaparl):
+
+    corpus = Corpus(
+        germaparl['corpus_name'],
+        registry_path=germaparl['registry_path'],
+        # data_path=None
+    )
+
+    # three discoursemes
+    topic = Disc(
+        corpus,
+        [",", ".", ")", "("],
+        'lemma',
+        's',
+        's',
+        escape=True
+    )
+    disc1 = Disc(
+        corpus,
+        ["die", "sie", "und"],
+        'lemma',
+        's',
+        's'
+    )
+    disc2 = Disc(
+        corpus,
+        ["sein", "in", "eine", "zu", "haben"],
+        'lemma',
+        's',
+        's'
+    )
+    disccon = DiscCon(topic, [disc1, disc2])
+    df = disccon.collocates(cut_off=None)
+    print(df)
