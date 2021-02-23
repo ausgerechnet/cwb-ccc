@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class Disc:
+class Discourseme:
     """
     realization of a discourseme given a corpus and query parameters
     """
@@ -38,7 +38,7 @@ class Disc:
             'escape': escape
         }
 
-        # run query
+        # run query, save dump
         query = formulate_cqp_query(
             items, p_query, s_query, flags, escape
         )
@@ -46,8 +46,11 @@ class Disc:
             query, context, context_break=s_context
         )
         self.dump = dump
+
+        # identifier for this discourseme
         self.idx = dump.name_cache
 
+        # init parameters for context and matches
         self._context = None
         self._matches = None
 
@@ -83,18 +86,44 @@ class Disc:
             cut_off=cut_off, form=form
         )
 
-    def collocates(self, window=5, order='f', cut_off=100,
+    def collocates(self, window_sizes=[5], order='f', cut_off=100,
                    p_query="lemma", ams=None, min_freq=2,
                    frequencies=True, flags=None):
 
-        coll = Collocates(self.dump.corpus.copy(), self.dump.df, p_query)
-        return coll.show(
-            window=window, order=order, cut_off=cut_off, ams=ams,
-            min_freq=min_freq, frequencies=frequencies, flags=flags
+        # determine mode
+        if type(window_sizes) is int:
+            single = True
+            mws = window_sizes
+        elif type(window_sizes) is list:
+            single = False
+            mws = max(window_sizes)
+        else:
+            raise NotImplementedError("window_sizes must be int or list")
+
+        coll = Collocates(
+            corpus=self.dump.corpus.copy(),
+            df_dump=self.dump.df,
+            p_query=p_query,
+            mws=mws
         )
 
+        if single:
+            return coll.show(
+                window=mws, order=order, cut_off=cut_off, ams=ams,
+                min_freq=min_freq, frequencies=frequencies, flags=flags
+            )
 
-class DiscCon:
+        else:
+            collocates = dict()
+            for window in window_sizes:
+                collocates[window] = coll.show(
+                    window=window, order=order, cut_off=cut_off, ams=ams,
+                    min_freq=min_freq, frequencies=frequencies, flags=flags
+                )
+            return collocates
+
+
+class DiscoursemeConstellation:
     """
     realization of a discourseme constellation given a topic and discoursemes
 
