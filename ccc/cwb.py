@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 def start_cqp(cqp_bin, registry_path,
               data_path=None, corpus_name=None,
               lib_path=None, subcorpus=None):
-    """Starts and returns CQP process. Reads library (with sub-folders
-    "wordlists" and "macros").
+    """Start CQP process, activate (sub-)corpora, set paths, and read
+    library (with sub-folders "wordlists" and "macros").
 
     :param str cqp_bin: /path/to/cqp-binary
     :param str registry_path: /path/to/cwb/registry/
@@ -84,7 +84,7 @@ class Corpora:
     def __init__(self,
                  cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/'):
-        """Establishes connections to registry and CQP.
+        """Establish connections to registry and CQP.
 
         :param str cqp_bin: /path/to/cqp-binary
         :param str registry_path: /path/to/cwb/registry/
@@ -95,7 +95,7 @@ class Corpora:
         self.cqp_bin = cqp_bin
 
     def show(self):
-        """Shows all corpora defined in registry and available via CQP
+        """Show all corpora defined in registry and available via CQP
         alongside corpus size (number of tokens).
 
         :return: Available corpora
@@ -126,6 +126,8 @@ class Corpora:
                     "corpus %s defined in registry but not available" % corpus_name
                 )
 
+        cqp.__kill__()
+
         # create dataframe
         corpora = DataFrame({'corpus': corpora_available,
                              'tokens': sizes})
@@ -140,24 +142,36 @@ class Corpus:
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
                  data_path="/tmp/ccc-data/"):
-        """Establishes connection to CQP and corpus attributes; imports macros
-        and wordlists. Raises KeyError if corpus not in registry.
+        """Establish connection to CQP and corpus attributes, set paths, read
+        library. Raises KeyError if corpus not in registry.
 
         attributes:
-        .registry_path
-        .corpus_name
+
         .data_path
+        .registry_path
+        .cqp_bin
+        .lib_path
+
+        .corpus_name
+        .subcorpus [None]
+
         .attributes_available
         .corpus_size
-        .lib_path
-        .subcorpus [None]
+
+        initialized methods:
+        .attributes
+        .cache
+        .counts
 
         methods:
         .__str__
-        .read_lib
+        ._get_attributes
 
-        .get_s_extents
+        .start_cqp
+        .copy
+
         .get_s_id
+        .get_s_extents
         .get_s_annotation
         .get_s_annotations
 
@@ -212,7 +226,7 @@ class Corpus:
         # macros and wordlists
         self.lib_path = lib_path
 
-        # init Attributes
+        # init attributes
         self.attributes = Crps(
             self.corpus_name,
             registry_dir=self.registry_path
@@ -233,21 +247,14 @@ class Corpus:
             self.corpus_name, self.registry_path
         )
 
-    def _get_attributes(self):
-        cqp = self.start_cqp()
-        cqp_ret = cqp.Exec('show cd;')
-        cqp.__kill__()
-
-        attributes = read_csv(
-            StringIO(cqp_ret), sep='\t',
-            names=['type', 'attribute', 'annotation', 'active']
-        ).fillna(False)
-
-        attributes['active'] = (attributes['active'] == "*")
-        attributes['annotation'] = (attributes['annotation'] == '-V')
-        return attributes
-
     def __str__(self):
+        """Method for printing.
+
+        :return: corpus_name, corpus_size, data_path, subcorpus
+        :rtype: str
+
+        """
+
         return "\n".join([
             'a ccc.Corpus: "%s"' % self.corpus_name,
             "size        : %s" % str(self.corpus_size),
@@ -257,7 +264,39 @@ class Corpus:
             self.attributes_available.to_string(),
         ])
 
+    def _get_attributes(self):
+        """Get indexed p- and s-attributes.
+
+        :return: attributes and annotation info
+        :rtype: DataFrame
+
+        """
+
+        # use CQP's context descriptor
+        cqp = self.start_cqp()
+        cqp_ret = cqp.Exec('show cd;')
+        cqp.__kill__()
+
+        # read as dataframe
+        attributes = read_csv(
+            StringIO(cqp_ret), sep='\t',
+            names=['type', 'attribute', 'annotation', 'active']
+        ).fillna(False)
+
+        # post-process Boolean columns
+        attributes['active'] = (attributes['active'] == "*")
+        attributes['annotation'] = (attributes['annotation'] == '-V')
+
+        return attributes
+
     def start_cqp(self):
+        """Start CQP process.
+
+        :return: CQP process
+        :rtype: CQP
+
+        """
+
         return start_cqp(
             self.cqp_bin,
             self.registry_path,
@@ -268,6 +307,12 @@ class Corpus:
         )
 
     def copy(self):
+        """Get a fresh initialization of the corpus.
+
+        :return: corpus
+        :rtype: Corpus
+        """
+
         return Corpus(
             self.corpus_name,
             self.lib_path,
@@ -279,19 +324,27 @@ class Corpus:
     ################
     # s-attributes #
     ################
+    def get_s_id(self, cpos, s_att):
+        """Gets CWB-ID of s_att at cpos."""
+        s_regions = self.attributes.attribute(s_att, "s")
+        try:
+            return s_regions.cpos2struc(cpos)
+        except KeyError:
+            return -1
+
     def get_s_extents(self, s_att):
-        """Maps s_att to corresponding extents, returns DataFrame.
+        """Map s-attribute to corresponding extents (+ annotation).
 
-        :param str s_att: s-attribute to get extents for
+        :param str s_att: s-attribute to get extents and annotation for
 
-        :return: df indexed by match, matchend; CWBID, annotation
+        :return: df indexed by match, matchend; CWB-ID, annotation (if available)
         :rtype: DataFrame
 
         """
 
-        logger.info("enter get_s_extents")
+        logger.info('enter get_s_extents')
 
-        # retrieve from cache
+        # retrieve from cache if possible
         parameters = ['s_extents', s_att]
         df = self.cache.get(parameters)
         if df is not None:
@@ -307,6 +360,7 @@ class Corpus:
             self.attributes_available['attribute'].values == s_att
         ]['annotation'].values[0]
 
+        # loop through regions
         records = list()
         for s in s_regions:
             s_id = self.get_s_id(s[0], s_att)
@@ -320,6 +374,8 @@ class Corpus:
                 s_att + '_CWBID': s_id,
                 s_att: ann
             })
+
+        # create dataframe
         df = DataFrame(records)
         df = df.set_index(['match', 'matchend'])
 
@@ -328,29 +384,20 @@ class Corpus:
 
         return df
 
-    def get_s_id(self, cpos, s_att):
-        """gets ID of s_att at cpos"""
-        s_regions = self.attributes.attribute(s_att, "s")
-        try:
-            return s_regions.cpos2struc(cpos)
-        except KeyError:
-            return -1
-
-    def get_s_annotation(self, df, s_att):
-        """Retrieves CWBIDs and annotations of s-attribute of match.
+    def get_s_annotation(self, df_dump, s_att):
+        """Retrieve CWB-IDs and annotations of s-attribute of match.
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param str s_att: s-attribute to retrieve
 
         """
-        # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc.)
 
         logger.info("cwb.get_s_annotation")
 
         # get IDs
-        df[s_att + "_CWBID"] = df.match.apply(
-                lambda x: self.get_s_id(x, s_att)
-            )
+        df_dump[s_att + "_CWBID"] = df_dump.match.apply(
+            lambda x: self.get_s_id(x, s_att)
+        )
 
         # check if there is any annotation
         annotation = self.attributes_available.loc[
@@ -361,7 +408,7 @@ class Corpus:
         else:
             # only retrieve where applicable
             s_regions = self.attributes.attribute(s_att, "s")
-            df_applicable = df.loc[df[s_att + "_CWBID"] != -1]
+            df_applicable = df_dump.loc[df_dump[s_att + "_CWBID"] != -1]
             s_region = DataFrame(
                 index=df_applicable.index,
                 data=df_applicable.match.apply(
@@ -379,7 +426,7 @@ class Corpus:
                 'retrieved %d annotations of s-att %s' % (nr, s_att)
             )
             # join to dataframe
-            df = df.join(s_region[s_att])
+            df = df_dump.join(s_region[s_att])
 
         return df
 
@@ -393,6 +440,9 @@ class Corpus:
         :rtype: DataFrame
 
         """
+
+        # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc.)
+
         df = df_dump.reset_index()
         df = df[['match', 'matchend']]
         for s in s_atts:
@@ -404,7 +454,7 @@ class Corpus:
     # p-attributes #
     ################
     def cpos2patts(self, cpos, p_atts=['word'], ignore_missing=True):
-        """Retrieves p-attributes of corpus position.
+        """Retrieve p-attributes of corpus position.
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
@@ -581,7 +631,7 @@ class Corpus:
         df_dump is indexed by (match, matchend).  Optional columns for
         each anchor:
 
-        === (match, matchend), 0, ..., 9 ===
+        === (match, matchend), 0*, ..., 9* ===
 
         :param str query: valid CQP query (without 'within' clause)
         :param str s_query: s-attribute used for initial query
@@ -662,9 +712,9 @@ class Corpus:
         return df_dump
 
     def extend_df_dump(self, df_dump, context_left, context_right, context_break):
-        """Extends a df_dump to context, breaking the context at context_break:
+        """Extend a df_dump to context, breaking the context at context_break:
 
-        === (match, matchend), 0, ..., 9, context, contextend ===
+        === (match, matchend), 0*, ..., 9*, context, contextend ===
 
         left_context -> context
         (1) context_break is None, context_left is None
@@ -732,7 +782,7 @@ class Corpus:
 
     def query_cache(self, query, context_left, context_right,
                     context_break, corrections, match_strategy):
-        """Queries the corpus, computes (context-extended) df_dump and caches
+        """Query the corpus, compute (context-extended) df_dump and caches
         the result. Name will be generated automatically from query
         parameters and returned.  Otherwise see query() for
         parameters.
@@ -772,7 +822,7 @@ class Corpus:
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
               match_strategy='standard', name='mnemosyne', save=False):
-        """Queries the corpus, computes df_dump.
+        """Query the corpus, compute (context-extended) df_dump.
 
         === (match, matchend), 0*, ..., 9*, context*, contextend* ===
 
