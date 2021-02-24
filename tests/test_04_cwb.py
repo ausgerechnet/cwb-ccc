@@ -6,10 +6,11 @@ import pytest
 from .conftest import local
 
 
-def get_corpus(germaparl):
+def get_corpus(corpus_settings):
     return Corpus(
-        germaparl['corpus_name'],
-        registry_path=germaparl['registry_path']
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None)
     )
 
 
@@ -18,11 +19,15 @@ def get_corpus(germaparl):
 ###############################################
 
 @pytest.mark.corpus_init
+def test_corpora(germaparl):
+    corpora = Corpora(registry_path=germaparl['registry_path'])
+    assert(type(corpora.show()) == pd.DataFrame)
+    assert("GERMAPARL1386" in corpora.show().index)
+
+
+@pytest.mark.corpus_init
 def test_corpus(germaparl):
-    corpus = Corpus(
-        germaparl['corpus_name'],
-        registry_path=germaparl['registry_path']
-    )
+    corpus = get_corpus(germaparl)
     assert(corpus.corpus_size > 1000)
 
 
@@ -42,11 +47,7 @@ def test_corpus_descriptor(germaparl):
 @pytest.mark.brexit
 @pytest.mark.corpus_init
 def test_corpus_lib(brexit):
-    corpus = Corpus(
-        brexit['corpus_name'],
-        lib_path=brexit['lib_path'],
-        registry_path=brexit['registry_path']
-    )
+    corpus = get_corpus(brexit)
     assert(corpus.corpus_size > 1000)
 
 
@@ -328,9 +329,3 @@ def test_query_s_atts_brexit(brexit):
     print(df['ner_type'].value_counts())
     assert(all(elem in df.columns for elem in columns))
 
-
-# CORPORA
-@pytest.mark.corpus_init
-def test_corpora():
-    corpora = Corpora()
-    assert(type(corpora.show()) == pd.DataFrame)

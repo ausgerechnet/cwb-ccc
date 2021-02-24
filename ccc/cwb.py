@@ -23,8 +23,23 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
+def start_cqp(cqp_bin, registry_path,
+              data_path=None, corpus_name=None,
               lib_path=None, subcorpus=None):
+    """Starts and returns CQP process. Reads library (with sub-folders
+    "wordlists" and "macros").
+
+    :param str cqp_bin: /path/to/cqp-binary
+    :param str registry_path: /path/to/cwb/registry/
+    :param str data_path: /path/to/data/and/cache
+    :param str corpus_name: name of corpus in CWB registry
+    :param str lib_path: path/to/macros/and/wordlists
+    :param str subcorpus: name of subcorpus (NQR)
+
+    :return: CQP process
+    :rtype: CQP
+
+    """
 
     cqp = CQP(
         bin=cqp_bin,
@@ -55,9 +70,8 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             cqp.Exec(cqp_exec)
-
         # execute each macro once (avoids CQP shortcoming for nested macros)
-        macros = cqp.Exec("show macro;")
+        macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
             cqp.Exec(macro)
 
@@ -65,21 +79,31 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
 
 
 class Corpora:
-    """ interface to CWB-indexed corpora """
+    """Interface to CWB-indexed corpora."""
 
     def __init__(self,
                  cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/'):
+        """Establishes connections to registry and CQP.
+
+        :param str cqp_bin: /path/to/cqp-binary
+        :param str registry_path: /path/to/cwb/registry/
+
+        """
 
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
-    def cqp(self):
-        return start_cqp(self.cqp_bin, self.registry_path)
-
     def show(self):
+        """Shows all corpora defined in registry and available via CQP
+        alongside corpus size (number of tokens).
 
-        cqp = self.cqp()
+        :return: Available corpora
+        :rtype: DataFrame
+
+        """
+
+        cqp = start_cqp(self.cqp_bin, self.registry_path)
 
         # get all corpora defined in registry
         corpora = cqp.Exec("show corpora;").split("\n")
@@ -94,7 +118,6 @@ class Corpora:
                                 cqp_bin=self.cqp_bin,
                                 registry_path=self.registry_path,
                                 data_path=None)
-
                 corpora_available.append(corpus_name)
                 sizes.append(corpus.corpus_size)
 
@@ -102,14 +125,17 @@ class Corpora:
                 logger.warning(
                     "corpus %s defined in registry but not available" % corpus_name
                 )
+
+        # create dataframe
         corpora = DataFrame({'corpus': corpora_available,
                              'tokens': sizes})
         corpora = corpora.set_index('corpus')
+
         return corpora
 
 
 class Corpus:
-    """ interface to CWB-indexed corpus """
+    """Interface to CWB-indexed corpus."""
 
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
