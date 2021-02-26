@@ -2,7 +2,8 @@ import os
 import pytest
 
 
-local = False
+local = True
+data_path = "/tmp/ccc-data/"
 
 
 @pytest.fixture
@@ -15,12 +16,10 @@ def germaparl():
 
     context = 50
     s_context = 'text'
+    s_meta = 'text_id'
 
     s_query = 's'
-    query = (
-        r'[lemma="Horst"]? [lemma="Seehofer"]'
-        r'"\[" "CDU" "/" "CSU" "\]"'
-    )
+    query = '[lemma="Seehofer"]'
     query_anchor = (
         r'@0[lemma="Horst"]? @1[lemma="Seehofer"] @2:[::]'
     )
@@ -33,6 +32,7 @@ def germaparl():
         'context': context,
         's_context': s_context,
         's_query': s_query,
+        's_meta': s_meta,
         'query': query,
         'query_anchor': query_anchor,
         'anchors': anchors,

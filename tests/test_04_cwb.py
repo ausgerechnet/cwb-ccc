@@ -3,14 +3,16 @@ from ccc import Corpora
 import pandas as pd
 import pytest
 
-from .conftest import local
+from .conftest import local, data_path
 
 
-def get_corpus(corpus_settings):
+def get_corpus(corpus_settings, data_path=data_path):
+
     return Corpus(
         corpus_settings['corpus_name'],
         registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None)
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
     )
 
 
@@ -18,26 +20,26 @@ def get_corpus(corpus_settings):
 # INIT ########################################
 ###############################################
 
-@pytest.mark.corpus_init
+@pytest.mark.init
 def test_corpora(germaparl):
     corpora = Corpora(registry_path=germaparl['registry_path'])
     assert(type(corpora.show()) == pd.DataFrame)
     assert("GERMAPARL1386" in corpora.show().index)
 
 
-@pytest.mark.corpus_init
+@pytest.mark.init
 def test_corpus(germaparl):
     corpus = get_corpus(germaparl)
     assert(corpus.corpus_size > 1000)
 
 
-@pytest.mark.corpus_init
+@pytest.mark.init
 def test_get_corpus(germaparl):
     corpus = get_corpus(germaparl)
     assert(corpus.corpus_size > 1000)
 
 
-@pytest.mark.corpus_init
+@pytest.mark.init
 def test_corpus_descriptor(germaparl):
     corpus = get_corpus(germaparl)
     assert(type(corpus.attributes_available) == pd.DataFrame)
@@ -45,74 +47,43 @@ def test_corpus_descriptor(germaparl):
 
 @pytest.mark.skipif(not local, reason='works on my machine')
 @pytest.mark.brexit
-@pytest.mark.corpus_init
+@pytest.mark.init
 def test_corpus_lib(brexit):
     corpus = get_corpus(brexit)
     assert(corpus.corpus_size > 1000)
 
 
-################################################
-# DUMPS ########################################
-################################################
+#####################################################
+# ATTRIBUTES ########################################
+#####################################################
 
-
-@pytest.mark.dump
-def test_dump_from_query(germaparl):
+@pytest.mark.attributes
+def test_cpos2patt(germaparl):
     corpus = get_corpus(germaparl)
-    df_dump = corpus.dump_from_query(
-        query=germaparl['query'],
-        s_query=germaparl['s_query'],
-        match_strategy='standard'
-    )
-    assert(type(df_dump) == pd.DataFrame)
-    assert(df_dump.shape[0] == 1)
+    token = corpus.cpos2patts(124345)
+    assert(type(token) == tuple)
+    assert(token[0] == 'gilt')
 
 
-@pytest.mark.dump
-def test_dump_from_query_anchors(germaparl):
+@pytest.mark.attributes
+def test_cpos2patts(germaparl):
     corpus = get_corpus(germaparl)
-    df_dump = corpus.dump_from_query(
-        query=germaparl['query_anchor'],
-        s_query=germaparl['s_query'],
-        anchors=germaparl['anchors'],
-        match_strategy='standard'
-    )
-    assert(type(df_dump) == pd.DataFrame)
-    assert(df_dump.shape[0] == 30)
-    assert(all(elem in df_dump.columns for elem in germaparl['anchors']))
+    token = corpus.cpos2patts(124345, ['word', 'pos'])
+    assert(type(token) == tuple)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
-@pytest.mark.dump
-def test_dump_from_query_lib(brexit):
-    corpus = Corpus(
-        brexit['corpus_name'],
-        lib_path=brexit['lib_path']
-    )
-    df_dump = corpus.dump_from_query(
-        query=brexit['query_lib'],
-        s_query=brexit['s_query'],
-        match_strategy='longest'
-    )
-    assert(type(df_dump) == pd.DataFrame)
-    assert(df_dump.shape[0] > 99)
+@pytest.mark.attributes
+def test_marginals(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.marginals(["Merkel", "Seehofer", "gehen"], p_att='lemma')
+    assert(df.loc['gehen']['freq'] == 224)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
-@pytest.mark.dump
-def test_dump_from_query_1(brexit):
-    corpus = Corpus(
-        brexit['corpus_name']
-    )
-    df_dump = corpus.dump_from_query(
-        query='[lemma="angela"] @1[lemma="merkel"]',
-        anchors=[1],
-        match_strategy='longest'
-    )
-    assert(type(df_dump) == pd.DataFrame)
-    assert(df_dump.shape[0] > 99)
+@pytest.mark.attributes
+def test_marginals_pattern(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.marginals(["Merkel", "Seehofer", "geh.*"], pattern=True)
+    assert(df.loc['geh.*']['freq'] == 310)
 
 
 #####################################################
@@ -205,68 +176,212 @@ def test_subcorpus_anchor(germaparl):
     assert(len(df1) > len(df_anchor) > len(df2))
 
 
-@pytest.mark.subcorpus
+################################################
+# CREATING DUMPS ###############################
+################################################
+
+
+@pytest.mark.dump
 def test_dump_from_s_att(germaparl):
     corpus = get_corpus(germaparl)
-    dump = corpus.dump_from_s_att(
-        'text_id', ['i13_86_1_1']
-    )
-    assert(dump.df.shape[0] == 1)
+    df = corpus.dump_from_s_att('text_id')
+    assert(df.iloc[0]['text_id_ann'] == "i13_86_1_1")
 
 
-@pytest.mark.subcorpus
+@pytest.mark.dump
 def test_dump_from_s_att_wo(germaparl):
     corpus = get_corpus(germaparl)
-    dump = corpus.dump_from_s_att('p', [True])
-    assert(dump.df.shape[0] == 7332)
+    df = corpus.dump_from_s_att('p')
+    assert(df.shape[0] == 7332)
 
 
-#####################################################
-# ATTRIBUTES ########################################
-#####################################################
+@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.brexit
+@pytest.mark.dump
+def test_dump_from_s_att_with(brexit):
+    corpus = Corpus(brexit['corpus_name'])
+    df = corpus.dump_from_s_att('ner_type')
+    assert(len(df) == 1212944)
 
-@pytest.mark.attributes
-def test_cpos2patt(germaparl):
+
+@pytest.mark.dump
+def test_dump_from_query(germaparl):
     corpus = get_corpus(germaparl)
-    token = corpus.cpos2patts(124345)
-    assert(type(token) == tuple)
-    assert(token[0] == 'gilt')
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] == 30)
 
 
-@pytest.mark.attributes
-def test_cpos2patts(germaparl):
+@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.brexit
+@pytest.mark.dump
+def test_dump_from_query_1(brexit):
+    corpus = Corpus(
+        brexit['corpus_name']
+    )
+    df_dump = corpus.dump_from_query(
+        query='[lemma="angela"] @1[lemma="merkel"]',
+        anchors=[1],
+        match_strategy='longest'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+
+
+@pytest.mark.dump
+def test_dump_from_query_anchors(germaparl):
     corpus = get_corpus(germaparl)
-    token = corpus.cpos2patts(124345, ['word', 'pos'])
-    assert(type(token) == tuple)
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query_anchor'],
+        s_query=germaparl['s_query'],
+        anchors=germaparl['anchors'],
+        match_strategy='standard'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] == 30)
+    assert(all(elem in df_dump.columns for elem in germaparl['anchors']))
 
 
-@pytest.mark.attributes
-def test_get_s_extents(germaparl):
+@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.brexit
+@pytest.mark.dump
+def test_dump_from_query_lib(brexit):
+    corpus = Corpus(
+        brexit['corpus_name'],
+        lib_path=brexit['lib_path']
+    )
+    df_dump = corpus.dump_from_query(
+        query=brexit['query_lib'],
+        s_query=brexit['s_query'],
+        match_strategy='longest'
+    )
+    assert(type(df_dump) == pd.DataFrame)
+    assert(df_dump.shape[0] > 99)
+
+
+#################################################
+# WORKING ON DUMPS ##############################
+#################################################
+
+@pytest.mark.dumpp
+def test_dump2satt(germaparl):
     corpus = get_corpus(germaparl)
-    df = corpus.get_s_extents('text_id')
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    df = corpus.dump2satt(df_dump, germaparl['s_meta'])
+    assert(len(df) == 30)
+    assert(df.iloc[0]['text_id_span'] == 10628)
+
+
+@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.brexit
+@pytest.mark.dumpp
+def test_dump2satt_2(brexit):
+    corpus = get_corpus(brexit)
+    df_dump = corpus.dump_from_query(
+        query=brexit['query'],
+        s_query=brexit['s_query'],
+        match_strategy='longest'
+    )
+    df = corpus.dump2satt(df_dump, 'vp')
+    print(df)
+
+
+@pytest.mark.dumpp
+def test_dump2context(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    df = corpus.dump2context(df_dump, 20, 20, 's')
+    print(df)
+
+
+@pytest.mark.dumpp
+def test_dump2context2(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    df = corpus.dump2context(df_dump, 20, 20, 'text_id')
     print(df)
 
 
 @pytest.mark.skipif(not local, reason='works on my machine')
 @pytest.mark.brexit
-@pytest.mark.attributes
-def test_get_s_extents_2(brexit):
-    corpus = Corpus(brexit['corpus_name'])
-    df = corpus.get_s_extents('ner_type')
+@pytest.mark.dumpp
+def test_dump2context3(brexit):
+    corpus = get_corpus(brexit)
+    df_dump = corpus.dump_from_query(
+        query=brexit['query'],
+        s_query=brexit['s_query'],
+        match_strategy='longest'
+    )
+    df = corpus.dump2context(df_dump, 20, 20, 'np')
+    print(df)
+
+
+@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.brexit
+@pytest.mark.dumpp
+def test_dump2context4(brexit):
+    corpus = get_corpus(brexit)
+    df_dump = corpus.dump_from_query(
+        query=brexit['query'],
+        s_query=brexit['s_query'],
+        match_strategy='longest'
+    )
+    df = corpus.dump2context(df_dump, None, 5, 'tweet_id')
+    print(df)
+
+
+@pytest.mark.dumpp
+def test_dump2patt(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    df = corpus.dump2context(df_dump, 20, 20, 'text_id')
+    df = corpus.dump2patt(df)
+    print(df)
+
+
+@pytest.mark.dumpp
+def test_dump2patt2(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.dump_from_query(
+        query=germaparl['query'],
+        s_query=germaparl['s_query'],
+        match_strategy='standard'
+    )
+    df = corpus.dump2context(df_dump, 20, 20, 'text_id')
+    df = corpus.dump2patt(df, start='context', end='contextend')
     print(df)
 
 
 #################################################
-# .query ########################################
+# QUERY ALIASES #################################
 #################################################
-
 
 @pytest.mark.query
 def test_query_context_1(germaparl):
     corpus = get_corpus(germaparl)
     df = corpus.query(
         cqp_query=germaparl['query_anchor'],
-        context=None,
+        context=None
     ).df
     assert(type(df) == pd.DataFrame)
     columns = germaparl['anchors'] + ['context', 'contextend']
@@ -279,7 +394,7 @@ def test_query_context_2(germaparl):
     df = corpus.query(
         cqp_query=germaparl['query_anchor'],
         context_left=10,
-        context=15,
+        context=15
     ).df
     assert(type(df) == pd.DataFrame)
     columns = germaparl['anchors'] + ['context', 'contextend']
@@ -295,7 +410,8 @@ def test_query_context_3(germaparl):
         context_break='s'
     ).df
     assert(type(df) == pd.DataFrame)
-    columns = germaparl['anchors'] + ['context_id', 'context', 'contextend']
+    print(df)
+    columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
 
@@ -308,24 +424,6 @@ def test_query_context_4(germaparl):
         context_break='s'
     ).df
     assert(type(df) == pd.DataFrame)
-    columns = germaparl['anchors'] + ['context_id', 'context', 'contextend']
+    print(df)
+    columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
-
-
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
-@pytest.mark.query
-def test_query_s_atts_brexit(brexit):
-    corpus = Corpus(brexit['corpus_name'])
-    df_dump = corpus.query(
-        cqp_query='[lemma="nigel"]',
-        context=10,
-        context_break='tweet'
-    ).df
-    df = corpus.get_s_annotations(df_dump, ['ner_type', 'tweet_id', 'tweet'])
-    assert(type(df) == pd.DataFrame)
-    columns = [a + '_CWBID' for a in ['ner_type', 'tweet_id', 'tweet']]
-    columns += ['ner_type', 'tweet_id']
-    print(df['ner_type'].value_counts())
-    assert(all(elem in df.columns for elem in columns))
-
