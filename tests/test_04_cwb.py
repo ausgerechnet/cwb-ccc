@@ -134,8 +134,7 @@ def test_deactivate_subcorpus(germaparl):
     # define subcorpus
     corpus.query(
         cqp_query="[lemma='sein'] expand to s",
-        name='SBCRPS3',
-        save=True
+        name='SBCRPS3'
     )
 
     # activate subcorpus
@@ -166,8 +165,7 @@ def test_subcorpus_anchor(germaparl):
     )
     df_anchor = corpus.query(
         germaparl['query_anchor'],
-        name='SBCRPS5',
-        save=True
+        name='SBCRPS5'
     ).df
     corpus.subcorpus = 'SBCRPS5'
     df2 = corpus.dump_from_query(
@@ -410,7 +408,6 @@ def test_query_context_3(germaparl):
         context_break='s'
     ).df
     assert(type(df) == pd.DataFrame)
-    print(df)
     columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
@@ -424,6 +421,17 @@ def test_query_context_4(germaparl):
         context_break='s'
     ).df
     assert(type(df) == pd.DataFrame)
-    print(df)
     columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
+
+
+@pytest.mark.query
+def test_query_context_5(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.query(
+        cqp_query='[lemma="Horst"]',
+        context=10,
+        context_break='s'
+    ).df
+    assert(type(df) == pd.DataFrame)
+    print(df)

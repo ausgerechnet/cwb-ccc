@@ -182,8 +182,8 @@ class Corpus:
     .dump2context
 
     # query aliases
+    .query_s_att
     .query
-    .query_cache
 
     """
 
@@ -558,55 +558,17 @@ class Corpus:
 
         return df
 
-    def query_cache(self, query, context_left, context_right,
-                    context_break, corrections, match_strategy):
-        """Query the corpus, compute (context-extended) df_dump and cache the
-        result. Name will be generated automatically from query
-        parameters and returned.  Otherwise see query() for
-        parameters.
-
-        """
-
-        # check subcorpus size to avoid confusion when re-naming
-        if self.subcorpus is not None:
-            cqp = self.start_cqp()
-            subcorpus = cqp.Exec("size %s" % self.subcorpus)
-            cqp.__kill__()
-            subcorpus = str(subcorpus) + self.subcorpus
-        else:
-            subcorpus = None
-
-        # identify query
-        identifiers = ['df_dump', query, context_left, context_right,
-                       context_break, corrections, match_strategy, subcorpus]
-        name_cache = self.cache.generate_idx(identifiers)
-
-        df_dump = self.cache.get(name_cache)
-        if df_dump is not None:
-            # retrieve from cache
-            logger.info('using version "%s" of df_dump' % name_cache)
-            logger.info('df_dump has %d matches' % len(df_dump))
-        else:
-            # compute
-            dump = self.query(query, None, context_left,
-                              context_right, context_break,
-                              corrections, match_strategy, name_cache)
-            df_dump = dump.df
-            # put into cache
-            self.cache.set(name_cache, df_dump)
-
-        return df_dump, name_cache
-
     def dump_from_query(self, query, s_query=None, anchors=[],
                         match_strategy='standard', name='Last', save=False):
         """Execute query, get DataFrame of corpus positions (CWB dump).
         Resulting df_dump is indexed by (match, matchend).
 
-        Note that in the CWB, only 2 anchors can be active
+        Note that in the CWB, only two anchors can be active
         simultaneously. The method thus runs the query once with
         anchors set to [0, 1], and then collects the remaining anchor
-        points by running the query again on the NQR for each pair of
-        remaining anchor points.  Optional columns for each anchor:
+        points by running the query again on the NQR of the first
+        query run for each pair of remaining anchor points.  Optional
+        columns for each anchor:
 
         === (match, matchend), 0*, ..., 9* ===
 
@@ -623,6 +585,28 @@ class Corpus:
         :rtype: DataFrame
 
         """
+
+        # identify query
+        if self.subcorpus is not None:
+            # check subcorpus size to avoid confusion when re-naming
+            cqp = self.start_cqp()
+            sbcrpssize = cqp.Exec("size %s" % self.subcorpus)
+            cqp.__kill__()
+        else:
+            sbcrpssize = None
+        identifier = self.cache.generate_idx([
+             query, s_query, anchors, match_strategy, self.subcorpus, sbcrpssize
+        ], prefix="df_dump:")
+
+        # retrieve from cache if possible
+        df_dump = self.cache.get(identifier)
+        if df_dump is not None:
+            logger.info(
+                'using cached version "%s" of df_dump with %d matches' % (
+                    identifier, len(df_dump)
+                )
+            )
+            return df_dump
 
         # init cqp and set matching strategy
         cqp = self.start_cqp()
@@ -685,6 +669,9 @@ class Corpus:
         # drop constant columns (contain only -1)
         # TODO this does not seem right
         df_dump = df_dump.loc[:, (df_dump != df_dump.iloc[0]).any()]
+
+        # put into cache
+        self.cache.set(identifier, df_dump)
 
         if save:
             cqp.nqr_save(self.corpus_name, name)
@@ -919,40 +906,32 @@ class Corpus:
         return Dump(
             self.copy(),
             spans,
-            name_cache=None,
             name_cqp=None
         )
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name='mnemosyne', save=False):
-        """Query the corpus, compute (context-extended) df_dump.
+              match_strategy='standard', name='Last', save=False):
+        """Query the corpus, compute context-extended df_dump, and correct
+        anchors. If a name is given, the resulting NQR (without
+        context and before anchor correction) will be written to disk
+        in CWB binary format.
 
         === (match, matchend), 0*, ..., 9*, contextid*, context*, contextend* ===
 
-        If the magic word 'mnemosyne' is given as name of the result,
-        the query parameters will be used to create an identifier and
-        the resulting subcorpus will be saved, so that the result can
-        be accessed directly by later queries with the same parameters
-        on the same subcorpus.
-
         :param str query: CQP query
-        :param int context: maximum context around match (symmetric)
+        :param int context: maximum context around match..matchend (symmetric)
         :param int context_left: maximum context left to the match
         :param int context_right: maximum context right to the matchend
         :param str context_break: s-attribute to confine context to
-        :param dict corrections: corrections to apply to anchors {anchor: offset}
+        :param dict corrections: corrections {anchor: offset}
         :param str match_strategy: CQP matching strategy
         :param str name: name for NQR
-        :param bool save: whether to save NQR to disk
 
-        :return: df_dump
-        :rtype: DataFrame
+        :return: dump
+        :rtype: Dump
 
         """
-
-        name_cache = None
-        name_cqp = None
 
         # preprocess input
         query, s_query, anchors = preprocess_query(cqp_query)
@@ -963,44 +942,30 @@ class Corpus:
         if context_right is None:
             context_right = context
 
-        # use cached version?
-        if name == 'mnemosyne':
-            df_dump, name_cache = self.query_cache(
-                query, context_left, context_right,
-                context_break, corrections, match_strategy
-            )
-            # TODO this does not seem right
-            # cqp.Exec("save %s;" % name_cache)  # save to disk
-
-        else:
-            # get df_dump
-            logger.info("running query to get df_dump")
-            df_dump = self.dump_from_query(
-                query=query,
-                s_query=s_query,
-                anchors=anchors,
-                match_strategy=match_strategy,
-                name=name,
-                save=save
-            )
-            # empty return?
-            if len(df_dump) == 0:
-                logger.warning("found 0 matches")
-                df_dump = DataFrame()
-            else:
-                # extend dump
-                df_dump = self.dump2context(
-                    df_dump, context_left, context_right, context_break
-                )
-                # apply corrections to anchor points
-                df_dump = correct_anchors(df_dump, corrections)
-
-        # create return object
-        dump = Dump(
-            self.copy(),
-            df_dump,
-            name_cache,
-            name_cqp
+        df_dump = self.dump_from_query(
+            query=query,
+            s_query=s_query,
+            anchors=anchors,
+            match_strategy=match_strategy,
+            name=name,
+            save=save
         )
 
-        return dump
+        # empty return?
+        if len(df_dump) == 0:
+            logger.warning("found 0 matches")
+            df_dump = DataFrame()
+        else:
+            # extend dump to context
+            df_dump = self.dump2context(
+                df_dump, context_left, context_right, context_break
+            )
+            # apply corrections to anchor points
+            df_dump = correct_anchors(df_dump, corrections)
+
+        # return proper dump
+        return Dump(
+            self.copy(),
+            df_dump,
+            name_cqp=name
+        )

@@ -16,13 +16,12 @@ logger = logging.getLogger(__name__)
 class Dump:
     """ result of a query """
 
-    def __init__(self, corpus, df_dump, name_cache, name_cqp):
+    def __init__(self, corpus, df_dump, name_cqp):
 
         # TODO: check context against collocates.mws
 
         self.df = df_dump
         self.corpus = corpus
-        self.name_cache = name_cache
         self.name_cqp = name_cqp
         self.size = len(self.df)
 
@@ -40,8 +39,6 @@ class Dump:
             crpssbcrps, self.corpus.corpus_size
         ))
         desc.append('- %d matches' % self.size)
-        if self.name_cache is not None:
-            desc.append('- name in cache: "%s"' % self.name_cache)
         if self.name_cqp is not None:
             desc.append('- name in cqp  : "%s"' % self.name_cqp)
         return "\n".join(desc)

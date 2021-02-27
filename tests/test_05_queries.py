@@ -35,7 +35,9 @@ def test_convert():
 @pytest.mark.brexit
 def test_run_from_cqpy(brexit):
 
-    corpus = Corpus(brexit['corpus_name'], brexit['registry_path'])
+    corpus = Corpus(brexit['corpus_name'],
+                    brexit['lib_path'])
+
     path = "tests/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
