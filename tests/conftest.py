@@ -1,9 +1,10 @@
 import os
 import pytest
+from pandas import read_csv
 
 
-local = True
-data_path = "/tmp/ccc-data/"
+LOCAL = True
+DATA_PATH = "/tmp/ccc-data/"
 
 
 @pytest.fixture
@@ -12,6 +13,7 @@ def germaparl():
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     registry_path = os.path.join(dir_path, "test-corpora/registry/")
+    dump_path = os.path.join(dir_path, "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
 
     context = 50
@@ -25,6 +27,8 @@ def germaparl():
     )
     anchors = [0, 1, 2]
     query_within = query_anchor + " within " + s_query + ";"
+    seehofer_dump = read_csv(dump_path, sep="\t", header=None, dtype=int,
+                             index_col=[0, 1], names=['match', 'matchend'])
 
     return {
         'registry_path': registry_path,
@@ -36,7 +40,8 @@ def germaparl():
         'query': query,
         'query_anchor': query_anchor,
         'anchors': anchors,
-        'query_full': query_within
+        'query_full': query_within,
+        'dump': seehofer_dump
     }
 
 

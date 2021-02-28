@@ -3,10 +3,10 @@ from ccc import Corpora
 import pandas as pd
 import pytest
 
-from .conftest import local, data_path
+from .conftest import LOCAL, DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=data_path):
+def get_corpus(corpus_settings, data_path=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
@@ -45,7 +45,7 @@ def test_corpus_descriptor(germaparl):
     assert(type(corpus.attributes_available) == pd.DataFrame)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.init
 def test_corpus_lib(brexit):
@@ -92,36 +92,6 @@ def test_marginals_pattern(germaparl):
 
 
 @pytest.mark.subcorpus
-def test_subcorpus_from_query(germaparl):
-    corpus = get_corpus(germaparl)
-    assert(int(corpus.start_cqp().Exec('size SBCRPS1')) == 0)
-    cqp = corpus.start_cqp()
-    cqp.nqr_from_query(
-        query="[lemma='Seehofer']",
-        name='SBCRPS1',
-        return_dump=False
-    )
-    assert(int(cqp.Exec('size SBCRPS1')) > 0)
-    cqp.__kill__()
-
-
-@pytest.mark.subcorpus
-def test_subcorpus_from_df(germaparl):
-    corpus = get_corpus(germaparl)
-    cqp = corpus.start_cqp()
-    assert(int(cqp.Exec('size SBCRPS2')) == 0)
-    df = corpus.dump_from_query(
-        query=germaparl['query']
-    )
-    cqp.nqr_from_dump(
-        df_dump=df,
-        name='SBCRPS2',
-    )
-    assert(int(cqp.Exec('size SBCRPS2')) > 0)
-    cqp.__kill__()
-
-
-@pytest.mark.subcorpus
 def test_deactivate_subcorpus(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -160,18 +130,17 @@ def test_subcorpus_anchor(germaparl):
     corpus = get_corpus(germaparl)
 
     df1 = corpus.dump_from_query(
-        "[lemma='Horst']",
-        s_query=germaparl['s_context']
+        "[lemma='Seehofer']"
     )
-    df_anchor = corpus.query(
-        germaparl['query_anchor'],
-        name='SBCRPS5'
+    corpus.query(
+        "[lemma='Horst'] extent to s",
+        name='Horst', save=True
     ).df
-    corpus.subcorpus = 'SBCRPS5'
+    corpus.subcorpus = 'Horst'
     df2 = corpus.dump_from_query(
-        "[lemma='Horst']", None
+        "[lemma='Seehofer']"
     )
-    assert(len(df1) > len(df_anchor) > len(df2))
+    assert(len(df1) > len(df2))
 
 
 ################################################
@@ -193,7 +162,7 @@ def test_dump_from_s_att_wo(germaparl):
     assert(df.shape[0] == 7332)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_s_att_with(brexit):
@@ -214,7 +183,7 @@ def test_dump_from_query(germaparl):
     assert(df_dump.shape[0] == 30)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_query_1(brexit):
@@ -244,7 +213,7 @@ def test_dump_from_query_anchors(germaparl):
     assert(all(elem in df_dump.columns for elem in germaparl['anchors']))
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_query_lib(brexit):
@@ -278,7 +247,7 @@ def test_dump2satt(germaparl):
     assert(df.iloc[0]['text_id_span'] == 10628)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dumpp
 def test_dump2satt_2(brexit):
@@ -289,7 +258,7 @@ def test_dump2satt_2(brexit):
         match_strategy='longest'
     )
     df = corpus.dump2satt(df_dump, 'vp')
-    print(df)
+    assert(df.iloc[0]['vp_cwbid'] == 112)
 
 
 @pytest.mark.dumpp
@@ -300,8 +269,10 @@ def test_dump2context(germaparl):
         s_query=germaparl['s_query'],
         match_strategy='standard'
     )
-    df = corpus.dump2context(df_dump, 20, 20, 's')
-    print(df)
+    df_dump = corpus.dump2context(df_dump, 20, 20, 's')
+    assert(all(
+        elem in df_dump.columns for elem in ['context', 'contextid', 'contextend']
+    ))
 
 
 @pytest.mark.dumpp
@@ -316,7 +287,7 @@ def test_dump2context2(germaparl):
     print(df)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dumpp
 def test_dump2context3(brexit):
@@ -330,7 +301,7 @@ def test_dump2context3(brexit):
     print(df)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.dumpp
 def test_dump2context4(brexit):
@@ -434,4 +405,3 @@ def test_query_context_5(germaparl):
         context_break='s'
     ).df
     assert(type(df) == pd.DataFrame)
-    print(df)

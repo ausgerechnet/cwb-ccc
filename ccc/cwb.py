@@ -42,7 +42,7 @@ def start_cqp(cqp_bin, registry_path,
     """
 
     cqp = CQP(
-        bin=cqp_bin,
+        binary=cqp_bin,
         options='-c -r ' + registry_path
     )
 

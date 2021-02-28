@@ -22,24 +22,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class StoppableThread(threading.Thread):
-    """Thread class with a stop() method. The thread itself has to check
-    regularly for the stopped() condition."""
-
-    def __init__(self,  *args, **kwargs):
-        super(StoppableThread, self).__init__(*args, **kwargs)
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def stopped(self):
-        return self._stop_event.is_set()
-
-
 # GLOBAL CONSTANTS OF MODULE:
-cProgressControlCycle = 5   # secs between each progress control cycle
-cMaxRequestProcTime = 500   # max secs for processing a user request
+CPROGRESSCONTROLCYCLE = 5   # secs between each progress control cycle
+CMAXREQUESTPROCTIME = 500   # max secs for processing a user request
 
 
 # ERROR MESSAGE TYPES:
@@ -62,41 +47,42 @@ class CQP:
     """Wrapper for CQP."""
 
     def _progressController(self):
-        """Control the progess.
+        """Control the progress.
 
         CREATED: 2008-02
 
         This method is run as a thread.
-        At certain intervals (cProgressControlCycle), it controls how long the
+        At certain intervals (CPROGRESSCONTROLCYCLE), it controls how long the
         CQP process of the current user has spent on processing this user's
         latest CQP command. If this time exceeds a certain maximun
-        (cMaxRequestProcTime), this method kills the CQP process.
+        (CMAXREQUESTPROCTIME), this method kills the CQP process.
         """
         self.runController = True
         while self.runController:
-            time.sleep(cProgressControlCycle)
+            time.sleep(CPROGRESSCONTROLCYCLE)
             if self.execStart is not None:
-                if time.time() - self.execStart > cMaxRequestProcTime *\
+                if time.time() - self.execStart > CMAXREQUESTPROCTIME *\
                  self.maxProcCycles:
-                    print(
-                        '''WARNING!: PROGRESS CONTROLLER IDENTIFIED BLOCKING CQP
-                        PROCESS ID {}'''.format(self.CQP_process.pid), end='')
+                    logger.error(
+                        "progress controller identified blocking cqp process id "
+                        "{}".format(self.CQP_process.pid)
+                    )
                     # os.kill(self.CQP_process.pid, SIGKILL) - doesn't work!
                     os.popen("kill -9 " + str(self.CQP_process.pid))  # works!
-                    print("=> KILLED!")
+                    logger.error("=> killed!")
                     self.CQPrunning = False
                     break
 
-    def __init__(self, bin="/usr/local/bin/cqp", options='-c', print_version=False):
+    def __init__(self, binary="/usr/local/bin/cqp", options='-c', print_version=False):
         """Class constructor."""
         self.execStart = time.time()
         self.maxProcCycles = 1.0
 
         # start CQP as a child process of this wrapper
-        if bin is None:
-            print("ERROR: Path to CQP binaries undefined", file=sys.stderr)
+        if binary is None:
+            logger.error("path to CQP binaries undefined")
             sys.exit(1)
-        self.CQP_process = subprocess.Popen(bin + ' ' + options,
+        self.CQP_process = subprocess.Popen(binary + ' ' + options,
                                             shell=True,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
@@ -107,9 +93,7 @@ class CQP:
         self.CQPrunning = True
 
         # init progress controller
-        progressthread = threading.Thread(
-            target=self._progressController, args=()
-        )
+        progressthread = threading.Thread(target=self._progressController, args=())
         progressthread.setDaemon(True)
         progressthread.start()
 
@@ -118,13 +102,13 @@ class CQP:
         version_string = version_string.rstrip()  # Equivalent to Perl's chomp
         self.CQP_process.stdout.flush()
         if print_version:
-            print(version_string, file=sys.stderr)
+            logger.info(version_string)
         version_regexp = re.compile(
             r'^CQP\s+(?:\w+\s+)*([0-9]+)\.([0-9]+)(?:\.b?([0-9]+))?(?:\s+(.*))?$'
         )
         match = version_regexp.match(version_string)
         if not match:
-            print("ERROR: CQP backend startup failed", file=sys.stderr)
+            logger.error("CQP backend startup failed")
             sys.exit(1)
         self.major_version = int(match.group(1))
         self.minor_version = int(match.group(2))
@@ -132,15 +116,10 @@ class CQP:
         self.compile_date = match.group(4)
 
         # We need cqp-2.2.b41 or newer (for query lock):
-        if not (
-                self.major_version >= 3 or
-                (self.major_version == 2 and
-                    self.minor_version == 2 and
-                    self.beta_version >= 41)
-                ):
-            print(
-                "ERROR: CQP version too old: " + version_string,
-                file=sys.stderr)
+        if not (self.major_version >= 3 or (self.major_version == 2 and
+                                            self.minor_version == 2 and
+                                            self.beta_version >= 41)):
+            logger.error("CQP version too old: " + version_string)
             sys.exit(1)
 
         # Error handling:
@@ -165,7 +144,7 @@ class CQP:
         """Set procCycles."""
         print("    Setting procCycles to {}".format(procCycles))
         self.maxProcCycles = procCycles
-        return int(self.maxProcCycles * cMaxRequestProcTime)
+        return int(self.maxProcCycles * CMAXREQUESTPROCTIME)
 
     def __del__(self):
         """Stop running CQP instance."""
@@ -174,10 +153,10 @@ class CQP:
             self.CQPrunning = False
             self.execStart = time.time()
             if self.debug:
-                print("Shutting down CQP backend ...", end='')
+                logger.info("Shutting down CQP backend ...")
             self.CQP_process.stdin.write('exit;')  # exits CQP backend
             if self.debug:
-                print("Done\nCQP object deleted.")
+                logger.info("Done\nCQP object deleted.")
             self.execStart = None
             # print "Finished"
 
@@ -198,7 +177,7 @@ class CQP:
         cmd = cmd.rstrip()  # Equivalent to Perl's 'chomp'
         cmd = re.sub(r';\s*$', r'', cmd)
         if self.debug:
-            print("CQP <<", cmd + ";")
+            logger.info("CQP <<", cmd + ";")
         try:
             self.CQP_process.stdin.write(cmd + '; .EOL.;\n')
         except IOError:
@@ -266,18 +245,15 @@ class CQP:
             result = self.Exec('dump ' + subcorpus + ";")
 
         elif ((not isinstance(first, int) and first is not None) or
-                (not isinstance(last, int) and last is not None)):
-            sys.stderr.write(
-                            "ERROR: Invalid value for first (" +
-                            str(first) + ") or last (" + str(last) +
-                            ") line in Dump() method\n")
+              (not isinstance(last, int) and last is not None)):
+            logger.error("Invalid value for first (" + str(first) +
+                         ") or last (" + str(last) + ") line in Dump() method")
             sys.exit(1)
         elif isinstance(first, int) and isinstance(last, int):
             if first > last:
-                sys.stderr.write(
-                    "ERROR: Invalid value for first line (first = " +
-                    str(first) + " > last = " + str(last) +
-                    ") in Dump() method\n")
+                logger.error("Invalid value for first line (first = " +
+                             str(first) + " > last = " + str(last) +
+                             ") in Dump() method")
                 sys.exit(1)
         else:
             if first is not None and last is None:
@@ -289,14 +265,15 @@ class CQP:
                 'dump ' + subcorpus + " " + str(first) + " " + str(last) + ";"
             )
 
-        # convert to dataframe
+        # convert to pandas dataframe
         df = read_csv(StringIO(result),
                       sep="\t", header=None, index_col=[0, 1],
                       names=["match", "matchend", "target", "keyword"])
         df = df.astype(int)
+
         return df
 
-    def Undump(self, subcorpus="tmp", df=DataFrame()):
+    def Undump(self, subcorpus="Last", df=DataFrame()):
         """Undump named query result from table of corpus positions."""
         columns = []
         wth = ''
@@ -331,17 +308,13 @@ class CQP:
         )
         match = re.match(spec_regexp, spec1)
         if not match:
-            print(
-                "ERROR: Invalid key '" + spec1 + "' in Group() method",
-                file=sys.stderr)
+            logger.error("Invalid key '" + spec1 + "' in Group() method")
             sys.exit(1)
         spec1 = match.group(1) + ' ' + match.group(2)
         if spec2 != '':
             match = re.match(spec_regexp, spec2)
             if not match:
-                print(
-                    "ERROR: Invalid key '" + spec2 + "' in Group() method",
-                    file=sys.stderr)
+                logger.error("Invalid key '" + spec2 + "' in Group() method")
                 sys.exit(1)
             spec2 = match.group(1) + ' ' + match.group(2)
             cmd = 'group ' + subcorpus + ' ' + spec2 + ' by ' + spec1 + \
@@ -357,17 +330,11 @@ class CQP:
         Based on sort clause.
         """
         if sort_clause is None:
-            print(
-                "ERROR: Parameter 'sort_clause' undefined in Count() method",
-                file=sys.stderr)
+            logger.error("Parameter 'sort_clause' undefined in Count() method")
             sys.exit(1)
-        return self.Exec(
-            'count ' +
-            subcorpus +
-            ' by ' +
-            sort_clause +
-            ' cut ' +
-            str(cutoff))
+        return self.Exec('count ' + subcorpus +
+                         ' by ' + sort_clause +
+                         ' cut ' + str(cutoff))
 
     def Checkerr(self):
         """Check CQP's stderr stream for error messages.
@@ -416,7 +383,7 @@ class CQP:
         if self.error_handler is not None:
             self.error_handler(msg)
         else:
-            print(msg, file=sys.stderr)
+            logger.error(msg)
 
     def Set_error_handler(self, handler=None):
         """Set user-defined error handler."""
@@ -428,9 +395,47 @@ class CQP:
         self.debug = on
         return prev
 
-    def nqr_activate(self, corpus_name, name=None):
-        """Activates named query result or switches back to corpus. """
+    #########################
+    # SOME ALIASES FOR NQRs #
+    #########################
+    def nqr_from_query(self, query, name='Last',
+                       match_strategy='longest', return_dump=True):
+        """Defines NQR from query, optionally returns dump.
 
+        :param str query: valid CQP query
+        :param str name: name for NQR
+        :param str match_strategy: CQP matching strategy
+        :param bool return_dump: whether to return the dump
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
+        logger.info('defining NQR "%s" from query' % name)
+        self.Query('%s=%s;' % (name, query))
+        if return_dump:
+            logger.info('dumping result')
+            df_dump = self.Dump(name)
+            return df_dump
+
+    def nqr_from_dump(self, df_dump, name='Last'):
+        """Alias for Undump. Defines NQR from given dump.
+
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+                                  with optional columns 'target' and 'keyword'
+        :param str name: name for NQR
+
+        """
+        logger.info('defining NQR "%s" from dump with %d matches' % (name, len(df_dump)))
+        self.Undump(name, df_dump)
+
+    def nqr_activate(self, corpus_name, name=None):
+        """Activate NQR or whole corpus.
+
+        :param str corpus_name: name of the corpus
+        :param str name: name of NQR
+
+        """
         if name is not None:
             logger.info('activating NQR "%s:%s"' % (corpus_name, name))
             self.Exec(name)
@@ -439,48 +444,11 @@ class CQP:
             self.Exec(corpus_name)
 
     def nqr_save(self, corpus_name, name='Last'):
-        """Saves named query result to disk.
+        """Save NQR to disk.
 
+        :param str corpus_name: name of the corpus
         :param str name: nqr to save
 
         """
-        logger.info(
-            'saving NQR "%s:%s" to disk' % (corpus_name, name)
-        )
+        logger.info('saving NQR "%s:%s" to disk' % (corpus_name, name))
         self.Exec("save %s;" % name)
-
-    def nqr_from_query(self, query, name='Last',
-                       match_strategy='longest',
-                       return_dump=True):
-        """Defines nqr from query, returns dump.
-
-        :param str query: valid CQP query
-        :param str name: subcorpus name
-        :param str match_strategy: CQP matching strategy
-
-        :return: df_dump
-        :rtype: DataFrame
-
-        """
-        logger.info(
-            'defining NQR "%s" from query' % name
-        )
-        self.Query('%s=%s;' % (name, query))
-
-        if return_dump:
-            logger.info('dumping result')
-            df_dump = self.Dump(name)
-            return df_dump
-
-    def nqr_from_dump(self, df_dump, name='Last'):
-        """Alias for Undump. Defines subcorpus from dump.
-
-        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-                                  with optional columns 'target' and 'keyword'
-        :param str name: subcorpus name
-
-        """
-        logger.info(
-            'defining NQR "%s" from dump ' % name
-        )
-        self.Undump(name, df_dump)
