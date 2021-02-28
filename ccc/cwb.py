@@ -153,37 +153,21 @@ class Corpus:
     .counts
 
     ... the following methods:
-    ._attributes_available()
-    .start_cqp()
-    .copy()
-    # p-attributes
-    .cpos2satt
-    .marginals
-    # s-attributes
-    .cpos2sid
-    .satt2spans
-
-    # subcorpora
-        # .show_subcorpora
-        # .activate_subcorpus
-        # .save_subcorpus
-        # .subcorpus_from_query
-        # .subcorpus_from_dump
-        # .subcorpus_from_s_att
-
-    # creating dumps
-    .dump_from_s_att: creates and caches df
-    .dump_from_query: creates df, saves nqr in cqp
-
-    # working on dumps
-    .dump2patt
-    .dump2satt
-        # .get_s_annotations
-    .dump2context
-
-    # query aliases
-    .query_s_att
-    .query
+    .__str__
+    ._attributes_available
+    .start_cqp
+    .copy
+    .cpos2patts                 # p-attributes
+    .marginals                  # p-attributes
+    .cpos2sid                   # s-attributes
+    .show_subcorpora            # subcorpora
+    .dump_from_s_att            # creating dumps
+    .dump_from_query            # creating dumps
+    .dump2patt                  # working on dumps
+    .dump2satt                  # working on dumps
+    .dump2context               # working on dumps
+    .query_s_att                # query alias
+    .query                      # query alias
 
     """
 
@@ -217,17 +201,16 @@ class Corpus:
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
+        # macros and wordlists
+        self.lib_path = lib_path
+
         # init (sub-)corpus information
         self.corpus_name = corpus_name
         self.subcorpus = None
 
-        # macros and wordlists
-        self.lib_path = lib_path
-
         # init attributes
-        self.attributes = Attributes(
-            self.corpus_name, registry_dir=self.registry_path
-        )
+        self.attributes = Attributes(self.corpus_name, registry_dir=self.registry_path)
+
         # get corpus size
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
@@ -419,83 +402,11 @@ class Corpus:
             df.drop('corpus:subcorpus', axis=1, inplace=True)
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
         except EmptyDataError:
-            logger.warning("no subcorpora defined")
+            logger.info("no subcorpora defined")
             df = DataFrame()
 
         cqp.__kill__()
         return df
-
-    # def activate_subcorpus(self, cqp, subcorpus=None, save=True):
-    #     """Activates subcorpus or switches to main corpus.
-
-    #     :param str subcorpus: named subcorpus to activate
-
-    #     """
-    #     if subcorpus is not None:
-    #         self.subcorpus = subcorpus
-    #         cqp.Exec(self.subcorpus)
-    #         if save:
-    #             self.save_subcorpus(cqp, subcorpus)
-    #         logger.info('switched to subcorpus "%s"' % subcorpus)
-    #     else:
-    #         self.subcorpus = self.corpus_name
-    #         cqp.Exec(self.subcorpus)
-    #         logger.info('switched to corpus "%s"' % self.corpus_name)
-
-    # def save_subcorpus(self, cqp, name='Last'):
-    #     """Saves subcorpus to disk.
-
-    #     :param str name: named subcorpus to save
-
-    #     """
-    #     cqp.Exec("save %s;" % name)
-    #     logger.info(
-    #         'CQP saved subcorpus "%s:%s" to disk' % (self.corpus_name, name)
-    #     )
-
-    # def subcorpus_from_query(self, cqp, query, name='Last',
-    #                          match_strategy='longest',
-    #                          return_dump=True):
-    #     """Defines subcorpus from query, returns dump.
-
-    #     :param str query: valid CQP query
-    #     :param str name: subcorpus name
-    #     :param str match_strategy: CQP matching strategy
-
-    #     :return: df_dump
-    #     :rtype: DataFrame
-
-    #     """
-
-    #     logger.info('defining subcorpus "%s" from query' % name)
-    #     subcorpus_query = '%s=%s;' % (name, query)
-    #     cqp.Query(subcorpus_query)
-    #     if return_dump:
-    #         logger.info('dumping result')
-    #         df_dump = cqp.Dump(name)
-    #         return df_dump
-
-    # def subcorpus_from_dump(self, cqp, df_dump, name='Last'):
-    #     """Defines subcorpus from dump.
-
-    #     :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-    #                               with optional columns 'target' and 'keyword'
-    #     :param str name: subcorpus name
-
-    #     """
-    #     logger.info('defining subcorpus "%s" from dump ' % name)
-    #     cqp.Undump(name, df_dump)
-
-    # def subcorpus_from_s_att(self, cqp, s_att, values, name='Last'):
-    #     """Defines a subcorpus via s-attribute restriction.
-
-    #     :param str s_att: s-att that stores values
-    #     :param set values: set (or list) of values
-    #     :param str name: subcorpus name to create
-
-    #     """
-    #     extents = self.dump_from_s_att(s_att, values).df
-    #     self.subcorpus_from_dump(cqp, extents, name=name)
 
     ##################
     # CREATING DUMPS #

@@ -167,7 +167,7 @@ def test_dump_from_s_att_wo(germaparl):
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_s_att_with(brexit):
-    corpus = Corpus(brexit['corpus_name'])
+    corpus = get_corpus(brexit)
     df = corpus.dump_from_s_att('ner_type')
     assert(len(df) == 1212944)
 
@@ -188,9 +188,7 @@ def test_dump_from_query(germaparl):
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_query_1(brexit):
-    corpus = Corpus(
-        brexit['corpus_name']
-    )
+    corpus = get_corpus(brexit)
     df_dump = corpus.dump_from_query(
         query='[lemma="angela"] @1[lemma="merkel"]',
         anchors=[1],
@@ -218,10 +216,7 @@ def test_dump_from_query_anchors(germaparl):
 @pytest.mark.brexit
 @pytest.mark.dump
 def test_dump_from_query_lib(brexit):
-    corpus = Corpus(
-        brexit['corpus_name'],
-        lib_path=brexit['lib_path']
-    )
+    corpus = get_corpus(brexit)
     df_dump = corpus.dump_from_query(
         query=brexit['query_lib'],
         s_query=brexit['s_query'],
