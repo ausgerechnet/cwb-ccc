@@ -421,11 +421,11 @@ class Corpus:
         This method thus creates a dataframe with the
         (non-overlapping) spans encoded as matches
 
-        === (match, matchend) $s_cwbid, $s_ann* ===
+        === (match, matchend) $s_cwbid, $s* ===
 
         and caches the result.
 
-        $s_ann is only created if annotation is True and attribute is
+        $s is only created if annotation is True and attribute is
         actually annotated.
 
         :param str s_att: s-attribute to get spans and annotation for
@@ -461,7 +461,7 @@ class Corpus:
         df = df.rename({'index': s_att + '_cwbid',
                         0: 'match',
                         1: 'matchend',
-                        2: s_att + '_ann'}, axis=1)
+                        2: s_att}, axis=1)
         df = df.set_index(['match', 'matchend'])
 
         # put into cache
@@ -631,9 +631,9 @@ class Corpus:
         matchend. This is reasonable assuming that the retrieved s-att
         comprises complete matches (match .. matchend).
 
-        === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s_ann*  ===
+        === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s*  ===
 
-        $s_ann is only created if annotation is True and attribute is
+        $s is only created if annotation is True and attribute is
         actually annotated.
 
         Any additional columns of df_dump are preserved.
@@ -678,7 +678,7 @@ class Corpus:
         df = df.set_index(['match', 'matchend'])
         df = df.rename({0: s_att + '_span',
                         1: s_att + '_spanend',
-                        2: s_att + '_ann'}, axis=1)
+                        2: s_att}, axis=1)
 
         # join to original dataframe
         df_dump = df_dump.join(df, lsuffix='_bak')
@@ -792,7 +792,7 @@ class Corpus:
         restricts the resulting df_dump by matching the provided
         values against the s-att annotations, and returns a Dump.
 
-        === (match, matchend), $s_cwbid, $s_ann* ===
+        === (match, matchend), $s_cwbid, $s* ===
 
         :param str s_att: s-attribute to use for spans
         :param set values: values of s-att annotation to restrict spans to
@@ -806,12 +806,12 @@ class Corpus:
 
         # restrict to certain values
         if len(values) > 0:
-            if s_att + "_ann" not in spans.columns:
+            if s_att not in spans.columns:
                 logger.error("cannot restrict spans without annotation")
                 return DataFrame()
             values = set(values)
             logger.info("restricting spans using %d values" % len(values))
-            spans = spans.loc[spans[s_att + "_ann"].isin(values)]
+            spans = spans.loc[spans[s_att].isin(values)]
 
         # return proper Dump
         return Dump(

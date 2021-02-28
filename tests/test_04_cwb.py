@@ -153,7 +153,7 @@ def test_deactivate_subcorpus(germaparl):
 def test_dump_from_s_att(germaparl):
     corpus = get_corpus(germaparl)
     df = corpus.dump_from_s_att('text_id')
-    assert(df.iloc[0]['text_id_ann'] == "i13_86_1_1")
+    assert(df.iloc[0]['text_id'] == "i13_86_1_1")
 
 
 @pytest.mark.dump
@@ -281,7 +281,7 @@ def test_dump2context2(germaparl):
     )
     df_dump = corpus.dump2context(df_dump, 20, 20, 'text_id')
     assert(all(elem in df_dump.columns for elem in [
-        'context', 'contextid', 'contextend', 'text_id_cwbid', 'text_id_ann'
+        'context', 'contextid', 'contextend', 'text_id_cwbid', 'text_id'
     ]))
 
 
@@ -313,7 +313,7 @@ def test_dump2context4(brexit):
     )
     df_dump = corpus.dump2context(df_dump, None, 5, 'tweet_id')
     assert(all(elem in df_dump.columns for elem in [
-        'context', 'contextid', 'contextend', 'tweet_id_cwbid', 'tweet_id_ann'
+        'context', 'contextid', 'contextend', 'tweet_id_cwbid', 'tweet_id'
     ]))
 
 

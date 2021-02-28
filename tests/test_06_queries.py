@@ -3,7 +3,7 @@ from pprint import pprint
 from ccc import Corpus
 import pytest
 
-from .conftest import local
+from .conftest import LOCAL
 
 
 def test_read_json():
@@ -31,7 +31,7 @@ def test_convert():
     print(cqpy_dump(query))
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 def test_run_from_cqpy(brexit):
 

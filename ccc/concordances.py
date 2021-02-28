@@ -133,9 +133,8 @@ class Concordance:
             df = df.join(DataFrame(concordance))
 
         # meta data
-        if len(s_show) > 0:
-            meta = self.corpus.get_s_annotations(df, s_show)
-            df = df.join(meta)
+        for s in s_show:
+            df = self.corpus.dump2satt(df, s)
 
         return df
 
@@ -147,7 +146,7 @@ def format_lines(df_lines,
                  p_show=['word'],
                  p_text=None,   # only for form == 'extended'
                  p_slots=None,  # only for form == 'extended'
-                 slots=[],    # only for form == 'extended'
+                 slots=[],      # only for form == 'extended'
                  form='dataframes'):
 
     # select p-attribute for simple and kwic
