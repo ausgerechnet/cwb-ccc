@@ -23,7 +23,7 @@ class Cache:
         if self.path is None:
             return None
 
-        if type(identifier) is str:
+        if isinstance(identifier, str):
             key = identifier
         else:
             key = self.generate_idx(identifier)
@@ -40,7 +40,7 @@ class Cache:
         if self.path is None:
             return None
 
-        if type(identifier) is str:
+        if isinstance(identifier, str):
             key = identifier
         else:
             key = self.generate_idx(identifier)
