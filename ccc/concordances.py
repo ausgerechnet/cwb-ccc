@@ -19,15 +19,81 @@ class Concordance:
         # bind corpus
         self.corpus = corpus
 
-        # what's in the dump?
+        # make sure there's context
+        if 'context' not in df_dump.columns:
+            df_dump['context'] = df_dump.index.get_level_values('match')
+        if 'contextend' not in df_dump.columns:
+            df_dump['contextend'] = df_dump.index.get_level_values('matchend')
+
+        # bind dump and check size
         self.df_dump = df_dump
         self.size = len(df_dump)
+        if self.size == 0:
+            logger.warning('empty dump')
+
+        # check anchor points
         anchors = [i for i in range(10) if i in df_dump.columns]
+        # match..matchend and context..contextend are also anchors ...
         anchors += ['match', 'matchend', 'context', 'contextend']
         self.anchors = anchors
 
-        if len(df_dump) == 0:
-            logger.warning('empty dump')
+    def simple(self, p_show=['word'], s_show=[],
+               start='context', end='contextend'):
+
+        # allow lazy definition of p_show
+        if isinstance(p_show, str):
+            p_show = [p_show]
+
+        df_lines = self.df_dump
+
+        for p_att in p_show:
+            df_lines = self.corpus.dump2patt(
+                df_lines, p_att=p_att, start=start, end=end
+            )
+
+        for s_att in s_show:
+            df_lines = self.corpus.dump2satt(
+                df_lines, s_att
+            )
+
+        return df_lines[p_show + s_show]
+
+    def kwic(self, p_show='word', s_show=[]):
+
+        # allow wrong definition of p_show
+        if isinstance(p_show, list):
+            logger.warning(
+                'kwic format does not support retrieval of several p-attributes'
+            )
+            p_show = p_show[0]
+            logger.info(
+                'using only the first given p-attribute ("%s")' % p_show
+            )
+
+        # left: context .. match - 1
+        # node: match .. matchend
+        # right: matchend + 1 .. contextend
+        df_lines = self.df_dump.reset_index()
+        df_lines['leftend'] = df_lines['match'] - 1
+        df_lines['rightstart'] = df_lines['matchend'] + 1
+        df_lines = df_lines.set_index(['match', 'matchend'])
+
+        df_lines['left'] = self.corpus.dump2patt(
+            df_lines, p_show, start='context', end='leftend'
+        )[p_show]
+        df_lines['node'] = self.corpus.dump2patt(
+            df_lines, p_show, start='match', end='matchend'
+        )[p_show]
+        df_lines['right'] = self.corpus.dump2patt(
+            df_lines, p_show, start='rightstart', end='contextend'
+        )[p_show]
+
+        for s_att in s_show:
+            df_lines = self.corpus.dump2satt(
+                df_lines, s_att
+            )
+
+        return df_lines[['left', 'node', 'right'] + s_show]
 
     def text_line(self, index, columns, p_show=['word']):
         """Translates one row of self.df_dump into a concordance_line.
@@ -293,7 +359,7 @@ def line2extended(line, p_text=None, p_slots=None, slots=dict()):
 
             region = slots[slot]
 
-            if type(region) == int:
+            if isinstance(region, int):
                 region = [region, region]
 
             anchor_left = True in out['df'][region[0]].values

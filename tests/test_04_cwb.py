@@ -237,7 +237,9 @@ def test_dump2satt(germaparl):
         s_query=germaparl['s_query'],
         match_strategy='standard'
     )
+    df_dump['test'] = None
     df = corpus.dump2satt(df_dump, germaparl['s_meta'])
+    assert('test' in df.columns)
     assert(len(df) == 30)
     assert(df.iloc[0]['text_id_span'] == 10628)
 

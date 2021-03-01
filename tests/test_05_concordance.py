@@ -7,18 +7,90 @@ import pandas as pd
 import pytest
 
 
-@pytest.mark.meta
-def test_concordance_meta(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl["registry_path"])
-    query = (
-        '[word="\\["] [lemma="CDU"] "/" "CSU" [word="\\]"]'
+from .conftest import DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
     )
-    result = corpus.query(query)
-    concordance = Concordance(corpus, result.df)
-    lines = concordance.lines(s_show=['text_name', 'p_type'])
-    assert('text_name' in lines.columns)
-    assert('p_type' in lines.columns)
-    assert(len(lines) == 13)
+
+
+@pytest.mark.now
+def test_concordance_set_context(germaparl):
+
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query('"CSU"', context_break='text').df
+    print(df_dump)
+    concordance = Concordance(corpus, df_dump)
+    concordance.set_context(10, context_break='text', context_right=10)
+    print(concordance.df_dump)
+
+
+@pytest.mark.lines1
+def test_concordance_simple(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query('"CSU"').df
+    concordance = Concordance(corpus, df_dump)
+    lines = concordance.simple(
+        p_show=['word', 'lemma'],
+        s_show=['text_party', 'text_name', 'p_type']
+    )
+    assert(len(lines) == len(df_dump))
+    assert(all(col in lines.columns for col in [
+        'word', 'lemma', 'text_party', 'text_name', 'p_type'
+    ]))
+
+
+@pytest.mark.lines1
+def test_concordance_simple_nocontext(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query('[lemma="gehen"]', context=None).df
+    concordance = Concordance(corpus, df_dump)
+    lines = concordance.simple(
+        p_show='word',
+        s_show=['text_party', 'text_name', 'p_type']
+    )
+    assert(len(lines) == len(df_dump))
+    assert(all(col in lines.columns for col in [
+        'word', 'text_party', 'text_name', 'p_type'
+    ]))
+    print(lines)
+
+
+@pytest.mark.lines1
+def test_concordance_kwic(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query('[lemma="gehen"]').df
+    concordance = Concordance(corpus, df_dump)
+    lines = concordance.kwic(
+        p_show='word',
+        s_show=['text_party', 'text_name', 'p_type']
+    )
+    assert(len(lines) == len(df_dump))
+    assert(all(col in lines.columns for col in [
+        'left', 'node', 'right', 'text_party', 'text_name', 'p_type'
+    ]))
+
+
+@pytest.mark.lines1
+def test_concordance_kwic_nocontext(germaparl):
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query('[lemma="gehen"]', context=None).df
+    concordance = Concordance(corpus, df_dump)
+    lines = concordance.kwic(
+        p_show='word',
+        s_show=['text_party', 'text_name', 'p_type']
+    )
+    assert(len(lines) == len(df_dump))
+    assert(all(col in lines.columns for col in [
+        'left', 'node', 'right', 'text_party', 'text_name', 'p_type'
+    ]))
+    print(lines)
 
 
 @pytest.mark.line
@@ -180,7 +252,6 @@ def test_concordance_many(germaparl):
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines()
     assert(len(lines) == 100)
-
 
 
 @pytest.mark.lines
