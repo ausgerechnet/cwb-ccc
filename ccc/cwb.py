@@ -599,7 +599,9 @@ class Corpus:
 
         === (match, matchend), $p ===
 
-        Any additional columns of df_dump are preserved.
+        Any additional columns of df_dump are preserved as long as
+        there are no conflicts (in which case the original column will
+        be overwritten).
 
         :param DataFrame df_dump: DataFrame with specified columns (possibly as index)
         :param str p_att: p-attribute to retrieve
@@ -629,14 +631,16 @@ class Corpus:
 
         Note that this only takes into account the match, not the
         matchend. This is reasonable assuming that the retrieved s-att
-        comprises complete matches (match .. matchend).
+        comprises complete matches (match..matchend).
 
         === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s*  ===
 
         $s is only created if annotation is True and attribute is
         actually annotated.
 
-        Any additional columns of df_dump are preserved.
+        Any additional columns of df_dump are preserved as long as
+        there are no conflicts (in which case the original columns
+        will be overwritten).
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param str s_att: s-attribute to retrieve
@@ -682,12 +686,11 @@ class Corpus:
 
         # join to original dataframe
         df_dump = df_dump.join(df, lsuffix='_bak')
+        df_dump = df_dump[[col for col in df_dump if not col.endswith('_bak')]]
         df_dump[[
-            s_att + '_span',
-            s_att + '_spanend'
+            s_att + '_span', s_att + '_spanend'
         ]] = df[[
-            s_att + '_span',
-            s_att + '_spanend'
+            s_att + '_span', s_att + '_spanend'
         ]].fillna(-1, downcast='infer')
 
         return df_dump
