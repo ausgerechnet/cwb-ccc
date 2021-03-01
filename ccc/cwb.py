@@ -708,7 +708,7 @@ class Corpus:
         not annotated, context_break is ignored.
 
         The context creation algorithm does not take into account that
-        match and matchend may be part of different regions defined by
+        match and matchend may be part of different spans defined by
         context_break; it only looks at the annotation of match, not
         matchend.
 
@@ -788,7 +788,7 @@ class Corpus:
     # QUERY ALIASES #################################
     #################################################
     def query_s_att(self, s_att, values=set()):
-        """Special query alias that call corpus.dump_from_s_att, optionally
+        """Special query alias that calls corpus.dump_from_s_att, optionally
         restricts the resulting df_dump by matching the provided
         values against the s-att annotations, and returns a Dump.
 
@@ -822,7 +822,7 @@ class Corpus:
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name='Last', save=False):
+              match_strategy='standard', name=None):
         """Query the corpus, compute context-extended df_dump, and correct
         anchors. If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -845,6 +845,12 @@ class Corpus:
         """
 
         # preprocess input
+        if name is None:
+            name = 'Last'
+            save = False
+        else:
+            save = True
+
         query, s_query, anchors = preprocess_query(cqp_query)
         # TODO
         s_query, context_break, s_meta = merge_s_atts(s_query, context_break, None)

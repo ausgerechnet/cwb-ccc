@@ -100,7 +100,7 @@ def test_activate_subcorpus(germaparl):
     )
     corpus.query(
         "[lemma='Horst'] expand to s",
-        name='Horst', save=True
+        name='Horst'
     ).df
     corpus.subcorpus = 'Horst'
     df2 = corpus.dump_from_query(
@@ -122,8 +122,7 @@ def test_deactivate_subcorpus(germaparl):
     # define subcorpus
     corpus.query(
         cqp_query="[lemma='sein'] expand to s",
-        name='Sein',
-        save=True
+        name='Sein'
     )
 
     # activate subcorpus
