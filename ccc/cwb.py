@@ -686,7 +686,7 @@ class Corpus:
 
         # join to original dataframe
         df_dump = df_dump.join(df, lsuffix='_bak')
-        df_dump = df_dump[[col for col in df_dump if not col.endswith('_bak')]]
+        df_dump = df_dump[[col for col in df_dump if not str(col).endswith('_bak')]]
         df_dump[[
             s_att + '_span', s_att + '_spanend'
         ]] = df[[
