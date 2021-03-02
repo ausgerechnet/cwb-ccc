@@ -700,31 +700,33 @@ class Corpus:
 
         === (match, matchend), contextid*, context, contextend  ===
 
-        Columns for $context_break_cwbid, $context_break_span,
-        etc. are also created.
+        Columns for $context_break, $context_break_cwbid,
+        $context_break_span, $context_break_spanend, are also created
+        (if applicable).
 
         Any additional columns of df_dump are preserved.
 
         Note that in contrast to matches, contexts may overlap.
 
-        For positions where the s-att specified by context_break is
-        not annotated, context_break is ignored.
+        For positions where the s-att specified by context_break does
+        not exist, context_break is ignored.
 
         The context creation algorithm does not take into account that
         match and matchend may be part of different spans defined by
-        context_break; it only looks at the annotation of match, not
-        matchend.
+        context_break; it only looks at the s-attributes of match, not
+        of matchend.
 
         For the _context_ column (left hand side), the strategy is as
         follows; the strategy for _contextend_ (right hand side) is
-        analogous (using s_end and matchend).
-        (1) if context_break is None and context_left is None
+        analogous (using context_right, matchend and
+        context_break_spanend).
+        if context_break_span is None and context_left is None
             => context = match
-        (2) if context_break is None and context_left is not None
-            => context = match - context_left
-        (3) if context_break is not None and context_left is None
-            => context = s_start
-        (4) if context_break is not None and context_left is not None
+        if context_break_span is None and context_left is not None
+            => context = max(0, match - context_left)
+        if context_break_span is not None and context_left is None
+            => context = context_break_span
+        if context_break_span is not None and context_left is not None
             => context = max(match - context_left, s_start)
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
@@ -791,9 +793,8 @@ class Corpus:
     # QUERY ALIASES #################################
     #################################################
     def query_s_att(self, s_att, values=set()):
-        """Special query alias that calls corpus.dump_from_s_att, optionally
-        restricts the resulting df_dump by matching the provided
-        values against the s-att annotations, and returns a Dump.
+        """Get s-attribute spans as Dump, optionally restricting the spans by
+        matching the provided values against the s-att annotations.
 
         === (match, matchend), $s_cwbid, $s* ===
 
@@ -825,8 +826,8 @@ class Corpus:
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
               match_strategy='standard', name=None):
-        """Query the corpus, compute context-extended df_dump, and correct
-        anchors. If a name is given, the resulting NQR (without
+        """Get query result as (context-extended) Dump (with corrected
+        anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
         in CWB binary format.
 
