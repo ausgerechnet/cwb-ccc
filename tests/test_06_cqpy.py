@@ -1,4 +1,4 @@
-from ccc.queries import cqpy_load, cqpy_dump, load_query_json, run_query
+from ccc.cqpy import cqpy_load, cqpy_dump, load_query_json, run_query
 from pprint import pprint
 from ccc import Corpus
 import pytest

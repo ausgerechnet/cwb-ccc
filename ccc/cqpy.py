@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" queries.py: read-write support for CQPY query files
+""" cqpy.py: read-write support for CQPY query files
 
 - a CQPY file contains a YAML header and the actual CQP input
 - YAML header *can* be commented
