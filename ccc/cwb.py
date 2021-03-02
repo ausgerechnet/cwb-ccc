@@ -805,23 +805,22 @@ class Corpus:
 
         """
 
-        spans = self.dump_from_s_att(s_att)
+        df_spans = self.dump_from_s_att(s_att)
 
         # restrict to certain values
         if len(values) > 0:
-            if s_att not in spans.columns:
+            if s_att not in df_spans.columns:
                 logger.error("cannot restrict spans without annotation")
-                return DataFrame()
-            values = set(values)
-            logger.info("restricting spans using %d values" % len(values))
-            spans = spans.loc[spans[s_att].isin(values)]
+                df_spans = DataFrame(columns=['match', 'matchend']).set_index(
+                    ['match', 'matchend']
+                )
+            else:
+                values = set(values)
+                logger.info("restricting spans using %d values" % len(values))
+                df_spans = df_spans.loc[df_spans[s_att].isin(values)]
 
         # return proper Dump
-        return Dump(
-            self.copy(),
-            spans,
-            name_cqp=None
-        )
+        return Dump(self.copy(), df_spans, name_cqp=None)
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
@@ -874,7 +873,9 @@ class Corpus:
         # empty return?
         if len(df_dump) == 0:
             logger.warning("found 0 matches")
-            df_dump = DataFrame()
+            df_dump = DataFrame(columns=['match', 'matchend']).set_index(
+                ['match', 'matchend']
+            )
         else:
             # extend dump to context
             df_dump = self.dump2context(

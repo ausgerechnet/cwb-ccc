@@ -20,18 +20,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
     )
 
 
-@pytest.mark.now
-def test_concordance_set_context(germaparl):
-
-    corpus = get_corpus(germaparl)
-    df_dump = corpus.query('"CSU"', context_break='text').df
-    print(df_dump)
-    concordance = Concordance(corpus, df_dump)
-    concordance.set_context(10, context_break='text', context_right=10)
-    print(concordance.df_dump)
-
-
-@pytest.mark.lines1
+@pytest.mark.lines
 def test_concordance_simple(germaparl):
     corpus = get_corpus(germaparl)
     df_dump = corpus.query('"CSU"').df
@@ -46,7 +35,7 @@ def test_concordance_simple(germaparl):
     ]))
 
 
-@pytest.mark.lines1
+@pytest.mark.lines
 def test_concordance_simple_nocontext(germaparl):
     corpus = get_corpus(germaparl)
     df_dump = corpus.query('[lemma="gehen"]', context=None).df
@@ -59,10 +48,9 @@ def test_concordance_simple_nocontext(germaparl):
     assert(all(col in lines.columns for col in [
         'word', 'text_party', 'text_name', 'p_type'
     ]))
-    print(lines)
 
 
-@pytest.mark.lines1
+@pytest.mark.lines
 def test_concordance_kwic(germaparl):
     corpus = get_corpus(germaparl)
     df_dump = corpus.query('[lemma="gehen"]').df
@@ -77,7 +65,7 @@ def test_concordance_kwic(germaparl):
     ]))
 
 
-@pytest.mark.lines1
+@pytest.mark.lines
 def test_concordance_kwic_nocontext(germaparl):
     corpus = get_corpus(germaparl)
     df_dump = corpus.query('[lemma="gehen"]', context=None).df
@@ -90,7 +78,6 @@ def test_concordance_kwic_nocontext(germaparl):
     assert(all(col in lines.columns for col in [
         'left', 'node', 'right', 'text_party', 'text_name', 'p_type'
     ]))
-    print(lines)
 
 
 @pytest.mark.line

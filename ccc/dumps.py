@@ -43,6 +43,22 @@ class Dump:
             desc.append('- name in cqp  : "%s"' % self.name_cqp)
         return "\n".join(desc)
 
+    def set_context(self, context, context_break=None,
+                    context_left=None, context_right=None):
+        """Set context in the dump. Useful
+
+        """
+        # pre-process context
+        if context_left is None:
+            context_left = context
+        if context_right is None:
+            context_right = context
+
+        # set context
+        self.df = self.corpus.dump2context(
+            self.df, context_left, context_right, context_break
+        )
+
     def breakdown(self, max_matches=None):
 
         if self._breakdown is None:
