@@ -3,15 +3,14 @@ from ccc.counts import cwb_scan_corpus
 from ccc.utils import formulate_cqp_query
 import pandas as pd
 import pytest
+from tempfile import NamedTemporaryFile
 
-from .conftest import local
+from .conftest import LOCAL
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
 @pytest.mark.cwb_counts
 def test_cwb_scan_corpus(germaparl):
-    from tempfile import NamedTemporaryFile
+
     corpus = Corpus(germaparl['corpus_name'],
                     registry_path=germaparl['registry_path'])
     cqp = corpus.start_cqp()
@@ -105,7 +104,7 @@ def test_count_items(germaparl):
     cqp.__kill__()
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.cwb_counts
 def test_count_matches(brexit):
@@ -114,11 +113,11 @@ def test_count_matches(brexit):
         cqp_query='[lemma="nigel"]',
         context=10,
         context_break='tweet',
-        name='Test',
-        save=True
+        name='Nigel'
     )
     cqp = corpus.start_cqp()
-    counts = corpus.counts.matches(cqp, 'Test')
+    counts = corpus.counts.matches(cqp, 'Nigel')
+    cqp.__kill__()
     assert("Nigel" in counts.index)
 
 
@@ -193,8 +192,8 @@ def test_count_items_subcorpora(germaparl):
                     registry_path=germaparl['registry_path'])
     cqp = corpus.start_cqp()
     dump = corpus.dump_from_s_att("text_role", ["presidency"])
-    cqp.nqr_from_dump(dump.df, 'presidency')
-    cqp.nqr_activate(corpus.corpus_name, 'presidency')
+    cqp.nqr_from_dump(dump, 'Presidency')
+    cqp.nqr_activate(corpus.corpus_name, 'Presidency')
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
     queries = [formulate_cqp_query([item]) for item in items]
 

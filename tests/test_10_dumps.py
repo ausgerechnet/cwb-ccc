@@ -1,7 +1,7 @@
 from ccc.cwb import Corpus
 import pytest
 
-from .conftest import local
+from .conftest import LOCAL
 
 
 def test_query2dump(germaparl):
@@ -16,6 +16,30 @@ def test_query2dump_name(germaparl):
                     registry_path=germaparl['registry_path'])
     dump = corpus.query('"SPD"', name="Test")
     print(dump)
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.brexit
+def test_satt2dump(brexit):
+
+    corpus = Corpus(
+        brexit['corpus_name']
+    )
+    ids = {
+        't740982320711249920',
+        't731037753241112576',
+        't729363812802039814',
+        't733648546881277953',
+        't741216447595220992',
+        't705780723018539012',
+        't745930343627243520',
+        't730870826178904065',
+        't745691821477605377',
+        't730419966818783232',
+        't746069538693750784'
+    }
+    dump = corpus.query_s_att('tweet_id', ids)
+    print(dump.concordance())
 
 
 def test_breakdown(germaparl):
@@ -41,6 +65,16 @@ def test_concordance_options(germaparl):
     print(dump.concordance(form='kwic'))
     print(dump.concordance(form='dataframes'))
     print(dump.concordance(form='extended'))
+
+
+def test_concordance_set_context(germaparl):
+
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+    dump = corpus.query('"CSU"', context_break='text')
+    print(dump)
+    dump.set_context(10, context_break='text', context_right=10)
+    print(dump)
 
 
 def test_collocates(germaparl):
@@ -79,7 +113,7 @@ def test_context_matches(germaparl):
     print(dump.context())
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 def test_argmin_query(brexit):
     corpus = Corpus(
@@ -110,27 +144,3 @@ def test_argmin_query(brexit):
 
     print(conc)
     print(conc['df'].iloc[0])
-
-
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
-def test_dumps(brexit):
-
-    corpus = Corpus(
-        brexit['corpus_name']
-    )
-    ids = {
-        't740982320711249920',
-        't731037753241112576',
-        't729363812802039814',
-        't733648546881277953',
-        't741216447595220992',
-        't705780723018539012',
-        't745930343627243520',
-        't730870826178904065',
-        't745691821477605377',
-        't730419966818783232',
-        't746069538693750784'
-    }
-    dump = corpus.dump_from_s_att('tweet_id', ids)
-    print(dump.concordance())

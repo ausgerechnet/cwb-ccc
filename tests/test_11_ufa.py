@@ -3,10 +3,10 @@ from ccc import Corpus
 from ccc.ufa import UFA
 import pytest
 
-from .conftest import local
+from .conftest import LOCAL
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 def test_keywords(brexit):
 
@@ -24,8 +24,8 @@ def test_keywords(brexit):
     print(tables)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.brexit1
 def test_collocates(brexit):
 
     # get s_att-split
@@ -40,7 +40,3 @@ def test_collocates(brexit):
     ufa = UFA(corpus, ids, s_att='tweet_id')
     tables = ufa.collocates(cqp_query='[lemma="johnson"]', order='log_likelihood')
     print(tables)
-    # for key in tables.keys():
-    #     dir_out = "/home/ausgerechnet/Downloads/"
-    #     tables[key].to_csv(os.path.join(dir_out, key + ".tsv.gz"),
-    #                        sep="\t", compression="gzip")

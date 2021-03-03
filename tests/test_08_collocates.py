@@ -1,7 +1,8 @@
 from ccc import Corpus
 from ccc.collocates import Collocates
 from ccc.keywords import Keywords
-from .conftest import local
+
+from .conftest import LOCAL
 
 import pandas as pd
 import pytest
@@ -75,21 +76,21 @@ def compare_counts(lemma, window, min_freq=0):
     assert(nr['f1_infl_ccc'] == nr['f1_infl_ucs'] - nr['O11_ucs_node'])
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.germaparl1114
 @pytest.mark.collocates_gold
 def test_compare_counts():
     compare_counts('Atomkraft', 5)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.germaparl1114
 @pytest.mark.collocates_gold
 def test_compare_counts_2():
     compare_counts('Angela', 5)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.germaparl1114
 @pytest.mark.collocates_speed
 @pytest.mark.skip(reason='takes too long')
@@ -97,7 +98,7 @@ def test_compare_counts_3():
     compare_counts('und', 2)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.germaparl1114
 @pytest.mark.collocates_speed
 def test_collocates_speed_many():
