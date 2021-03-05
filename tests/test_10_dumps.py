@@ -18,6 +18,31 @@ def test_query2dump_name(germaparl):
     print(dump)
 
 
+def test_breakdown(germaparl):
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+    dump = corpus.query('"SPD"')
+    print(dump.breakdown())
+
+
+def test_dump_matches(germaparl):
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+
+    # init topic disc
+    dump = corpus.query('"SPD"')
+    print(dump.matches())
+
+
+def test_dump_context(germaparl):
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+
+    # init topic disc
+    dump = corpus.query('"SPD"')
+    print(dump.context())
+
+
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 def test_satt2dump(brexit):
@@ -40,13 +65,6 @@ def test_satt2dump(brexit):
     }
     dump = corpus.query_s_att('tweet_id', ids)
     print(dump.concordance())
-
-
-def test_breakdown(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    dump = corpus.query('"SPD"')
-    print(dump.breakdown())
 
 
 def test_concordance(germaparl):

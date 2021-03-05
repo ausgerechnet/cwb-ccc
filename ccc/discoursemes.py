@@ -18,79 +18,48 @@ class Discourseme:
     realization of a discourseme given a corpus and query parameters
     """
 
-    def __init__(self, corpus, items, p_query, s_query, s_context,
-                 context=20, flags="%cd", escape=False):
+    def __init__(self, corpus, items, p_query, s_query, flags="%cd", escape=False):
         """
-        .items
-        .parameters
+        .nodes
         .idx
         .dump
         """
 
-        self.items = items
-
-        self.parameters = {
+        self.nodes = {
+            'items': items,
             'p_query': p_query,
             's_query': s_query,
-            's_context': s_context,
-            'context': context,
             'flags': flags,
-            'escape': escape
+            'escape': escape,
+            'corpus': corpus.corpus_name
         }
 
-        # run query, save dump
-        query = formulate_cqp_query(
-            items, p_query, s_query, flags, escape
-        )
-        dump = corpus.query(
-            query, context, context_break=s_context
-        )
-        self.dump = dump
+        self.idx = corpus.cache.generate_idx(self.nodes, prefix='nodes_')
 
-        # identifier for this discourseme
-        self.idx = dump.name_cache
+        # run query, attach dump
+        query = formulate_cqp_query(items, p_query, s_query, flags, escape)
+        self.dump = corpus.query(query, context=None, context_break=s_query)
 
-        # init parameters for context and matches
-        self._context = None
-        self._matches = None
-
-    def concordance(self, context=None, matches=None,
+    def concordance(self, context=None, context_left=None,
+                    context_right=None, context_break=None,
                     p_show=['word'], s_show=[], order='random',
-                    cut_off=100, form='dataframes'):
+                    cut_off=100, matches=None, form='dataframes'):
 
-        # deal with context
-        if context is None:
-            context = self.parameters['context']
-        if context > self.parameters['context']:
-            logger.warning(
-                "out of context; falling back to context=%d" %
-                self.parameters['context']
-            )
-            context = self.parameters['context']
-            df = self.dump.df
-        elif context < self.parameters['context']:
-            df = self.dump.df.reset_index()
-            df['context_new'] = df['match'] - context
-            df['contextend_new'] = df['matchend'] + context
-            df['context'] = df[['context', 'context_new']].max(axis=1)
-            df['contextend'] = df[['contextend', 'contextend_new']].min(axis=1)
-            df = df.drop(['context_new', 'contextend_new'], axis=1)
-            df = df.set_index(['match', 'matchend'])
-        else:
-            df = self.dump.df
+        self.dump.set_context(context, context_break,
+                              context_left, context_right)
 
-        conc = Concordance(self.dump.corpus.copy(), df)
-        return conc.lines(
+        return self.dump.concordance(
             matches=matches, p_show=p_show, s_show=s_show,
             p_text=None, p_slots=None, slots=[], order=order,
             cut_off=cut_off, form=form
         )
 
-    def collocates(self, window_sizes=[5], order='f', cut_off=100,
+    def collocates(self, window_sizes=[5], context_break=None,
+                   order='log_likelihood', cut_off=100,
                    p_query="lemma", ams=None, min_freq=2,
                    frequencies=True, flags=None):
 
-        # determine mode
+        # determine mode and mws
         if type(window_sizes) is int:
             single = True
             mws = window_sizes
@@ -99,6 +68,8 @@ class Discourseme:
             mws = max(window_sizes)
         else:
             raise NotImplementedError("window_sizes must be int or list")
+
+        self.dump.set_context(context=mws, context_break=context_break)
 
         coll = Collocates(
             corpus=self.dump.corpus.copy(),
@@ -163,7 +134,7 @@ class DiscoursemeConstellation:
 
     def add_items(self, items):
 
-        disc = Disc(
+        disc = Discourseme(
             corpus=self.corpus.copy(),
             items=items,
             **self.parameters
@@ -382,8 +353,6 @@ class DiscoursemeConstellation:
     #     logger.info("excluding all discourseme matches from context")
     #     df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-    #     # 
-        
     #     # do it once for max_window
     #     relevant = df_cooc.loc[abs(df_cooc['offset']) <= max_window]
 

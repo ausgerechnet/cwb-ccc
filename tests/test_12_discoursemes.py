@@ -1,67 +1,30 @@
 from ccc import Corpus
-from ccc.discoursemes import Disc, DiscCon
+from ccc.discoursemes import Discourseme, DiscoursemeConstellation
 import pytest
 
 
 @pytest.mark.discourseme
-def test_disc(germaparl):
+def test_init(germaparl):
     corpus = Corpus(germaparl['corpus_name'],
                     registry_path=germaparl['registry_path'])
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-        's'
+        'lemma', 's',
     )
     print(topic.dump)
 
 
-@pytest.mark.discourseme
-def test_disc_matches(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
-    # init topic disc
-    topic = Disc(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-        's'
-    )
-    print(topic.dump.matches())
-
-
-@pytest.mark.discourseme
-def test_disc_context(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
-    # init topic disc
-    topic = Disc(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-        's'
-    )
-    print(topic.dump.context())
-
-
-@pytest.mark.discourseme
-def test_disc_concordance(germaparl):
+@pytest.mark.discourseme1
+def test_concordance(germaparl):
 
     corpus = Corpus(germaparl['corpus_name'],
                     registry_path=germaparl['registry_path'])
 
-    # init topic disc
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-        's'
+        'lemma', 's',
     )
     print(topic.concordance(20))
     print(topic.concordance(10))
@@ -75,7 +38,7 @@ def test_disc_concordance_form(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # init topic disc
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
@@ -93,7 +56,7 @@ def test_disc_collocates(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # init topic disc
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
@@ -110,7 +73,7 @@ def test_disccon(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # init topic disc
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
@@ -119,21 +82,21 @@ def test_disccon(germaparl):
     )
 
     # two floating discoursemes
-    disc1 = Disc(
+    disc1 = Discourseme(
         corpus,
         ["sollen", "müssen"],
         'lemma',
         's',
         's'
     )
-    disc2 = Disc(
+    disc2 = Discourseme(
         corpus,
         ["und"],
         'lemma',
         's',
         's'
     )
-    discon = DiscCon(topic, [disc1, disc2])
+    discon = DiscoursemeConstellation(topic, [disc1, disc2])
     discon.slice_discs()
     print(discon.df_nodes.keys())
     print(discon.df_nodes[discon.parameters['context']])
@@ -146,14 +109,14 @@ def test_disccon_2(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # init topic disc
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
         's',
         's'
     )
-    discon = DiscCon(topic)
+    discon = DiscoursemeConstellation(topic)
     # two floating discoursemes
     discon.add_items(["sollen", "müssen"])
     discon.add_items(["und"])
@@ -169,21 +132,21 @@ def test_disccon_concordance(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # three discoursemes
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
         's',
         's'
     )
-    disc1 = Disc(
+    disc1 = Discourseme(
         corpus,
         ["sollen", "müssen"],
         'lemma',
         's',
         's'
     )
-    disc2 = Disc(
+    disc2 = Discourseme(
         corpus,
         ["und"],
         'lemma',
@@ -192,7 +155,7 @@ def test_disccon_concordance(germaparl):
     )
 
     # init discursive position
-    disccon = DiscCon(topic, [disc1, disc2])
+    disccon = DiscoursemeConstellation(topic, [disc1, disc2])
     # show concordance
     print(disccon.concordance())
     print(disccon.concordance(p_show=['word', 'lemma'])['df'].iloc[0]['word'])
@@ -205,21 +168,21 @@ def test_disccon_collocates(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # three discoursemes
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
         's',
         's'
     )
-    disc1 = Disc(
+    disc1 = Discourseme(
         corpus,
         ["sollen", "müssen", "machen"],
         'lemma',
         's',
         's'
     )
-    disc2 = Disc(
+    disc2 = Discourseme(
         corpus,
         ["und"],
         'lemma',
@@ -228,7 +191,7 @@ def test_disccon_collocates(germaparl):
     )
 
     # init discursive position
-    discpos = DiscCon(topic, [disc1, disc2])
+    discpos = DiscoursemeConstellation(topic, [disc1, disc2])
     # show collocates
     print(discpos.collocates())
 
@@ -240,7 +203,7 @@ def test_disccon_collocates_empty(germaparl):
                     registry_path=germaparl['registry_path'])
 
     # three discoursemes
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
@@ -248,7 +211,7 @@ def test_disccon_collocates_empty(germaparl):
         's'
     )
     # init discursive position
-    disccon = DiscCon(topic)
+    disccon = DiscoursemeConstellation(topic)
     disccon.add_items(["Verhandlung"])
     # show collocates
     assert(disccon.collocates(window=5).empty)
@@ -260,7 +223,7 @@ def test_disccon_collocates_nodes(germaparl):
         registry_path=germaparl['registry_path'],
         # data_path=None
     )
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         [",", ".", ")", "("],
         'lemma',
@@ -272,7 +235,7 @@ def test_disccon_collocates_nodes(germaparl):
     assert("," not in df.index)
     assert("(" not in df.index)
 
-    topic2 = DiscCon(topic)
+    topic2 = DiscoursemeConstellation(topic)
     df2 = topic2.collocates(cut_off=None)
     assert(df2.equals(df))
 
@@ -287,7 +250,7 @@ def test_disccon_collocates_range(germaparl):
     )
 
     # three discoursemes
-    topic = Disc(
+    topic = Discourseme(
         corpus,
         [",", ".", ")", "("],
         'lemma',
@@ -295,20 +258,20 @@ def test_disccon_collocates_range(germaparl):
         's',
         escape=True
     )
-    disc1 = Disc(
+    disc1 = Discourseme(
         corpus,
         ["die", "sie", "und"],
         'lemma',
         's',
         's'
     )
-    disc2 = Disc(
+    disc2 = Discourseme(
         corpus,
         ["sein", "in", "eine", "zu", "haben"],
         'lemma',
         's',
         's'
     )
-    disccon = DiscCon(topic, [disc1, disc2])
+    disccon = DiscoursemeConstellation(topic, [disc1, disc2])
     df = disccon.collocates(cut_off=None)
     print(df)

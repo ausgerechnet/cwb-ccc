@@ -25,7 +25,7 @@ def test_keywords(brexit):
 
 
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.brexit1
+@pytest.mark.brexit
 def test_collocates(brexit):
 
     # get s_att-split

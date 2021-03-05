@@ -30,7 +30,7 @@ class Dump:
         self._context = None
 
     def __str__(self):
-        desc = ['a ccc.Dump.']
+        desc = ['a ccc.Dump with %d matches' % self.size]
         if self.corpus.subcorpus:
             crpssbcrps = self.corpus.corpus_name + ":" + self.corpus.subcorpus
         else:
@@ -38,12 +38,12 @@ class Dump:
         desc.append('- corpus "%s" (%d tokens in whole corpus)' % (
             crpssbcrps, self.corpus.corpus_size
         ))
-        desc.append('- %d matches' % self.size)
         if self.name_cqp is not None:
-            desc.append('- name in cqp  : "%s"' % self.name_cqp)
+            desc.append('- name in cqp: "%s"' % self.name_cqp)
+        desc.append('- columns: %s' % str(list(self.df.columns)))
         return "\n".join(desc)
 
-    def set_context(self, context, context_break=None,
+    def set_context(self, context=None, context_break=None,
                     context_left=None, context_right=None):
         """Set context in the dump. Useful
 
