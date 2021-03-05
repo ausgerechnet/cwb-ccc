@@ -217,10 +217,10 @@ class Corpus:
         # get available corpus attributes
         self.attributes_available = self._attributes_available()
 
-        # init Cache
+        # init cache
         self.cache = Cache(cache_path)
 
-        # init Counts
+        # init counts
         self.counts = Counts(self.corpus_name, self.registry_path)
 
     def __str__(self):
