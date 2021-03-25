@@ -695,6 +695,7 @@ class Corpus:
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param str s_att: s-attribute to retrieve
+        :param bool annotation: whether to retrieve annotation of s-att
 
         :return: df_dump
         :rtype: DataFrame
