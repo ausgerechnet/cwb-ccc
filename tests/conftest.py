@@ -54,7 +54,7 @@ def brexit():
     )
     corpus_name = "BREXIT_V20190522_DEDUP"
     lib_path = (
-        "/home/ausgerechnet/repositories/spheroscope/library/BREXIT_V20190522_DEDUP/"
+        "/home/ausgerechnet/implementation/spheroscope/library/BREXIT_V20190522_DEDUP/"
     )
     meta_path = (
         "/home/ausgerechnet/corpora/cwb/upload/"
