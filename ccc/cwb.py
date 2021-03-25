@@ -92,6 +92,20 @@ class Corpora:
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
+    def __str__(self):
+        """Method for printing.
+
+        :return: available corpora
+        :rtype: str
+        """
+
+        return "\n" + "\n".join([
+            'registry-path: "%s"' % self.registry_path,
+            'cqp-bin      : "%s"' % self.cqp_bin,
+            "corpora:",
+            self.show().to_string(),
+        ])
+
     def show(self):
         """Show all corpora defined in registry and available via CQP
         alongside corpus size (number of tokens).
@@ -130,6 +144,15 @@ class Corpora:
         corpora = corpora.set_index('corpus')
 
         return corpora
+
+    def activate(self, corpus_name,
+                 lib_path=None, data_path='/tmp/ccc-data/'):
+
+        return Corpus(corpus_name,
+                      lib_path=lib_path,
+                      cqp_bin=self.cqp_bin,
+                      registry_path=self.registry_path,
+                      data_path=data_path)
 
 
 class Corpus:
@@ -577,9 +600,9 @@ class Corpus:
             df_dump = df_dump.dropna(axis=1, how='all')
             df_dump = df_dump.fillna(-1, downcast='integer')
 
-        # drop constant columns (contain only -1)
-        # TODO this does not seem right
-        df_dump = df_dump.loc[:, (df_dump != df_dump.iloc[0]).any()]
+        # restrict output to requested anchors
+        # df_dump = df_dump.loc[:, (df_dump != -1).any()]
+        df_dump = df_dump[anchors]
 
         # put into cache
         self.cache.set(identifier, df_dump)
@@ -594,6 +617,33 @@ class Corpus:
     #################################################
     # WORKING ON DUMPS ##############################
     #################################################
+    def _dump2patt_row(self, row, p_att, start, end):
+        """Retrieve p-attribute annotation from start to end of one row.
+
+        :param Series row: dataframe row that contain start and end keys
+        :param str p_att: p-attribute to retrieve
+        :param str start: key of start column (int or str)
+        :param str end: key of end column (int or str)
+
+        :return: p-attribute annotation
+        :rtype: str
+        """
+
+        cpos_start = row[start]
+        cpos_end = row[end]
+
+        # if both are missing, return empty string
+        if cpos_start == cpos_end == -1:
+            return ""
+        # if one of them is missing, set start = end
+        if cpos_start == -1:
+            cpos_start = cpos_end
+        if cpos_end == -1:
+            cpos_end = cpos_start
+
+        p = self.attributes.attribute(p_att, 'p')
+        return " ".join(p[int(cpos_start): int(cpos_end) + 1])
+
     def dump2patt(self, df_dump, p_att='word', start='match', end='matchend'):
         """Retrieve p-attribute annotation from start to end.
 
@@ -605,6 +655,8 @@ class Corpus:
 
         :param DataFrame df_dump: DataFrame with specified columns (possibly as index)
         :param str p_att: p-attribute to retrieve
+        :param str start: key of start column (int or str)
+        :param str end: key of end column (int or str)
 
         :return: df_dump
         :rtype: DataFrame
@@ -616,9 +668,8 @@ class Corpus:
         df = df_dump.reset_index()
 
         # retrieve attribute
-        p = self.attributes.attribute(p_att, 'p')
         df[p_att] = df.apply(
-            lambda row: " ".join(p[int(row[start]): int(row[end]) + 1]), axis=1
+            lambda row: self._dump2patt_row(row, p_att, start, end), axis=1
         )
 
         # post-process
