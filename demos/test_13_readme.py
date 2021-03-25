@@ -1,10 +1,20 @@
-from ccc import Corpus
+from ccc import Corpus, Corpora
 import pytest
 
-from .conftest import local
+from .conftest import LOCAL
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.setup
+@pytest.mark.now
+def test_corpora(germaparl):
+    corpora = Corpora(registry_path=germaparl['registry_path'])
+    print(corpora)
+    corpus = corpora.activate(germaparl["corpus_name"])
+    print(corpus)
+    print(corpus.attributes_available)
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.setup
 def test_init_corpus(germaparl):
@@ -13,7 +23,7 @@ def test_init_corpus(germaparl):
     print(corpus)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.setup
 def test_macro(brexit):
@@ -138,6 +148,26 @@ def test_collocates(germaparl):
     print(collocates[[
         'O11', 'O12', 'O21', 'O22', 'E11', 'E12', 'E21', 'E22', 'log_likelihood'
     ]])
+
+
+# @pytest.mark.now
+def test_query_satt(germaparl):
+
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+    dump = corpus.query_s_att('p_type', {'interjection'})
+    conc = dump.concordance(form='simple')
+    print(conc)
+
+
+# @pytest.mark.now
+def test_query_satt_easy(brexit):
+
+    corpus = Corpus(brexit['corpus_name'],
+                    registry_path=brexit['registry_path'])
+    dump = corpus.query_s_att('np')
+    conc = dump.concordance(form='simple')
+    print(conc)
 
 
 @pytest.mark.keywords
