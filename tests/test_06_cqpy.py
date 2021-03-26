@@ -42,6 +42,7 @@ def test_run_from_cqpy(brexit):
     query = cqpy_load(path)
     result = run_query(corpus, query)
 
+    # print(result)
     print(result[["lonely_anchor_lemma", "region_1_lemma", "region_2_lemma"]])
 
     print(result[["region_1_lemma", "region_2_lemma"]])
