@@ -1,90 +1,141 @@
 # Collocation and Concordance Computation #
 
 ## Introduction ##
-This module is a wrapper around the [IMS Open Corpus Workbench
-(CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to
-run queries, extract concordance lines, and calculate collocates.
+This module is a wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
 
 * [Introduction](#introduction)
 	* [Prerequisites](#prerequisites)
 	* [Installation](#installation)
-	* [Defining your corpus](#corpus-setup)
+	* [Accessing Corpora](#accessing-corpora)
 * [Usage](#usage)
 	* [Queries and Dumps](#queries-and-dumps)
-	* [Extracting concordance lines](#concordancing)
-	* [Dealing with anchored queries](#anchored-queries)
-	* [Calculating collocates](#collocation-analyses)
-	* [Extracting keywords](#keyword-analyses)
+	* [Extracting Concordance Lines](#concordancing)
+	* [Dealing with Anchored Queries](#anchored-queries)
+	* [Calculating Collocates](#collocation-analyses)
+	* [Defining Subcorpora](#subcorpora)
+	* [Extracting Keywords](#keyword-analyses)
+* [Testing](#testing)
 * [Acknowledgements](#acknowledgements)
 
 
 ### Prerequisites ###
-The module needs a working installation of the CWB and operates on
-CWB-indexed corpora.
+The module needs a working installation of the [CWB](http://cwb.sourceforge.net/) and operates on CWB-indexed corpora.
 
-If you want to run queries with more than two anchor points, the
-module requires CWB version 3.4.16 or later.
+If you want to run queries with more than two anchor points, the module requires CWB version 3.4.16 or later.
 
 ### Installation ###
 You can install this module with pip from PyPI:
 
 	pip3 install cwb-ccc
 
-You can also clone the source from
-[github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the
-respective folder, and use `setup.py`:
+You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and use `setup.py`:
 
 	python3 setup.py install
 
-### Corpus Setup
-All methods rely on the `Corpus` class, which establishes the
-connection to your CWB-indexed corpus:
+### Accessing Corpora ###
+
+To list all available corpora, you can use
+```python
+from ccc import Corpora
+corpora = Corpora(registry_path="/usr/local/share/cwb/registry/")
+print(corpora)
+corpora.show()  # returns a DataFrame
+```
+
+All further methods rely on the `Corpus` class, which establishes the connection to your CWB-indexed corpus. You can activate a corpus with
+
+```python
+corpus = corpora.activate(corpus_name="GERMAPARL1386")
+```
+
+or directly use the respective class:
 
 ```python
 from ccc import Corpus
 corpus = Corpus(
   corpus_name="GERMAPARL1386",
-  registry_path='/usr/local/share/cwb/registry/'
+  registry_path="/usr/local/share/cwb/registry/"
 )
 ```
 
-This will raise a `KeyError` if the named corpus is not in the
-specified registry.
+This will raise a `KeyError` if the named corpus is not in the specified registry.
 
-If you are using macros and wordlists, you have to store them in a
-separate folder (with subfolders "wordlists/" and "macros/").  Make
-sure you specify this folder via `lib_path` when initializing the
-corpus.
+If you are using macros and wordlists, you have to store them in a separate folder (with subfolders "wordlists/" and "macros/").  Specify this folder via `lib_path` when initializing the corpus.
 
-You can use the `cqp_bin` to point the module to a specific version of
-`cqp` (this is also helpful if `cqp` is not in your `PATH`).
+You can use the `cqp_bin` to point the module to a specific version of `cqp` (this is also helpful if `cqp` is not in your `PATH`).
 
-By default, the `data_path` points to "/tmp/ccc-data/". Make sure that
-"/tmp/" exists and appropriate rights are granted. Otherwise, change
-the parameter when initializing the corpus.
+By default, the `data_path` points to "/tmp/ccc-data/". Make sure that "/tmp/" exists and appropriate rights are granted. Otherwise, change the parameter when initializing the corpus.
+
+If everything is set up correctly, you can list all available attributes of the activated corpus:
+
+<details>
+<summary><code>corpus.attributes_available</code></summary>
+<p>
+
+| type   | attribute                  | annotation   | active   |
+|:-------|:---------------------------|:-------------|:---------|
+| p-Att  | word                       | False        | True     |
+| p-Att  | pos                        | False        | False    |
+| p-Att  | lemma                      | False        | False    |
+| s-Att  | corpus                     | False        | False    |
+| s-Att  | corpus\_name               | True         | False    |
+| s-Att  | sitzung                    | False        | False    |
+| s-Att  | sitzung\_date              | True         | False    |
+| s-Att  | sitzung\_period            | True         | False    |
+| s-Att  | sitzung\_session           | True         | False    |
+| s-Att  | div                        | False        | False    |
+| s-Att  | div\_desc                  | True         | False    |
+| s-Att  | div\_n                     | True         | False    |
+| s-Att  | div\_type                  | True         | False    |
+| s-Att  | div\_what                  | True         | False    |
+| s-Att  | text                       | False        | False    |
+| s-Att  | text\_id                   | True         | False    |
+| s-Att  | text\_name                 | True         | False    |
+| s-Att  | text\_parliamentary\_group | True         | False    |
+| s-Att  | text\_party                | True         | False    |
+| s-Att  | text\_position             | True         | False    |
+| s-Att  | text\_role                 | True         | False    |
+| s-Att  | text\_who                  | True         | False    |
+| s-Att  | p                          | False        | False    |
+| s-Att  | p\_type                    | True         | False    |
+| s-Att  | s                          | False        | False    |
+
+</p>
+</details>
+
 
 ## Usage ##
 
-### Queries and Dumps
-The normal starting point for analyzing a corpus is to run a query
-with the `corpus.query()` method, which accepts valid CQP queries such
-as
+### Queries and Dumps ###
+The usual starting point for using this module is to run a query with the `corpus.query()` method, which accepts valid CQP queries such as
 
 ```python
-query = r'"\[" ([pos="NE"] "/"?)+ "\]"'
-dump = corpus.query(cqp_query=query)
+query = r'"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ "\]"'
+dump = corpus.query(query)
 ```
 
-The result is a `Dump` object. Its core is a pandas DataFrame
-(`dump.df`) multi-indexed by CQP's "match" and "matchend" (similar to
-a CQP dump). All entries of the DataFrame, including the index, are
-integers representing corpus positions.
+The result is a `Dump` object. Its core is a pandas DataFrame (`dump.df`) similar to a CQP dump and multi-indexed by "match" and "matchend" of the query.  All entries of the DataFrame, including the index, are integers representing corpus positions:
 
-You can provide one or more parameters to define the context around
-the matches: a parameter `context` specifying the context window
-(defaults to 20) and an s-attribute defining the context
-(`context_break`). You can specify asymmetric windows via
-`context_left` and `context_right`.
+<details>
+<summary><code>dump.df</code></summary>
+<p>
+
+| *match* | *matchend* | context | contextend |
+|--------:|-----------:|--------:|-----------:|
+|    2313 |       2319 |    2293 |       2339 |
+|    8213 |       8217 |    8193 |       8237 |
+|    8438 |       8444 |    8418 |       8464 |
+|   15999 |      16001 |   15979 |      16021 |
+|   24282 |      24288 |   24262 |      24308 |
+|     ... |        ... |     ... |        ... |
+
+</p>
+</details>
+<br/>
+
+You can provide one or more parameters to define the context around the matches: a parameter `context` specifying the context window (defaults to 20) and a parameter `context_break` naming an s-attribute to limit the context .  You can specify asymmetric windows via `context_left` and `context_right`.
+
+When providing an s-attribute limiting the context, the module additionally retrieves the CWB-id of this attribute, the corpus positions of the respective span start and end, as well as the actual context spans:
 
 ```python
 dump = corpus.query(
@@ -94,160 +145,272 @@ dump = corpus.query(
 )
 ```
 
-Note that queries _may_ end on a "within" clause, which will limit the
-matches to regions defined by this structural attribute. If you
-provide a `context_break` parameter, the query will be automatically
-confined by this s-attribute.
+<details>
+<summary><code>dump.df</code></summary>
+<p>
 
-You can set CQP's matching strategy ("standard", "longest",
-"shortest") via the `match_strategy` parameter.
+| *match* | *matchend* | s_cwbid | s_span | s_spanend | contextid | context | contextend |
+|--------:|-----------:|--------:|-------:|----------:|----------:|--------:|-----------:|
+|    2313 |       2319 |     161 |   2304 |      2320 |       161 |    2308 |       2320 |
+|    8213 |       8217 |     489 |   8187 |      8218 |       489 |    8208 |       8218 |
+|    8438 |       8444 |     500 |   8425 |      8445 |       500 |    8433 |       8445 |
+|   15999 |      16001 |     905 |  15992 |     16002 |       905 |   15994 |      16002 |
+|   24282 |      24288 |    1407 |  24273 |     24289 |      1407 |   24277 |      24289 |
+|     ... |        ... |     ... |    ... |       ... |       ... |     ... |        ... |
+
+</p>
+</details>
+<br/>
+
+There are two reasons for defining the context when running the queries:
+
+1. If you provide a `context_break` parameter, the query will be automatically confined to spans delimited by this s-attribute; this is equivalent to formulating a query that ends on a respective "within" clause.
+2. Subsequent analyses (concordancing, collocation) will all work on the same context.
+
+Notwithstanding (1), the context can also be set after having run the query:
+
+```python
+dump.set_context(context_left=5, context_right=10, context_break='s')
+```
+
+Note that this works "inplace".
+
+You can set CQP's matching strategy ("standard", "longest", "shortest", "traditional") via the `match_strategy` parameter.
 	
-By default, the result is cached: the query parameters will be used to
-create an identifier. The resulting `Dump` object contains the
-appropriate identifier as attribute `name_cache`. The resulting
-subcorpus will be saved to disk by CQP, and the extended dump
-containing the context put into a cache. This way, the result can be
-accessed directly by later queries with the same parameters on the
-same (sub)corpus, without the need for CQP to run again.  You can
-disable caching by providing a `name` other than "mnemosyne".
+By default, the result is cached: the query parameters are used to create an appropriate identifier.  This way, the result can be accessed directly by later queries with the same parameters on the same (sub)corpus, without the need for CQP to run again.
 
-We are set up to analyze your query result. Let's start with the
-frequency breakdown:
+We are set up to analyze the query result. Here's the frequency breakdown:
 
-```
-print(dump.breakdown())
-```
+<details>
+<summary><code>dump.breakdown()</code></summary>
+<p>
 
-| *word*        | freq |
-|---------------|------|
-| [ SPD ]       | 18   |
-| [ CDU / CSU ] | 13   |
-| [ PDS ]       | 6    |
+| *word*                      |   freq |
+|:----------------------------|-------:|
+| [ SPD ]                     |     18 |
+| [ F. D. P. ]                |     14 |
+| [ CDU / CSU ]               |     13 |
+| [ BÜNDNIS 90 / DIE GRÜNEN ] |     12 |
+| [ PDS ]                     |      6 |
+
+</p>
+</details>
+<br/>
 
 
 ### Concordancing ###
 
-You can directly access concordance lines via the `concordance` method
-of the dump. This method returns a dataframe with information about
-the query matches in context:
+You can access concordance lines via the `concordance` method of the dump.  This method returns a DataFrame with information about the query matches in context:
 
+<details>
+<summary><code>dump.concordance()</code></summary>
+<p>
+
+| *match* | *matchend* | word                                                       |
+|--------:|-----------:|:-----------------------------------------------------------|
+|    2313 |       2319 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) |
+|    8213 |       8217 | Widerspruch des Abg. Wolfgang Zöller [ CDU / CSU ] )       |
+|    8438 |       8444 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) |
+|   15999 |      16001 | des Abg. Dr. Peter Struck [ SPD ] )                        |
+|   24282 |      24288 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) |
+|     ... |        ... | ...                                                        |
+
+</p>
+</details>
+<br/>
+
+By default, the output is a "simple" format, i.e. a DataFrame indexed by "match" and "matchend" with a column "word" showing the matches in context.  You can choose which p-attributes to retrieve via the `p_show` parameter.  Similarly, you can retrieve s-attributes (at match-position):
+
+<details>
+<summary><code>dump.concordance(p_show=["word", "lemma"], s_show=["text_id"])</code></summary>
+<p>
+
+| *match* | *matchend* | word                                                       | lemma                                                      | text\_id        |
+|--------:|-----------:|:-----------------------------------------------------------|:-----------------------------------------------------------|:---------------|
+|    2313 |       2319 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) | Joseph Fischer [ Frankfurt ] [ Bündnis 90 / die Grünen ] ) | i13\_86\_1\_2  |
+|    8213 |       8217 | Widerspruch des Abg. Wolfgang Zöller [ CDU / CSU ] )       | Widerspruch die Abg. Wolfgang Zöller [ CDU / CSU ] )       | i13\_86\_1\_4  |
+|    8438 |       8444 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) | Joseph Fischer [ Frankfurt ] [ Bündnis 90 / die Grünen ] ) | i13\_86\_1\_4  |
+|   15999 |      16001 | des Abg. Dr. Peter Struck [ SPD ] )                        | die Abg. Dr. Peter Struck [ SPD ] )                        | i13\_86\_1\_8  |
+|   24282 |      24288 | Joseph Fischer [ Frankfurt ] [ BÜNDNIS 90 / DIE GRÜNEN ] ) | Joseph Fischer [ Frankfurt ] [ Bündnis 90 / die Grünen ] ) | i13\_86\_1\_24 |
+|     ... |        ... | ...                                                        | ...                                                        | ...            |
+
+</p>
+</details>
+<br/>
+
+The format can be changed using the `form` parameter.  The "kwic" format e.g. returns three columns for each requested p-attribute:
+
+<details>
+<summary><code>dump.concordance(form="kwic")</code></summary>
+<p>
+
+| *match* | *matchend* | left_word                            | node_word                   | right_word |
+|--------:|-----------:|:-------------------------------------|:----------------------------|:-----------|
+|    2313 |       2319 | Joseph Fischer [ Frankfurt ]         | [ BÜNDNIS 90 / DIE GRÜNEN ] | )          |
+|    8213 |       8217 | Widerspruch des Abg. Wolfgang Zöller | [ CDU / CSU ]               | )          |
+|    8438 |       8444 | Joseph Fischer [ Frankfurt ]         | [ BÜNDNIS 90 / DIE GRÜNEN ] | )          |
+|   15999 |      16001 | des Abg. Dr. Peter Struck            | [ SPD ]                     | )          |
+|   24282 |      24288 | Joseph Fischer [ Frankfurt ]         | [ BÜNDNIS 90 / DIE GRÜNEN ] | )          |
+
+</p>
+</details>
+<br/>
+
+If you want to inspect each query result in detail, use `form`="dataframe"; here, every concordance line is verticalized text formated as DataFrame with the _cpos_ of each token as index:
+
+```python
+lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
 ```
-lines = dump.concordance()
-print(lines)
-```
 
-| *match* | *matchend* | context | contextend | raw                                               |
-|---------|------------|---------|------------|---------------------------------------------------|
-| 8213    | 8217       | 8193    | 8237       | {'cpos': [8193, 8194, 8195, 8196, 8197, 8198, ... |
-| 15999   | 16001      | 15979   | 16021      | {'cpos': [15979, 15980, 15981, 15982, 15983, 1... |
-| 25471   | 25473      | 25451   | 25493      | {'cpos': [25451, 25452, 25453, 25454, 25455, 2... |
-| ...     | ...        | ...     | ...        | ...                                               |
+<details>
+<summary><code>lines.iloc[0]['dataframe']</code></summary>
+<p>
 
-Column `raw` contains a dictionary with the following keys:
-- "match" (int): the cpos of the match
+|   *cpos* |   offset | word      | pos     | lemma     |
+|---------:|---------:|:----------|:--------|:----------|
+|     2308 |       -5 | Joseph    | NE      | Joseph    |
+|     2309 |       -4 | Fischer   | NE      | Fischer   |
+|     2310 |       -3 | [         | XY      | [         |
+|     2311 |       -2 | Frankfurt | NE      | Frankfurt |
+|     2312 |       -1 | ]         | APPRART | ]         |
+|     2313 |        0 | [         | ADJA    | [         |
+|     2314 |        0 | BÜNDNIS   | NN      | Bündnis   |
+|     2315 |        0 | 90        | CARD    | 90        |
+|     2316 |        0 | /         | $(      | /         |
+|     2317 |        0 | DIE       | ART     | die       |
+|     2318 |        0 | GRÜNEN    | NN      | Grünen    |
+|     2319 |        0 | ]         | $.      | ]         |
+|     2320 |        1 | )         | $(      | )         |
+
+</p>
+</details>
+<br/>
+
+Further `form`s are "slots" (see [below](#anchored-queries)) and "dict": In the latter case, every entry in the "dict" column is a dictionary with the following keys:
+- "match" (int): the cpos of the match (serves as an identifier)
 - "cpos" (list): the cpos of all tokens in the concordance line
 - "offset" (list): the offset to match/matchend of all tokens 
 - "word" (list): the words of all tokens
-- "anchors" (dict): a dictionary of {anchor: cpos} (see
-  [below](#anchored-queries))
+- "anchors" (dict): a dictionary of {anchor: cpos} (see [below](#anchored-queries))
+  
+This format is especially suitable for serialization purposes.
 
-You can create your own formatting from this, or use the `form`
-parameter to define how your lines should be formatted ("raw",
-"simple", "kwic", "dataframes" or "extended"). If `form="dataframes"`
-or `form="extended"`, the dataframe contains a column `df` with each
-concordance line being formatted as a `DataFrame` with the _cpos_ of
-each token as index:
-
-```
-lines = dump.concordance(form="dataframes")
-print(lines['df'].iloc[1])
-```
-
-| *cpos* | offset | word    | match | matchend | context | contextend |
-|--------|--------|---------|-------|----------|---------|------------|
-| 15992  | -7     | (       | False | False    | True    | False      |
-| 15993  | -6     | Beifall | False | False    | False   | False      |
-| 15994  | -5     | des     | False | False    | False   | False      |
-| 15995  | -4     | Abg.    | False | False    | False   | False      |
-| 15996  | -3     | Dr.     | False | False    | False   | False      |
-| 15997  | -2     | Peter   | False | False    | False   | False      |
-| 15998  | -1     | Struck  | False | False    | False   | False      |
-| 15999  | 0      | [       | True  | False    | False   | False      |
-| 16000  | 0      | SPD     | False | False    | False   | False      |
-| 16001  | 0      | ]       | False | True     | False   | False      |
-| 16002  | 1      | )       | False | False    | False   | True       |
-
-
-Attribute selection is controlled via the `p_show` and `s_show`
-parameters (lists of p-attributes and s-attributes, respectively):
-
-```
-lines = dump.concordance(
-  form="dataframes",
-  p_show=['word', 'lemma'],
-  s_show=['text_id']
-)
-```
-
-|                   |                       |
-|-------------------|-----------------------|
-| context\_id       | 905                   |
-| context           | 15992                 |
-| contextend        | 16002                 |
-| df                | lemma offset word ... |
-| text\_role\_CWBID | 7                     |
-| text\_role        | mp                    |
-
-```
-print(lines['df'].iloc[1])
-```
-
-| *cpos* | lemma   | offset | word    | match | matchend | context | contextend |
-|--------|---------|--------|---------|-------|----------|---------|------------|
-| 15992  | (       | -7     | (       | False | False    | True    | False      |
-| 15993  | Beifall | -6     | Beifall | False | False    | False   | False      |
-| 15994  | die     | -5     | des     | False | False    | False   | False      |
-| 15995  | Abg.    | -4     | Abg.    | False | False    | False   | False      |
-| 15996  | Dr.     | -3     | Dr.     | False | False    | False   | False      |
-| 15997  | Peter   | -2     | Peter   | False | False    | False   | False      |
-| 15998  | Struck  | -1     | Struck  | False | False    | False   | False      |
-| 15999  | [       | 0      | [       | True  | False    | False   | False      |
-| 16000  | SPD     | 0      | SPD     | False | False    | False   | False      |
-| 16001  | ]       | 0      | ]       | False | True     | False   | False      |
-| 16002  | )       | 1      | )       | False | False    | False   | True       |
-
-You can decide which and how many concordance lines you want to
-retrieve by means of the parameters `order` ("first", "last", or
-"random") and `cut_off`. You can also provide a list of `matches` to
-get only specific concordance lines.
-
+You can decide which and how many concordance lines you want to retrieve by means of the parameters `order` ("first", "last", or "random") and `cut_off`. You can also provide a list of `matches` to get only specific concordance lines.
 
 ### Anchored Queries ###
 
-The concordancer detects anchored queries automatically. The following
-query
+The concordancer detects anchored queries automatically. The following query
+
 ```python
 dump = corpus.query(
-  query = r'@1[pos="NE"]? @2[pos="NE"] "\[" (@3[word="[A-Z]+"]+ "/"?)+ "\]"'
+  cqp_query=r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
+  context=None, context_break='s', match_strategy='longest'
 )
-lines = dump.concordance(form='dataframes')
-print(lines['df'].iloc[1])
+lines = dump.concordance(form='dataframe')
 ```
-thus returns `DataFrame`s with additional columns for each anchor point.
 
-| *cpos* | offset | word    | 1     | 2     | 3     | match | matchend | context | contextend |
-|--------|--------|---------|-------|-------|-------|-------|----------|---------|------------|
-| 15992  | -5     | (       | False | False | False | False | False    | True    | False      |
-| 15993  | -4     | Beifall | False | False | False | False | False    | False   | False      |
-| 15994  | -3     | des     | False | False | False | False | False    | False   | False      |
-| 15995  | -2     | Abg.    | False | False | False | False | False    | False   | False      |
-| 15996  | -1     | Dr.     | False | False | False | False | False    | False   | False      |
-| 15997  | 0      | Peter   | True  | False | False | True  | False    | False   | False      |
-| 15998  | 0      | Struck  | False | True  | False | False | False    | False   | False      |
-| 15999  | 0      | [       | False | False | False | False | False    | False   | False      |
-| 16000  | 0      | SPD     | False | False | True  | False | False    | False   | False      |
-| 16001  | 0      | ]       | False | False | False | False | True     | False   | False      |
-| 16002  | 1      | )       | False | False | False | False | False    | False   | True       |
+thus returns DataFrames with additional columns for each anchor point:
+
+<details>
+<summary><code>lines.iloc[0]['dataframe']</code></summary>
+<p>
+
+|   *cpos* |   offset | word         | 1     | 2     | 3     | 4     |
+|---------:|---------:|:-------------|:------|:------|:------|:------|
+|     8187 |      -24 | (            | False | False | False | False |
+|     8188 |      -23 | Anhaltender  | False | False | False | False |
+|     8189 |      -22 | lebhafter    | False | False | False | False |
+|     8190 |      -21 | Beifall      | False | False | False | False |
+|     8191 |      -20 | bei          | False | False | False | False |
+|     8192 |      -19 | der          | False | False | False | False |
+|     8193 |      -18 | SPD          | False | False | False | False |
+|     8194 |      -17 | --           | False | False | False | False |
+|     8195 |      -16 | Beifall      | False | False | False | False |
+|     8196 |      -15 | bei          | False | False | False | False |
+|     8197 |      -14 | Abgeordneten | False | False | False | False |
+|     8198 |      -13 | des          | False | False | False | False |
+|     8199 |      -12 | BÜNDNISSES   | False | False | False | False |
+|     8200 |      -11 | 90           | False | False | False | False |
+|     8201 |      -10 | /            | False | False | False | False |
+|     8202 |       -9 | DIE          | False | False | False | False |
+|     8203 |       -8 | GRÜNEN       | False | False | False | False |
+|     8204 |       -7 | und          | False | False | False | False |
+|     8205 |       -6 | der          | False | False | False | False |
+|     8206 |       -5 | PDS          | False | False | False | False |
+|     8207 |       -4 | --           | False | False | False | False |
+|     8208 |       -3 | Widerspruch  | False | False | False | False |
+|     8209 |       -2 | des          | False | False | False | False |
+|     8210 |       -1 | Abg.         | False | False | False | False |
+|     8211 |        0 | Wolfgang     | True  | False | False | False |
+|     8212 |        0 | Zöller       | False | True  | False | False |
+|     8213 |        0 | [            | False | False | True  | False |
+|     8214 |        0 | CDU          | False | False | False | False |
+|     8215 |        0 | /            | False | False | False | False |
+|     8216 |        0 | CSU          | False | False | False | False |
+|     8217 |        0 | ]            | False | False | False | True  |
+|     8218 |        1 | )            | False | False | False | False |
+
+</p>
+</details>
+<br/>
+
+For an analysis of certain spans of your query matches, you can use anchor points to define "slots", i.e. single anchors or spans between anchors that define sub-parts of your matches.  Use the "slots" format to extract these parts from each match:
+   
+```python
+dump = corpus.query(
+    r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
+    context=0, context_break='s', match_strategy='longest',
+)
+lines = dump.concordance(
+  form='slots', p_show=['word', 'lemma'], 
+  slots={"name": [1, 2], "party": [3, 4]}
+)
+```
+<details>
+<summary><code>lines</code></summary>
+<p>
+
+| *match* | *matchend* | word                          | name\_word      | party\_word   |
+|--------:|-----------:|:------------------------------|:----------------|:--------------|
+|    8211 |       8217 | Wolfgang Zöller [ CDU / CSU ] | Wolfgang Zöller | [ CDU / CSU ] |
+|   15997 |      16001 | Peter Struck [ SPD ]          | Peter Struck    | [ SPD ]       |
+|   25512 |      25516 | Jörg Tauss [ SPD ]            | Jörg Tauss      | [ SPD ]       |
+|   32808 |      32814 | Ina Albowitz [ F. D. P. ]     | Ina Albowitz    | [ F. D. P. ]  |
+|   36980 |      36984 | Christa Luft [ PDS ]          | Christa Luft    | [ PDS ]       |
+|     ... |        ... | ...                           | ...             | ...           |
+
+</p>
+</details>
+<br/>
+
+
+
+The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) -- note that this works inplace:
+   
+```python
+dump.correct_anchors({3: +1, 4: -1})
+lines = dump.concordance(
+  form='slots', p_show=['word', 'lemma'], 
+  slots={"name": [1, 2], "party": [3, 4]}
+)
+```
+
+<details>
+<summary><code>lines</code></summary>
+<p>
+
+| *match* | *matchend* | word                          | name\_word      | party\_word |
+|--------:|-----------:|:------------------------------|:----------------|:------------|
+|    8211 |       8217 | Wolfgang Zöller [ CDU / CSU ] | Wolfgang Zöller | CDU / CSU   |
+|   15997 |      16001 | Peter Struck [ SPD ]          | Peter Struck    | SPD         |
+|   25512 |      25516 | Jörg Tauss [ SPD ]            | Jörg Tauss      | SPD         |
+|   32808 |      32814 | Ina Albowitz [ F. D. P. ]     | Ina Albowitz    | F. D. P.    |
+|   36980 |      36984 | Christa Luft [ PDS ]          | Christa Luft    | PDS         |
+|     ... |        ... | ...                           | ...             | ...         |
+
+</p>
+</details>
+<br/>
 
 
 ### Collocation Analyses ###
@@ -299,17 +462,53 @@ only the first 100 most frequently co-occurring collocates are
 retrieved. You can (and should) change this behaviour via the `order`
 and `cut_off` parameters.
 
-### Keyword Analyses
+### Subcorpora ###
 
-For keyword analyses, you have to define a subcorpus. The natural way
-of doing so is by selecting text identifiers via spreadsheets or
-relational databases, or by directly using the annotated
-s-attributes. If you have collected an appropriate set of attribute
-values, you can use the `corpus.dump_from_s_att()` method:
+In cwb-ccc terms, every `dump` is a subcorpus. There are two
+possibilities to get a dump: either by running a traditional query as
+outlined [above](#queries-and-dumps); the following query e.g. defines
+a subcorpus of all sentences that contain the word "SPD":
 
 ```python
-party = {"CDU", "CSU"}
-dump = corpus.dump_from_s_att('text_party', party)
+dump = corpus.query('"SPD" expand to s')
+```
+
+Alternatively, you can define subcorpora via meta data stored in
+s-attributes.  A subcorpus of all noun phrases (indexed as
+s-attributes `np`) can e.g. be extracted using
+
+```python
+dump = corpus.query_s_att("np")
+```
+
+You can also query the respective annotations:
+
+```python
+dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
+```
+
+will e.g. retrieve all `text` spans with respective constraints on the
+`party`.
+
+Note that while the CWB does allow storage of arbitrary meta data in
+s-attributes, it does not index these attributes.  The method thus
+creates a dataframe with the spans of the s-attribute encoded as
+matches and caches the result.  Consequently, the first query of an
+s-attribute will be compartively slow and subsequent queries will be
+faster.
+
+Note also that the CWB does not allow complex queries on s-attributes.
+It is thus reasonable to store meta data in separate spreadsheets or
+relational databases and link to text spans via simple identifiers.
+This way (1) you can work with natural meta data queries and (2)
+working with a small number of s-attributes also unburdens the cache.
+
+
+### Keyword Analyses ###
+
+You can retrieve keywords for a subcorpus (a `dump`) with
+
+```python
 keywords = dump.keywords()
 ```
 
@@ -317,15 +516,9 @@ Just as with collocates, the result is a `DataFrame` with lexical
 items (`p_query` layer) as index and frequency signatures and
 association measures as columns.
 
-You can of course also define a subcorpus via a corpus query,
-e.g.
-```python
-dump = corpus.query('"SPD" expand to s')
-keywords = dump.keywords()
-```
 
 ## Testing ##
-The module is shipped with a small test corpus ("GERMAPARL8613"),
+The module is shipped with a small test corpus ("GERMAPARL1386"),
 which contains all speeches of the 86th session of the 13th German
 Bundestag on Feburary 8, 1996. The corpus consists of 149,800 tokens
 in 7332 paragraphs (s-attribute `p` with annotation _type_ ("regular"
@@ -337,18 +530,25 @@ _type_, _what_), and 346 `text`s corresponding to all speeches
 (annotations _name_, _parliamentary\_group_, _party_, _position_,
 _role_, _who_).
 
-The module is tested using pytest. Make sure you install all
+The corpus is located in this [repository](tests/test-corpora/), but
+you will have to manually update the path to the binary data files
+(line 10 of the [registry
+file](tests/test-corpora/registry/germaparl8613)), since the CWB
+requires an absolute path here.
+
+You can test the module using pytest. Make sure you install all
 development dependencies:
 	
 	pip install --dev
 
-You can then
+You can then simply
 
 	make test
 	
 and
 
 	make coverage
+
 
 ## Acknowledgements ##
 The module relies on
