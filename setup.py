@@ -24,13 +24,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/ausgerechnet/cwb-ccc",
     install_requires=[
-        "cython",
-        "numpy",
-        "pandas",
-        "unidecode",
-        "pyyaml",
         "cwb-python>=0.2.2",
-        "association-measures>=0.1.5"
+        "association-measures>=0.1.5",
+        "pandas>=1.0.0",
+        "unidecode>=1.2.0",
+        "pyyaml>=5.2.1"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
