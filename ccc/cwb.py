@@ -635,12 +635,13 @@ class Corpus:
         # if both are missing, return empty string
         if cpos_start == cpos_end == -1:
             return ""
-        # if one of them is missing, set start = end
+        # if one of them is missing, set start = end or end = start
         if cpos_start == -1:
             cpos_start = cpos_end
         if cpos_end == -1:
             cpos_end = cpos_start
 
+        # lexicalize
         p = self.attributes.attribute(p_att, 'p')
         return " ".join(p[int(cpos_start): int(cpos_end) + 1])
 
