@@ -126,79 +126,96 @@ class Concordance:
 
         return df_lines
 
-    def _dict_line(self, index, row, p_show):
-        """Translates one row of a df_dump into a dictionary.
+    def _export(self, index, row, p_show, form='dict'):
+        """Translates one row of a df_dump into a dictionary or a DataFrame.
 
-        :return: dictionary of [match, cpos, offset, anchors] + p_show
-        :rtype: dict
+        :return: [cpos, offset, anchors] + p_show
+        :rtype: dict or DataFrame
 
         """
 
-        # pack values
-        match, matchend = index
+        # pack all values into a dictionary
         row = dict(row)
+        match, matchend = index
         row['match'] = match
         row['matchend'] = matchend
 
         # create cotext
         cotext = node2cooc(row)
-        cpos = cotext['cpos_list']
-
-        # init output dictionary
-        out = {
-            'cpos': cpos,
-            'offset': cotext['offset_list'],
-            'match': match
-        }
-        assert(match == cotext['match_list'][0])
 
         # lexicalize positions
         attribute_lists = zip(
-            *list(map(lambda x: self.corpus.cpos2patts(x, p_show), cpos))
+            *list(map(lambda x: self.corpus.cpos2patts(x, p_show), cotext['cpos_list']))
         )
+
+        # init output dictionary
+        d = {
+            'cpos': cotext['cpos_list'],
+            'offset': cotext['offset_list']
+        }
+        # add attributes
         for p, a in zip(p_show, attribute_lists):
-            out[p] = list(a)
+            d[p] = list(a)
 
-        # process anchors
-        out['anchors'] = dict()
-        for a in self.anchors:
-            out['anchors'][a] = row[a]
+        if form == 'dict':
+            # add match as identifier
+            d['match'] = match
+            # process anchors
+            d['anchors'] = dict()
+            for a in self.anchors:
+                d['anchors'][a] = row[a]
+            return d
 
-        return out
+        elif form == 'dataframe':
+            # convert to dataframe and sort columns
+            df = DataFrame.from_records(d).set_index('cpos')
+            df = df[['offset'] + p_show]
+            # process anchors
+            for a in self.anchors:
+                df[a] = False
+                if row[a] in df.index:
+                    df.at[row[a], a] = True
+            return df
 
     def dict(self, df, p_show=['word']):
         """Retrieve concordance lines of provided df in 'dict' formatting.
+
         Each dictionary has the following keys:
         - match: single integer as ID
         - cpos: list of corpus positions of tokens
         - offset: list of offset of token to match..matchend
         - $p for in p_show: list of tokens
         - anchors: dictionary of anchor: cpos
+
         All lists are aligned.
+
         """
 
         df['dict'] = df.apply(
-            lambda row: self._dict_line(row.name, row, p_show),
+            lambda row: self._export(row.name, row, p_show, form='dict'),
             axis=1
         )
 
         return df
 
-    def dataframe(self, df_dict, p_show=['word']):
+    def dataframe(self, df, p_show=['word']):
         """Retrieve concordance lines of provided df_dict in 'dataframe'
         formatting.  df_dict must contain column 'dict' (return value
         of self.dict()).
 
         Each concordance line is a DataFrame with the cpos of each
-        token as index.
+        token as index:
+
+        == (cpos), offset, p_show[0], p_show[1], ... ==
 
         """
-        return DataFrame(
-            index=df_dict.index,
-            data={'dataframe': df_dict['dict'].apply(
-                lambda row: dict2df(row, p_show),
-            ).values}
+
+        df['dataframe'] = df.apply(
+            lambda row: self._export(row.name, row, p_show, form='dataframe'),
+            axis=1
         )
+
+        return df
 
     def lines(self, form='simple', p_show=['word'], s_show=[],
               order='first', cut_off=100, matches=None, slots=None):
@@ -208,10 +225,15 @@ class Concordance:
         (2) selection of p-attributes and s-attributes
         (3) selection of matches using cut-off and order or a
             pre-defined list of matches
-        (4) definition of slots (only for form='slot')
+        (4) definition of slots via anchor points (only for form='slot')
 
         Return value of all formats is a DataFrame indexed by (match,
-        matchend), columns depend on format.
+        matchend) and requested s-attributes of the match:
+
+        == (match, matchend), s_show[0], ... ==
+
+        Further columns depend on output format, see the respective
+        format implementations.
 
         :param str form: simple / kwic / dict / slots / dataframe
         :param list p_show: p-attributes to retrieve
@@ -267,46 +289,13 @@ class Concordance:
                 df = self.kwic(df, p_show)
             elif form == 'slots':
                 df = self.slots(df, p_show, slots)
-            else:
+            elif form == 'dict':
                 df = self.dict(df, p_show)
-                if form == 'dataframe':
-                    df = self.dataframe(df, p_show)
+            elif form == 'dataframe':
+                df = self.dataframe(df, p_show)
 
         # s-attributes
         for s_att in s_show:
             df = self.corpus.dump2satt(df, s_att)
 
         return df
-
-
-def dict2df(line, p_show):
-    """Transform a concordance dictionary into a DataFrame.  Pops
-    "anchors" and "match" (if part of the dictionary); all other
-    elements of the dictionary must be aligned lists.
-
-    :param dict line: dictionary with 'cpos', 'offset', 'anchors', p_show
-    :param list p_show: p-attributes to show (only relevant for sorting / selecting)
-
-    :return: concordance line formatted as a DataFrame
-    :rtype: DataFrame
-
-    """
-
-    # pop non-lists
-    anchors = []
-    if 'anchors' in line:
-        anchors = line.pop('anchors')
-    if 'match' in line:
-        line.pop('match')       # not needed
-
-    # transform to df
-    df = DataFrame.from_records(line).set_index('cpos')
-    df = df[['offset'] + p_show]
-
-    # append anchors
-    for a in anchors:
-        df[a] = False
-        if anchors[a] in df.index:
-            df.at[anchors[a], a] = True
-
-    return df

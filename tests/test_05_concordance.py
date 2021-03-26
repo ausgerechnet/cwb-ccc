@@ -1,6 +1,5 @@
 from ccc import Corpus
 from ccc.concordances import Concordance
-from ccc.concordances import dict2df
 import pandas as pd
 import pytest
 
@@ -138,35 +137,34 @@ def test_concordance_slots_regions_dict(germaparl):
 
 
 @pytest.mark.line
-def test_concordance_dict_line(germaparl):
+def test_concordance_export_dict(germaparl):
     corpus = get_corpus(germaparl)
     query = (
-        '[word="\\["] [lemma="CDU"] "/" "CSU" [word="\\]"]'
+        '[word="\\["] @1[lemma="CDU"] "/" "CSU" [word="\\]"]'
     )
     result = corpus.query(query)
     concordance = Concordance(corpus, result.df)
     line = result.df.iloc[0]
-    text_line = concordance._dict_line(
-        line.name, line, p_show=['word', 'pos']
+    text_line = concordance._export(
+        line.name, line, p_show=['word', 'pos'], form='dict'
     )
     assert(isinstance(text_line, dict))
     assert('cpos' in text_line)
 
 
 @pytest.mark.line
-def test_concordance_dict2df(germaparl):
+def test_concordance_export_dataframe(germaparl):
     corpus = get_corpus(germaparl)
     query = (
-        '[word="\\["] [lemma="CDU"] "/" "CSU" [word="\\]"]'
+        '[word="\\["] @1[lemma="CDU"] "/" "CSU" [word="\\]"]'
     )
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     line = result.df.iloc[0]
-    text_line = concordance._dict_line(
-        line.name, line, ['word', 'lemma']
+    text_line = concordance._export(
+        line.name, line, p_show=['word', 'pos'], form='dataframe'
     )
-    res = dict2df(text_line, ['word', 'lemma'])
-    assert(isinstance(res, pd.DataFrame))
+    assert(isinstance(text_line, pd.DataFrame))
 
 
 @pytest.mark.raw
