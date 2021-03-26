@@ -152,13 +152,10 @@ def test_argmin_query(brexit):
     conc = dump.concordance(
         p_show=query['p_show'],
         s_show=query['s_show'],
-        p_text=query['p_text'],
-        p_slots=query['p_slots'],
         slots=query['slots'],
         order='first',
         cut_off=None,
-        form='extended'
+        form='slots'
     )
 
     print(conc)
-    print(conc['df'].iloc[0])
