@@ -601,7 +601,6 @@ class Corpus:
             df_dump = df_dump.fillna(-1, downcast='integer')
 
         # restrict output to requested anchors
-        # df_dump = df_dump.loc[:, (df_dump != -1).any()]
         df_dump = df_dump[anchors]
 
         # put into cache
