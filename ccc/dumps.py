@@ -5,7 +5,8 @@
 from .concordances import Concordance
 from .collocates import Collocates
 from .keywords import Keywords
-from .utils import merge_intervals
+
+from .utils import merge_intervals, correct_anchors
 # requirements
 from pandas import DataFrame
 # logging
@@ -17,8 +18,6 @@ class Dump:
     """ result of a query """
 
     def __init__(self, corpus, df_dump, name_cqp):
-
-        # TODO: check context against collocates.mws
 
         self.df = df_dump
         self.corpus = corpus
@@ -45,7 +44,7 @@ class Dump:
 
     def set_context(self, context=None, context_break=None,
                     context_left=None, context_right=None):
-        """Set context in the dump. Useful
+        """Set context in the dump.
 
         """
         # pre-process context
@@ -58,6 +57,12 @@ class Dump:
         self.df = self.corpus.dump2context(
             self.df, context_left, context_right, context_break
         )
+
+    def correct_anchors(self, corrections):
+        """Correct anchors by integer offsets.
+
+        """
+        self.df = correct_anchors(self.df, corrections)
 
     def breakdown(self, max_matches=None):
 
@@ -109,9 +114,8 @@ class Dump:
 
         return self._context
 
-    def concordance(self, matches=None, p_show=['word'], s_show=[],
-                    p_text=None, p_slots=None, slots=[],
-                    order='first', cut_off=100, form='raw'):
+    def concordance(self, form='simple', p_show=['word'], s_show=[],
+                    order='first', cut_off=100, matches=None, slots=None):
 
         conc = Concordance(
             self.corpus.copy(),
@@ -119,15 +123,13 @@ class Dump:
         )
 
         return conc.lines(
-            matches=matches,
+            form=form,
             p_show=p_show,
             s_show=s_show,
-            p_text=p_text,
-            p_slots=p_slots,
-            slots=slots,
             order=order,
             cut_off=cut_off,
-            form=form
+            matches=matches,
+            slots=slots
         )
 
     def collocates(self, p_query='lemma', mws=20, window=5, order='f',
@@ -171,10 +173,3 @@ class Dump:
             frequencies=frequencies,
             flags=flags
         )
-
-
-class Dumps:
-    """ several dumps """
-
-    def __init__(self):
-        pass
