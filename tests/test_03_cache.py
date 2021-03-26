@@ -11,7 +11,7 @@ def test_generate_idx():
     parameters = {'query': "test", 's_break': "test"}
     cache = Cache()
     s = cache.generate_idx(parameters)
-    assert(type(s) == str)
+    assert(isinstance(s, str))
 
 
 def test_set_get():

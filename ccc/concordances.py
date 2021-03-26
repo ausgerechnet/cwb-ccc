@@ -50,8 +50,8 @@ class Concordance:
 
     def kwic(self, df, p_show=['word']):
         """Retrieve concordance lines of provided df in 'kwic' formatting. The
-        resulting dataframe has 3xlen(p_show) columns, namely for each
-        $p in p_show:
+        resulting dataframe has 3 times len(p_show) columns, namely
+        for each $p in p_show:
         - left_$p: context .. match - 1
         - node_$p: match .. matchend
         - right_$p: matchend + 1 .. contextend
@@ -193,11 +193,11 @@ class Concordance:
         token as index.
 
         """
-        return DataFrame.from_records(
+        return DataFrame(
             index=df_dict.index,
-            data=df_dict['dict'].apply(
-                lambda row: line2df(row, p_show),
-            ).values,
+            data={'dataframe': df_dict['dict'].apply(
+                lambda row: dict2df(row, p_show),
+            ).values}
         )
 
     def lines(self, form='simple', p_show=['word'], s_show=[],
@@ -271,6 +271,7 @@ class Concordance:
                 df = self.dict(df, p_show)
                 if form == 'dataframe':
                     df = self.dataframe(df, p_show)
+
         # s-attributes
         for s_att in s_show:
             df = self.corpus.dump2satt(df, s_att)
@@ -278,21 +279,22 @@ class Concordance:
         return df
 
 
-def line2df(line, p_show):
-    """Transform one line of a dictionary to a dictionary of {"dataframe":
-    DataFrame}.  Pops "anchors" and "match"; everything else must be
-    aligned lists.
+def dict2df(line, p_show):
+    """Transform a concordance dictionary into a DataFrame.  Pops
+    "anchors" and "match" (if part of the dictionary); all other
+    elements of the dictionary must be aligned lists.
 
     :param dict line: dictionary with 'cpos', 'offset', 'anchors', p_show
+    :param list p_show: p-attributes to show (only relevant for sorting / selecting)
 
-    :return: concordance line formatted as a DataFrame in a dict with key 'dataframe'
-    :rtype: dict
+    :return: concordance line formatted as a DataFrame
+    :rtype: DataFrame
 
     """
 
     # pop non-lists
     anchors = []
-    if 'anchors' in line.keys():
+    if 'anchors' in line:
         anchors = line.pop('anchors')
     if 'match' in line:
         line.pop('match')       # not needed
@@ -307,6 +309,4 @@ def line2df(line, p_show):
         if anchors[a] in df.index:
             df.at[anchors[a], a] = True
 
-    return {
-        'dataframe': df
-    }
+    return df

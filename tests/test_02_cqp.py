@@ -37,7 +37,7 @@ def test_cqp_dump(germaparl):
     cqp.Query('"Horst"')
     df = cqp.Dump()
     assert(len(df) == 55)
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
 
 
 def test_cqp_undump(germaparl):

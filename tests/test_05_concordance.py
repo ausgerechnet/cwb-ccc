@@ -1,6 +1,6 @@
 from ccc import Corpus
 from ccc.concordances import Concordance
-from ccc.concordances import line2df
+from ccc.concordances import dict2df
 import pandas as pd
 import pytest
 
@@ -46,7 +46,6 @@ def test_concordance_simple_nocontext(germaparl):
     assert(all(col in lines.columns for col in [
         'word'
     ]))
-    print(lines)
 
 
 @pytest.mark.raw
@@ -93,7 +92,11 @@ def test_concordance_slots_singletons(germaparl):
         df_dump,
         ['word', 'lemma']
     )
-    print(lines)
+    assert(set(lines.columns) == {
+        "word", "lemma",
+        "1_word", "1_lemma", "2_word", "2_lemma", "3_word", "3_lemma",
+        "match..matchend_word", "match..matchend_lemma"
+    })
 
 
 @pytest.mark.raw
@@ -110,7 +113,9 @@ def test_concordance_slots_regions(germaparl):
         ['word'],
         slots=[['match', 1], [2, 3]]
     )
-    print(lines)
+    assert(set(lines.columns) == {
+        "word", "match..1_word", "2..3_word"
+    })
 
 
 @pytest.mark.raw
@@ -127,7 +132,9 @@ def test_concordance_slots_regions_dict(germaparl):
         ['word'],
         slots={'mp': ['match', 1], 'party': [2, 3]}
     )
-    print(lines)
+    assert(set(lines.columns) == {
+        'word', 'mp_word', 'party_word'
+    })
 
 
 @pytest.mark.line
@@ -142,12 +149,12 @@ def test_concordance_dict_line(germaparl):
     text_line = concordance._dict_line(
         line.name, line, p_show=['word', 'pos']
     )
-    assert(type(text_line) == dict)
+    assert(isinstance(text_line, dict))
     assert('cpos' in text_line)
 
 
 @pytest.mark.line
-def test_concordance_line2df(germaparl):
+def test_concordance_dict2df(germaparl):
     corpus = get_corpus(germaparl)
     query = (
         '[word="\\["] [lemma="CDU"] "/" "CSU" [word="\\]"]'
@@ -158,9 +165,8 @@ def test_concordance_line2df(germaparl):
     text_line = concordance._dict_line(
         line.name, line, ['word', 'lemma']
     )
-    res = line2df(text_line, ['word', 'lemma'])
-    assert(type(res) == dict)
-    assert(type(res['dataframe']) == pd.DataFrame)
+    res = dict2df(text_line, ['word', 'lemma'])
+    assert(isinstance(res, pd.DataFrame))
 
 
 @pytest.mark.raw
@@ -172,7 +178,8 @@ def test_concordance_dict(germaparl):
         df_dump,
         p_show=['word']
     )
-    print(lines)
+    assert(isinstance(lines['dict'].iloc[0], dict))
+    assert('word' in lines['dict'].iloc[0])
 
 
 @pytest.mark.raw
@@ -185,11 +192,9 @@ def test_concordance_dataframes(germaparl):
                           match_strategy='longest')
     concordance = Concordance(corpus, result.df)
     df = concordance.dict(result.df, p_show=['word', 'lemma'])
-    # print(df['dict'].iloc[0])
     lines = concordance.dataframe(df, p_show=['word', 'lemma'])
     assert('dataframe' in lines.columns)
-    assert(type(lines['dataframe'].iloc[0]) == pd.DataFrame)
-    print("\n", lines['dataframe'].iloc[0])
+    assert(isinstance(lines['dataframe'].iloc[0], pd.DataFrame))
 
 
 @pytest.mark.lines
@@ -233,7 +238,6 @@ def test_concordance_lines(germaparl):
     assert(all(
         elem in lines.columns for elem in ['dict', 'text_id']
     ))
-    print(lines.iloc[0]['dict'])
 
     # dict
     lines = concordance.lines(form='dataframe', s_show=['text_id'], cut_off=10)
@@ -241,7 +245,6 @@ def test_concordance_lines(germaparl):
     assert(all(
         elem in lines.columns for elem in ['dataframe', 'text_id']
     ))
-    print(lines.iloc[0]['dataframe'])
 
 
 @pytest.mark.lines
@@ -387,7 +390,7 @@ def test_concordance_last(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(type(conc.lines(order='last')) == pd.DataFrame)
+    assert(isinstance(conc.lines(order='last'), pd.DataFrame))
 
 
 def test_concordance_fallback(germaparl):
@@ -397,6 +400,7 @@ def test_concordance_fallback(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(type(
-        conc.lines(order='last', form='simple', p_show=['word', 'lemma'])
-    ) == pd.DataFrame)
+    assert(isinstance(
+        conc.lines(order='last', form='simple', p_show=['word', 'lemma']),
+        pd.DataFrame)
+    )

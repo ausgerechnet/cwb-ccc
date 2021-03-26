@@ -42,7 +42,7 @@ def test_get_corpus(germaparl):
 @pytest.mark.init
 def test_corpus_descriptor(germaparl):
     corpus = get_corpus(germaparl)
-    assert(type(corpus.attributes_available) == pd.DataFrame)
+    assert(isinstance(corpus.attributes_available, pd.DataFrame))
 
 
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
@@ -61,7 +61,7 @@ def test_corpus_lib(brexit):
 def test_cpos2patt(germaparl):
     corpus = get_corpus(germaparl)
     token = corpus.cpos2patts(124345)
-    assert(type(token) == tuple)
+    assert(isinstance(token, tuple))
     assert(token[0] == 'gilt')
 
 
@@ -69,7 +69,7 @@ def test_cpos2patt(germaparl):
 def test_cpos2patts(germaparl):
     corpus = get_corpus(germaparl)
     token = corpus.cpos2patts(124345, ['word', 'pos'])
-    assert(type(token) == tuple)
+    assert(isinstance(token, tuple))
 
 
 @pytest.mark.attributes
@@ -179,7 +179,7 @@ def test_dump_from_query(germaparl):
         s_query=germaparl['s_query'],
         match_strategy='standard'
     )
-    assert(type(df_dump) == pd.DataFrame)
+    assert(isinstance(df_dump, pd.DataFrame))
     assert(df_dump.shape[0] == 30)
 
 
@@ -193,7 +193,7 @@ def test_dump_from_query_1(brexit):
         anchors=[1],
         match_strategy='longest'
     )
-    assert(type(df_dump) == pd.DataFrame)
+    assert(isinstance(df_dump, pd.DataFrame))
     assert(df_dump.shape[0] > 99)
 
 
@@ -206,7 +206,7 @@ def test_dump_from_query_anchors(germaparl):
         anchors=germaparl['anchors'],
         match_strategy='standard'
     )
-    assert(type(df_dump) == pd.DataFrame)
+    assert(isinstance(df_dump, pd.DataFrame))
     assert(df_dump.shape[0] == 30)
     assert(all(elem in df_dump.columns for elem in germaparl['anchors']))
 
@@ -221,7 +221,7 @@ def test_dump_from_query_lib(brexit):
         s_query=brexit['s_query'],
         match_strategy='longest'
     )
-    assert(type(df_dump) == pd.DataFrame)
+    assert(isinstance(df_dump, pd.DataFrame))
     assert(df_dump.shape[0] > 99)
 
 
@@ -355,7 +355,7 @@ def test_query_context_1(germaparl):
         cqp_query=germaparl['query_anchor'],
         context=None
     ).df
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
     columns = germaparl['anchors'] + ['context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
@@ -368,7 +368,7 @@ def test_query_context_2(germaparl):
         context_left=10,
         context=15
     ).df
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
     columns = germaparl['anchors'] + ['context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
@@ -381,7 +381,7 @@ def test_query_context_3(germaparl):
         context=None,
         context_break='s'
     ).df
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
     columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
@@ -394,7 +394,7 @@ def test_query_context_4(germaparl):
         context=10,
         context_break='s'
     ).df
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
     columns = germaparl['anchors'] + ['contextid', 'context', 'contextend']
     assert(all(elem in df.columns for elem in columns))
 
@@ -407,4 +407,4 @@ def test_query_context_5(germaparl):
         context=10,
         context_break='s'
     ).df
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
