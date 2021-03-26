@@ -385,7 +385,7 @@ lines = dump.concordance(
 
 
 
-The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) -- note that this works inplace:
+The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) – note that this works inplace:
    
 ```python
 dump.correct_anchors({3: +1, 4: -1})
