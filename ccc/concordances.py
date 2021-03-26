@@ -296,6 +296,6 @@ class Concordance:
 
         # s-attributes
         for s_att in s_show:
-            df = self.corpus.dump2satt(df, s_att)
+            df[s_att] = self.corpus.dump2satt(df, s_att)[s_att]
 
         return df
