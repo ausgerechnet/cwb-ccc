@@ -1,7 +1,17 @@
 from ccc.cwb import Corpus
 import pytest
 
-from .conftest import LOCAL
+from .conftest import LOCAL, DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
 
 
 def test_query2dump(germaparl):
@@ -26,12 +36,22 @@ def test_breakdown(germaparl):
 
 
 def test_dump_matches(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
-    # init topic disc
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.matches())
+
+
+@pytest.mark.now
+def test_dump_matches1(germaparl):
+    corpus = get_corpus(germaparl)
+    dump_base = corpus.query(
+        r'[pos="NE"]? [pos="NE"] "\[" ".*" "]")', name="Base"
+    )
+    tokens_base = len(dump_base.matches())
+    corpus.subcorpus = "Base"
+    dump_neg = corpus.query('[pos="NE"]')
+    tokens_neg = len(dump_neg.matches())
+    print(tokens_base - tokens_neg)
 
 
 def test_dump_context(germaparl):
