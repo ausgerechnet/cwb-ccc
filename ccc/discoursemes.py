@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Discourseme:
     """
-    realization of a discourseme given a corpus and query parameters
+    realization of a discourseme with context in a corpus
     """
 
     def __init__(self, corpus, items, p_query, s_query, flags="%cd", escape=False):
@@ -54,7 +54,7 @@ class Discourseme:
             cut_off=cut_off, form=form
         )
 
-    def collocates(self, window_sizes=[5], context_break=None,
+    def collocates(self, window_sizes=[3, 5, 7], context_break=None,
                    order='log_likelihood', cut_off=100,
                    p_query="lemma", ams=None, min_freq=2,
                    frequencies=True, flags=None):

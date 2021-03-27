@@ -12,10 +12,10 @@ def test_init(germaparl):
         ["SPD", "CSU", "Grünen"],
         'lemma', 's',
     )
-    print(topic.dump)
+    assert(len(topic.dump.df) == 1640)
 
 
-@pytest.mark.discourseme1
+@pytest.mark.discourseme
 def test_concordance(germaparl):
 
     corpus = Corpus(germaparl['corpus_name'],
@@ -24,9 +24,9 @@ def test_concordance(germaparl):
     topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
-        'lemma', 's',
+        'lemma', 's'
     )
-    print(topic.concordance(20))
+    print(topic.concordance())
     print(topic.concordance(10))
     print(topic.concordance(30))
 
@@ -42,13 +42,13 @@ def test_disc_concordance_form(germaparl):
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
-        's',
         's'
     )
     print(topic.concordance(cut_off=None, form='kwic'))
     print(topic.concordance(matches=[148430], cut_off=None, form='extended'))
 
 
+@pytest.mark.now
 @pytest.mark.discourseme
 def test_disc_collocates(germaparl):
 
@@ -60,12 +60,12 @@ def test_disc_collocates(germaparl):
         corpus,
         ["SPD", "CSU", "Grünen"],
         'lemma',
-        's',
         's'
     )
     print(topic.collocates())
 
 
+# constellations
 @pytest.mark.disccon
 def test_disccon(germaparl):
 
