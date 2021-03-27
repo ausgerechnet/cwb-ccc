@@ -900,6 +900,7 @@ class Corpus:
         """
 
         # preprocess input
+        # TODO: corpus will not be saved if already cached
         if name is None:
             name = 'Last'
             save = False
