@@ -9,7 +9,7 @@ class UFA:
     def __init__(self, corpus, s_dict, s_att='text_id'):
         """
         :param Corpus corpus: corpus to work on
-        :param dict ids: dicitonary of {subcorpus_name: set of values for context_break}
+        :param dict ids: dicitonary of {subcorpus_name: set of values for s_att}
         :param str context_break: s-attribute that is used for definition of regions
         """
 
