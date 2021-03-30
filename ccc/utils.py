@@ -244,7 +244,7 @@ def calculate_offset(row):
 # s-att handling #
 ##################
 def merge_s_atts(s_query, s_break, s_meta):
-    """ consistencize s-atts """
+    """ DEPRECATED consistencize s-atts """
     # s_query < s_break < s_meta
 
     # case 1.1: only s_query

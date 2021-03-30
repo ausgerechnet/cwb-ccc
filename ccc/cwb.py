@@ -8,10 +8,8 @@ from glob import glob
 from .cqp import CQP
 from .cache import Cache
 from .counts import Counts
-from .utils import (
-    preprocess_query, merge_s_atts,
-    chunk_anchors, correct_anchors
-)
+from .utils import preprocess_query
+from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
 # requirements
 from CWB.CL import Corpus as Attributes
@@ -908,12 +906,9 @@ class Corpus:
             save = True
 
         query, s_query, anchors = preprocess_query(cqp_query)
-        # TODO
-        s_query, context_break, s_meta = merge_s_atts(s_query, context_break, None)
-        if context_left is None:
-            context_left = context
-        if context_right is None:
-            context_right = context
+        s_query = context_break if s_query is None else s_query
+        context_left = context if context_left is None else context_left
+        context_right = context if context_right is None else context_right
 
         df_dump = self.dump_from_query(
             query=query,
