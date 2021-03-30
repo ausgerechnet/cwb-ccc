@@ -3,8 +3,7 @@ legacy/
 *.pyc
 __pycache__/
 
-instance/
-tests/test-cache/
+tests/data-dir/
 
 .pytest_cache/
 .coverage
