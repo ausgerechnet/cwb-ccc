@@ -3,7 +3,17 @@ from ccc import Corpus
 from ccc.ufa import UFA
 import pytest
 
-from .conftest import LOCAL
+from .conftest import LOCAL, DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
 
 
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
@@ -18,7 +28,7 @@ def test_keywords(brexit):
         ids[s] = set(meta.loc[meta['ymd'] == s]['id'])
 
     # keywords
-    corpus = Corpus(brexit['corpus_name'])
+    corpus = get_corpus(brexit)
     ufa = UFA(corpus, ids, s_att='tweet_id')
     tables = ufa.keywords()
     print(tables)
@@ -36,7 +46,7 @@ def test_collocates(brexit):
         ids[s] = set(meta.loc[meta['ymd'] == s]['id'])
 
     # keywords
-    corpus = Corpus(brexit['corpus_name'])
+    corpus = get_corpus(brexit)
     ufa = UFA(corpus, ids, s_att='tweet_id')
     tables = ufa.collocates(cqp_query='[lemma="johnson"]', order='log_likelihood')
     print(tables)

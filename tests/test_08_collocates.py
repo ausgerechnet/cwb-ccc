@@ -2,15 +2,25 @@ from ccc import Corpus
 from ccc.collocates import Collocates
 from ccc.keywords import Keywords
 
-from .conftest import LOCAL
+from .conftest import LOCAL, DATA_PATH
 
 import pandas as pd
 import pytest
 
 
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
+
+
 @pytest.mark.default
 def test_query_default(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[word="\\("] [lemma=".*"]+ [word="\\)"]'
     )
@@ -23,7 +33,7 @@ def test_query_default(germaparl):
 
 @pytest.mark.fallback
 def test_query_logging(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[word="\\("] [lemma=".*"]+ [word="\\)"]'
     )
@@ -35,6 +45,7 @@ def test_query_logging(germaparl):
 
 
 def compare_counts(lemma, window, min_freq=0):
+    # TODO: update to reproduceable example
 
     # CCC
     corpus = Corpus("GERMAPARL_1114")
@@ -112,7 +123,7 @@ def test_collocates_speed_many():
 
 @pytest.mark.persistence
 def test_collocates_persistence(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query_1 = (
         '"SPD"'
     )
@@ -139,7 +150,7 @@ def test_collocates_persistence(germaparl):
 
 @pytest.mark.keywords_collocates
 def test_query_keywords_collocates(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '"Horst" expand to s'
     )
@@ -150,7 +161,7 @@ def test_query_keywords_collocates(germaparl):
 
 @pytest.mark.mwu_marginals
 def test_collocates_mwu(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="CDU"] "/"? [lemma="CSU"]?'
     )
@@ -165,7 +176,7 @@ def test_collocates_mwu(germaparl):
 
 @pytest.mark.fold_items
 def test_collocates_pp(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '"SPD"'
     )
@@ -179,7 +190,7 @@ def test_collocates_pp(germaparl):
 
 @pytest.mark.fail
 def test_collocates_empty(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="Armin"]? [lemma="NAHH"]'
     )
@@ -190,7 +201,7 @@ def test_collocates_empty(germaparl):
 
 @pytest.mark.fail
 def test_collocates_no_context(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="Armin"]? [lemma="Laschet"]'
     )
@@ -201,7 +212,7 @@ def test_collocates_no_context(germaparl):
 
 @pytest.mark.fail
 def test_collocates_no_mws(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="Armin"]? [lemma="Laschet"]'
     )
@@ -212,7 +223,7 @@ def test_collocates_no_mws(germaparl):
 
 def test_collocates_nodes(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     query = (
         '[lemma=","] | [lemma="\\."] | [lemma="\\)"] | [lemma="\\("]'

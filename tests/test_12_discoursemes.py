@@ -3,10 +3,22 @@ from ccc.discoursemes import Discourseme, DiscoursemeConstellation
 import pytest
 
 
+from .conftest import DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
+
+
 @pytest.mark.discourseme
 def test_init(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
@@ -17,10 +29,7 @@ def test_init(germaparl):
 
 @pytest.mark.discourseme
 def test_concordance(germaparl):
-
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
+    corpus = get_corpus(germaparl)
     topic = Discourseme(
         corpus,
         ["SPD", "CSU", "Grünen"],
@@ -34,9 +43,7 @@ def test_concordance(germaparl):
 @pytest.mark.discourseme
 def test_disc_concordance_form(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
+    corpus = get_corpus(germaparl)
     # init topic disc
     topic = Discourseme(
         corpus,
@@ -48,12 +55,10 @@ def test_disc_concordance_form(germaparl):
     print(topic.concordance(matches=[148430], cut_off=None, form='extended'))
 
 
-@pytest.mark.now
 @pytest.mark.discourseme
 def test_disc_collocates(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # init topic disc
     topic = Discourseme(
@@ -69,8 +74,7 @@ def test_disc_collocates(germaparl):
 @pytest.mark.disccon
 def test_disccon(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # init topic disc
     topic = Discourseme(
@@ -105,8 +109,7 @@ def test_disccon(germaparl):
 @pytest.mark.disccon
 def test_disccon_2(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # init topic disc
     topic = Discourseme(
@@ -128,8 +131,7 @@ def test_disccon_2(germaparl):
 @pytest.mark.disccon
 def test_disccon_concordance(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # three discoursemes
     topic = Discourseme(
@@ -164,8 +166,7 @@ def test_disccon_concordance(germaparl):
 @pytest.mark.disccon
 def test_disccon_collocates(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # three discoursemes
     topic = Discourseme(
@@ -199,9 +200,7 @@ def test_disccon_collocates(germaparl):
 @pytest.mark.disccon
 def test_disccon_collocates_empty(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-
+    corpus = get_corpus(germaparl)
     # three discoursemes
     topic = Discourseme(
         corpus,
@@ -218,11 +217,7 @@ def test_disccon_collocates_empty(germaparl):
 
 
 def test_disccon_collocates_nodes(germaparl):
-    corpus = Corpus(
-        germaparl['corpus_name'],
-        registry_path=germaparl['registry_path'],
-        # data_path=None
-    )
+    corpus = get_corpus(germaparl)
     topic = Discourseme(
         corpus,
         [",", ".", ")", "("],
@@ -243,11 +238,7 @@ def test_disccon_collocates_nodes(germaparl):
 @pytest.mark.disccon
 def test_disccon_collocates_range(germaparl):
 
-    corpus = Corpus(
-        germaparl['corpus_name'],
-        registry_path=germaparl['registry_path'],
-        # data_path=None
-    )
+    corpus = get_corpus(germaparl)
 
     # three discoursemes
     topic = Discourseme(

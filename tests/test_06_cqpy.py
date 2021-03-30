@@ -3,30 +3,40 @@ from pprint import pprint
 from ccc import Corpus
 import pytest
 
-from .conftest import LOCAL
+from .conftest import LOCAL, DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
 
 
 def test_read_json():
-    path = "tests/as_a_x_i_y_knowledge.json"
+    path = "tests/gold/as_a_x_i_y_knowledge.json"
     query = load_query_json(path)
     pprint(query)
 
 
 def test_cqpy_load():
-    path = "tests/as_a_x_i_y_knowledge.manual.cqpy"
+    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     print()
     pprint(query)
 
 
 def test_cqpy_dump():
-    path = "tests/as_a_x_i_y_knowledge.manual.cqpy"
+    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     print(cqpy_dump(query))
 
 
 def test_convert():
-    path = "tests/as_a_x_i_y_knowledge.json"
+    path = "tests/gold/as_a_x_i_y_knowledge.json"
     query = load_query_json(path)
     print(cqpy_dump(query))
 
@@ -35,10 +45,8 @@ def test_convert():
 @pytest.mark.brexit
 def test_run_from_cqpy(brexit):
 
-    corpus = Corpus(brexit['corpus_name'],
-                    brexit['lib_path'])
-
-    path = "tests/as_a_x_i_y_knowledge.manual.cqpy"
+    corpus = get_corpus(brexit)
+    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
 

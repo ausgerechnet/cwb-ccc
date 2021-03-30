@@ -15,22 +15,19 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 def test_query2dump(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump)
 
 
 def test_query2dump_name(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"', name="Test")
     print(dump)
 
 
 def test_breakdown(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.breakdown())
 
@@ -41,7 +38,6 @@ def test_dump_matches(germaparl):
     print(dump.matches())
 
 
-@pytest.mark.now
 def test_dump_matches1(germaparl):
     corpus = get_corpus(germaparl)
     dump_base = corpus.query(
@@ -55,8 +51,7 @@ def test_dump_matches1(germaparl):
 
 
 def test_dump_context(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     # init topic disc
     dump = corpus.query('"SPD"')
@@ -67,9 +62,7 @@ def test_dump_context(germaparl):
 @pytest.mark.brexit
 def test_satt2dump(brexit):
 
-    corpus = Corpus(
-        brexit['corpus_name']
-    )
+    corpus = get_corpus(brexit)
     ids = {
         't740982320711249920',
         't731037753241112576',
@@ -88,15 +81,13 @@ def test_satt2dump(brexit):
 
 
 def test_concordance(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.concordance())
 
 
 def test_concordance_options(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.concordance(form='raw'))
     print(dump.concordance(form='simple'))
@@ -107,8 +98,7 @@ def test_concordance_options(germaparl):
 
 def test_concordance_set_context(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"CSU"', context_break='text')
     print(dump)
     dump.set_context(10, context_break='text', context_right=10)
@@ -116,36 +106,31 @@ def test_concordance_set_context(germaparl):
 
 
 def test_collocates(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.collocates())
 
 
 def test_collocates_options(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.collocates(order='log_likelihood', cut_off=200))
 
 
 def test_keywords(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD" expand to s')
     print(dump.keywords())
 
 
 def test_keywords_options(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD" expand to s')
     print(dump.keywords(order='log_ratio', cut_off=200))
 
 
 def test_context_matches(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
     print(dump.matches())
     print(dump.context())
@@ -154,10 +139,7 @@ def test_context_matches(germaparl):
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 def test_argmin_query(brexit):
-    corpus = Corpus(
-        brexit['corpus_name'],
-        lib_path=brexit['lib_path']
-    )
+    corpus = get_corpus(brexit)
 
     query = brexit['query_argmin']
 

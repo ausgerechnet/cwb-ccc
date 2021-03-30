@@ -5,7 +5,7 @@ from pandas import read_csv
 
 LOCAL = True
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-DATA_PATH = os.path.join(DIR_PATH, 'test-cache')
+DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def germaparl():
     """ settings for small germaparl testing corpus """
 
     registry_path = os.path.join(DIR_PATH, "test-corpora/registry/")
-    dump_path = os.path.join(DIR_PATH, "germaparl-seehofer.tsv")
+    dump_path = os.path.join(DIR_PATH, "gold", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
 
     context = 50
@@ -61,7 +61,7 @@ def brexit():
         "brexit/brexit-preref-rant/brexit_v20190522_dedup.tsv.gz"
     )
 
-    query_path = (os.path.join(DIR_PATH, "as_a_x_i_y_knowledge.json"))
+    query_path = (os.path.join(DIR_PATH, "gold", "as_a_x_i_y_knowledge.json"))
 
     context = 50
     s_context = 'tweet'

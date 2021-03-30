@@ -382,7 +382,7 @@ def test_concordance_order(germaparl):
 
 
 def test_concordance_last(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl["registry_path"])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="Gerhard"]? [lemma="Schröder"]'
     )
@@ -392,7 +392,7 @@ def test_concordance_last(germaparl):
 
 
 def test_concordance_fallback(germaparl):
-    corpus = Corpus(germaparl['corpus_name'], registry_path=germaparl["registry_path"])
+    corpus = get_corpus(germaparl)
     query = (
         '[lemma="Gerhard"]? [lemma="Schröder"]'
     )

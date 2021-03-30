@@ -3,7 +3,17 @@ from ccc.keywords import Keywords
 from pandas import read_csv
 import pytest
 
-from .conftest import LOCAL
+from .conftest import LOCAL, DATA_PATH
+
+
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
 
 
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
@@ -16,7 +26,7 @@ def test_keywords_from_satt_values(brexit):
     ids_replies = set(meta.loc[meta['in_reply_status'] == "1"]['id'])
 
     # create subcorpus
-    corpus = Corpus(corpus_name=brexit['corpus_name'])
+    corpus = get_corpus(brexit)
     df_dump = corpus.query_s_att('tweet_id', ids_replies).df
 
     # keywords
@@ -29,8 +39,7 @@ def test_keywords_from_satt_values(brexit):
 def test_keywords_from_query(germaparl):
 
     # get subcorpus as dump
-    corpus = Corpus(corpus_name=germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     df_dump = corpus.query('"Seehofer" expand to s').df
 
     # keywords
@@ -43,8 +52,7 @@ def test_keywords_from_query(germaparl):
 def test_keywords_from_dump(germaparl):
 
     # get subcorpus as dump
-    corpus = Corpus(corpus_name=germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     df_dump = corpus.dump_from_query('"und" expand to s')
 
     # keywords
@@ -58,8 +66,7 @@ def test_keywords_from_dump(germaparl):
 def test_keywords_switch(germaparl):
 
     # get some regions
-    corpus = Corpus(corpus_name=germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     df_all = corpus.query('"und" expand to s', name='Und_all').df
 
     df_head = df_all.head(500)
