@@ -12,7 +12,7 @@ DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
 def germaparl():
     """ settings for small germaparl testing corpus """
 
-    registry_path = os.path.join(DIR_PATH, "test-corpora/registry/")
+    registry_path = os.path.join(DIR_PATH, "corpora/registry/")
     dump_path = os.path.join(DIR_PATH, "gold", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
 
