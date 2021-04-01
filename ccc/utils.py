@@ -304,3 +304,10 @@ def fold_df(df, flags="%cd"):
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)
     return df
+
+
+def filter_df(df, path):
+    import pkgutil
+    data = pkgutil.get_data(__name__, path)
+    items = set(data.decode().split("\n"))
+    return df.loc[~df.index.isin(items)]
