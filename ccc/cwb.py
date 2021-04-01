@@ -429,6 +429,27 @@ class Corpus:
         cqp.__kill__()
         return df
 
+    def activate_subcorpus(self, subcorpus=None):
+        """Activate subcorpus.  This only sets self.subcorpus but logs an
+        error if subcorpus not defined.
+
+        :param str subcorpus: subcorpus name defined in CQP
+        """
+
+        if subcorpus is not None:
+            subcorpora = self.show_subcorpora()['subcorpus'].values
+            # raise an error if subcorpus not available
+            if subcorpus not in subcorpora:
+                logger.error('subcorpus "%s" not defined)' % subcorpus)
+                self.activate_subcorpus()
+            else:
+                logger.info('switched to subcorpus "%s"' % subcorpus)
+        else:
+            logger.info('switched to corpus "%s"' % self.corpus_name)
+
+        # activate subcorpus
+        self.subcorpus = subcorpus
+
     ##################
     # CREATING DUMPS #
     ##################
@@ -898,18 +919,14 @@ class Corpus:
         """
 
         # preprocess input
-        # TODO: corpus will not be saved if already cached
-        if name is None:
-            name = 'Last'
-            save = False
-        else:
-            save = True
-
+        save = False if name is None else True  # save NQR from CQP to disk?
+        name = 'Last' if name is None else name  # name in CQP
         query, s_query, anchors = preprocess_query(cqp_query)
         s_query = context_break if s_query is None else s_query
         context_left = context if context_left is None else context_left
         context_right = context if context_right is None else context_right
 
+        # get dump from query
         df_dump = self.dump_from_query(
             query=query,
             s_query=s_query,
@@ -918,6 +935,14 @@ class Corpus:
             name=name,
             save=save
         )
+
+        # if dump has been retrieved from cache, NQR might not exist
+        if self.show_subcorpora().empty or name not in self.show_subcorpora()['subcorpus'].values:
+            # undump the dump and save to disk
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_dump, name)
+            cqp.nqr_save(self.corpus_name, name)
+            cqp.__kill__()
 
         # empty return?
         if len(df_dump) == 0:
