@@ -296,6 +296,10 @@ class Concordance:
 
         # s-attributes
         for s_att in s_show:
-            df[s_att] = self.corpus.dump2satt(df, s_att)[s_att]
+            tmp = self.corpus.dump2satt(df, s_att)
+            if s_att in tmp.columns:  # annotation
+                df[s_att] = tmp[s_att]
+            else:               # ID if no annotation
+                df[s_att] = tmp[s_att + "_cwbid"]
 
         return df
