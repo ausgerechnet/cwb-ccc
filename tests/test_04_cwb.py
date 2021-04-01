@@ -102,7 +102,7 @@ def test_activate_subcorpus(germaparl):
         "[lemma='Horst'] expand to s",
         name='Horst'
     ).df
-    corpus.subcorpus = 'Horst'
+    corpus.activate_subcorpus('Horst')
     df2 = corpus.dump_from_query(
         "[lemma='Seehofer']"
     )
@@ -126,14 +126,14 @@ def test_deactivate_subcorpus(germaparl):
     )
 
     # activate subcorpus
-    corpus.subcorpus = 'Sein'
+    corpus.activate_subcorpus('Sein')
     df2 = corpus.dump_from_query(
         '[lemma="die"]',
         germaparl['s_query']
     )
 
     # deactivate subcorpus
-    corpus.subcorpus = corpus.corpus_name
+    corpus.activate_subcorpus()
     df3 = corpus.dump_from_query(
         '[lemma="die"]',
         germaparl['s_query']
@@ -141,6 +141,20 @@ def test_deactivate_subcorpus(germaparl):
 
     assert(len(df1) == len(df3))
     assert(len(df1) > len(df2))
+
+
+@pytest.mark.subcorpus
+def test_create_cached_nqr(germaparl):
+
+    # problem: if a query runs once without having been given a name,
+    # the CQP dump (NQR) is not saved to disk
+    # if the same query runs again *with a name*, it should be saved to disk
+
+    corpus = get_corpus(germaparl)
+    corpus.query('[lemma="jetzt"]')
+    corpus.query('[lemma="jetzt"]', name='Jetzt')
+    corpus.activate_subcorpus("Jetzt")
+    assert("Jetzt" in corpus.show_subcorpora().values)
 
 
 ################################################
