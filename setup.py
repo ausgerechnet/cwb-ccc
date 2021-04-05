@@ -28,7 +28,7 @@ setuptools.setup(
         "cwb-python>=0.2.2",
         "pandas>=1.0.0",
         "numexpr>=2.7.3",
-        "Bottleneck>=2.7.3",
+        "Bottleneck>=1.3.2",
         "unidecode>=1.2.0",
         "pyyaml>=5.2.1"
     ],
