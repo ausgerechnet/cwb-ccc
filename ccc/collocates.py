@@ -37,7 +37,7 @@ class Collocates:
         # determine layer to work on
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
 
-        # TODO: also comprises s-satt -- implement convenient retrieval
+        # TODO: also comprises s-att -- implement convenient retrieval
         p_available = set(self.corpus.attributes_available['attribute'].values)
         if not set(self.p_query).issubset(p_available):
             logger.warning(
@@ -91,8 +91,8 @@ class Collocates:
         # determine reference frequency
         if isinstance(marginals, str):
             if marginals == 'corpus':
-                # get marginals
                 N = self.corpus.corpus_size - len(self.f1_set)
+                # get marginals
                 if len(self.p_query) == 1:
                     # coerce to multiindex (what was I thinking?)
                     f2 = self.corpus.marginals(
