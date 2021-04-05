@@ -19,7 +19,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 @pytest.mark.default
-def test_query_default(germaparl):
+def test_collo_single(germaparl):
     corpus = get_corpus(germaparl)
     query = (
         '[word="\\("] [lemma=".*"]+ [word="\\)"]'
@@ -27,8 +27,23 @@ def test_query_default(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, 'lemma')
     c = collocates.show(order='log_likelihood')
+    print(c)
     assert(type(c) == pd.DataFrame)
     assert('Dr.' in c.index)
+
+
+@pytest.mark.default
+def test_collo_combo(germaparl):
+    corpus = get_corpus(germaparl)
+    query = (
+        '[word="\\("] [lemma=".*"]+ [word="\\)"]'
+    )
+    df_dump = corpus.query(query).df
+    collocates = Collocates(corpus, df_dump, ['lemma', 'pos'])
+    c = collocates.show(order='log_likelihood')
+    # print(c)
+    assert(type(c) == pd.DataFrame)
+    # assert('Dr.' in c.index)
 
 
 @pytest.mark.fallback

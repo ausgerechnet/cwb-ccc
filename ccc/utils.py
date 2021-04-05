@@ -284,22 +284,34 @@ def merge_s_atts(s_query, s_break, s_meta):
 # p-att handling #
 ##################
 def fold_item(item, flags="%cd"):
+
     if flags is None:
         return item
 
+    isstr = False
+    if isinstance(item, str):
+        isstr = True
+        item = (item, )
+
     if "c" in flags:
         # lower-case
-        item = item.lower()
+        item = [i.lower() for i in item]
 
     if "d" in flags:
         # TODO align with CWB
         # remove diacritica
-        item = unidecode(item)
+        item = [unidecode(i) for i in item]
+
+    item = item[0] if isstr else tuple(item)
 
     return item
 
 
 def fold_df(df, flags="%cd"):
+
+    if flags is None:
+        return df
+
     df.index = df.index.map(lambda x: fold_item(x, flags))
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)

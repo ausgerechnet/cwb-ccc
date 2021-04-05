@@ -55,7 +55,6 @@ def test_merge_intervals():
     assert(merge == [[1, 4], [5, 10]])
 
 
-@pytest.mark.now
 def test_filter_df(germaparl):
     c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
     dump = c.query(germaparl['query'])

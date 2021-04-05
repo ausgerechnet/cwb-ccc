@@ -70,20 +70,45 @@ def test_cpos2patts(germaparl):
     corpus = get_corpus(germaparl)
     token = corpus.cpos2patts(124345, ['word', 'pos'])
     assert(isinstance(token, tuple))
+    assert(token == ('gilt', 'VVFIN'))
 
 
 @pytest.mark.attributes
-def test_marginals(germaparl):
+def test_marginals_word(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.marginals(["Merkel", "Seehofer", "gehen"])
+    print(df)
+
+
+@pytest.mark.attributes
+def test_marginals_lemma(germaparl):
     corpus = get_corpus(germaparl)
     df = corpus.marginals(["Merkel", "Seehofer", "gehen"], p_att='lemma')
-    assert(df.loc['gehen']['freq'] == 224)
+    print(df)
+
+
+@pytest.mark.attributes
+def test_marginals_lemma_pos(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.marginals_complex([('Seehofer', 'NE')], ['lemma', 'pos'])
+    print(df)
 
 
 @pytest.mark.attributes
 def test_marginals_pattern(germaparl):
     corpus = get_corpus(germaparl)
     df = corpus.marginals(["Merkel", "Seehofer", "geh.*"], pattern=True)
-    assert(df.loc['geh.*']['freq'] == 310)
+    print(df)
+
+
+@pytest.mark.attributes
+def test_marginals_complex(germaparl):
+    corpus = get_corpus(germaparl)
+    df = corpus.marginals_complex(
+        [("gehen", "VVFIN"), ("Seehofer", "NE"), ("Merkel", "NE")],
+        ["lemma", "pos"]
+    )
+    print(df)
 
 
 #####################################################

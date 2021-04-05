@@ -11,6 +11,7 @@ from .counts import Counts
 from .utils import preprocess_query
 from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
+from .counts import cwb_scan_corpus
 # requirements
 from CWB.CL import Corpus as Attributes
 from pandas import DataFrame, read_csv
@@ -345,23 +346,22 @@ class Corpus:
         return tuple(token)
 
     def marginals(self, items, p_att='word', flags=0, pattern=False):
-        """Extract marginal frequencies for given unigram patterns.
-        0 if not in corpus.
+        """Extract marginal frequencies for given unigrams or unigram patterns
+        of a single p-attribute.  0 if not in corpus.  For
+        combinations of p-attributes, see marginals_complex.
 
         :param list items: items to get marginals for
-        :param str p_att: p-attribute to get counts for
-        :param int flags: 1 = %c, 2 = %d, 3 = %cd
+        :param str p_att: p-attribute to get frequencies for
+        :param int flags: 1 = %c, 2 = %d, 3 = %cd (will activate wildcards)
         :param bool pattern: activate wildcards?
 
-        :return: counts of the items in the whole corpus indexed by items
-        :rtype: DataFrame
+        :return: frequencies of the items in the whole corpus indexed by items
+        :rtype: FreqFrame
 
         """
 
-        if flags:
-            pattern = True
+        pattern = True if flags > 0 else pattern
 
-        # init attribute
         tokens_all = self.attributes.attribute(p_att, 'p')
 
         # loop through items and collect frequencies
@@ -376,11 +376,38 @@ class Corpus:
                 cpos = tokens_all.find_pattern(item, flags=flags)
                 counts.append(len(cpos))
 
-        # create and post-process dataframe
-        df = DataFrame(data=counts, index=items, columns=['freq'])
-        df.index.name = p_att
-        df = df.sort_values(by='freq', ascending=False)
+        # create dataframe
+        df = DataFrame({'freq': counts, p_att: items})
+        df = df.set_index(p_att)
 
+        return df
+
+    def marginals_complex(self, items, p_atts=['word']):
+        """Extract marginal frequencies for p-attribute combinations,
+        e.g. ["word", "lemma"].  0 if not in corpus.  Marginals are
+        retrieved using cwb-scan-corpus, result is cached.
+
+        :param list items: list of tuples
+        :param list p_atts: list of p-attributes
+
+        :return: counts of the items in the whole corpus indexed by items
+        :rtype: FreqFrame
+
+        """
+
+        # retrieve all marginals for p-att combination from cache if possible
+        identifier = "_".join(p_atts) + "_marginals"
+        df = self.cache.get(identifier)
+        if df is not None:
+            logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
+        else:
+            # calculate all marginals for p-att combination
+            df = cwb_scan_corpus(None, self.corpus_name, self.registry_path, p_atts)
+            self.cache.set(identifier, df)
+
+        # select relevant rows
+        df = df.reindex(items)
+        df = df.fillna(0, downcast='infer')
         return df
 
     ################

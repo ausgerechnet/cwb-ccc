@@ -92,8 +92,8 @@ def test_concordance_options(germaparl):
     print(dump.concordance(form='raw'))
     print(dump.concordance(form='simple'))
     print(dump.concordance(form='kwic'))
-    print(dump.concordance(form='dataframes'))
-    print(dump.concordance(form='extended'))
+    print(dump.concordance(form='dataframe'))
+    print(dump.concordance(form='slots'))
 
 
 def test_concordance_set_context(germaparl):

@@ -17,26 +17,44 @@ logger = logging.getLogger(__name__)
 
 def cwb_scan_corpus(path, corpus_name, registry_path,
                     p_atts=['word'], cmd='cwb-scan-corpus'):
+    """
+
+    :return: counts of the p_attribute (combinations) of the positions
+    :rtype: FreqFrame
+    """
 
     logger.info("running cwb-scan-corpus ...")
+    command = [cmd, '-r', registry_path]
+    if path is not None:
+        command += ['-R', path]
+    command += [corpus_name] + p_atts
     scan = subprocess.Popen(
-        [cmd, '-r', registry_path, '-R', path, corpus_name] + p_atts,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     ret = scan.communicate()[0].decode()
+
     logger.info("... collecting results")
     df_counts = read_csv(StringIO(ret), sep="\t", header=None,
                          quoting=3, keep_default_na=False)
     df_counts.columns = ['freq'] + p_atts
+
+    # indexing
+    if len(p_atts) == 1:
+        # coerce to tuple for MultiIndex
+        df_counts[p_atts] = df_counts[p_atts].apply(lambda x: tuple(x), axis=1)
     df_counts = df_counts.set_index(p_atts)
+    df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
+
     return df_counts
 
 
 class Counts:
-    """
-    returns df_counts:
-    def: (p_att_1, p_att_2, ...), freq
-    all p_atts are strings, " "-delimited for MWUs (split=NO)
+    """all methods return a FreqFrame
+    == (p_atts) freq ==
+    where the index is either a BaseIndex or a MultiIndex,
+    depending on the number of p-attributes.
+
+    if not split, MWUs are " "-joined
 
     attributes:
     .corpus_name
@@ -46,8 +64,9 @@ class Counts:
     ._cpos2patts
 
     .cpos      (cpos_list, p_atts)
+      - strategy 1: split   |YES; flags  ; combo x
 
-    .dump      (df_dump, start, end, p_atts, split)
+    .dump      (dumpframe, start, end, p_atts, split)
       - strategy 1: split NO|YES; flags  ; combo x
       - strategy 2: split   |YES; flags  ; combo
 
@@ -74,37 +93,40 @@ class Counts:
             registry_dir=registry_path
         )
 
-    def _cpos2patts(self, cpos, p_atts=['word'], ignore_missing=True):
-        """Retrieves p-attributes of corpus position.
+    def _cpos2patts(self, cpos, p_atts=['word'], ignore=True):
+        """Retrieve p-attributes of corpus position.
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
-        :param bool ignore_missing: whether to return -1 for out-of-bounds
+        :param bool ignore: whether to return (None, .*) for -1
 
-        :return: p_att(s)
+        :return: p-attribute(s) at cpos
         :rtype: tuple
 
         """
 
-        if ignore_missing and cpos == -1:
+        if cpos == -1 and ignore:
             token = [None] * len(p_atts)
         else:
-            token = [self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts]
+            token = [
+                self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts
+            ]
 
         return tuple(token)
 
     def cpos(self, cpos_list, p_atts=['word']):
-        """Creates a frequency table for the p_att-values of the cpos-list.
+        """Create a frequency table for the p-attribute values of the
+        cpos-list.
 
         :param list cpos_list: corpus positions to fill
         :param list p_atts: p-attribute (combinations) to count
 
         :return: counts of the p_attribute (combinations) of the positions
-        :rtype: DataFrame
+        :rtype: FreqFrame
 
         """
-        lex_items = [self._cpos2patts(p, p_atts=p_atts) for p in cpos_list]
-        counts = Counter(lex_items)
+        items = [self._cpos2patts(p, p_atts=p_atts) for p in cpos_list]
+        counts = Counter(items)
         df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
         df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
         return df_counts
@@ -112,7 +134,7 @@ class Counts:
     @time_it
     def dump(self, df_dump, start='match', end='matchend',
              p_atts=['word'], split=False, strategy=2):
-        """Counts tokens in [start .. end] (columns in df_dump).
+        """Count tokens in [start .. end] (columns or index columns in df_dump).
 
         :param list df_dump: corpus positions to fill
         :param str start: column name where to start counting
@@ -123,7 +145,7 @@ class Counts:
                              does not support MWU counts though
 
         :return: counts of the p_attribute (combinations) of the positions
-        :rtype: DataFrame
+        :rtype: FreqFrame
 
         """
 
@@ -185,7 +207,7 @@ class Counts:
         :param str flags: %c, %d, %cd
 
         :return: counts of the p_attribute (combinations) of the positions
-        :rtype: DataFrame
+        :rtype: FreqFrame
 
         """
 
@@ -302,8 +324,9 @@ class Counts:
         :param bool fill_missing: count 0 for missing items?
         :param int strategy: strategy to use (see below)
 
-        :return: counts (index: queries(strategy 1) or tokens (, column: freq)
+        :return: counts (index: queries(strategy 1) or tokens, column: freq)
         :rtype: DataFrame
+        # TODO FreqFrame
 
         Strategy 1:
         for each item
@@ -321,8 +344,7 @@ class Counts:
 
         """
 
-        queries = set(queries)  # only process each one query once
-        name = 'tmp'            # subcorpus name to use
+        name = 'Tmp'            # subcorpus name to use
 
         if strategy == 1:
             if p_atts:
@@ -370,8 +392,6 @@ class Counts:
 
         # post-process dataframe
         df["freq"] = df["freq"].astype(int)
-        df = df.sort_values(by=["freq"], ascending=False)
-
         # df = df.loc[df["freq"] != 0]
 
         return df

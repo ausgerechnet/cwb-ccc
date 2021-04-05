@@ -19,60 +19,99 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 @pytest.mark.cwb_counts
-def test_cwb_scan_corpus(germaparl):
+def test_cwb_scan_corpus_subcorpora(germaparl):
 
     corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
-    cqp.nqr_from_query('[lemma="Helmut"]', name='tmp')
+
+    # get a DumpFrame
+    cqp.nqr_from_query('[lemma="Helmut"]', name='Tmp')
+
+    # run cwb-scan-corpus on dump
     with NamedTemporaryFile(mode="wt") as f:
-        cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump Tmp > "%s"' % f.name)
         df1 = cwb_scan_corpus(f.name, germaparl['corpus_name'],
                               germaparl['registry_path'])
 
-    cqp.nqr_from_query(query='[lemma="und"] expand to s',
-                       name='und')
-
+    # activate a sub-corpus
+    cqp.nqr_from_query(query='[lemma="und"] expand to s', name='und')
     cqp.nqr_activate(corpus.corpus_name, 'und')
-    cqp.nqr_from_query('[lemma="Kohl"]', name='tmp')
 
+    # run same query on sub-corpus
+    cqp.nqr_from_query('[lemma="Helmut"]', name='Tmp')
+
+    # run cwb-scan-corpus on dump
     with NamedTemporaryFile(mode="wt") as f:
-        cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump Tmp > "%s"' % f.name)
         df2 = cwb_scan_corpus(f.name, germaparl['corpus_name'],
                               germaparl['registry_path'])
 
-    cqp.__kill__()
+    # check that results are different
     assert(sum(df2['freq']) != sum(df1['freq']))
+
+    cqp.__kill__()
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_cwb_scan_corpus_marginal(germaparl):
+
+    df1 = cwb_scan_corpus(
+        None,
+        germaparl['corpus_name'],
+        germaparl['registry_path']
+    )
+    df2 = cwb_scan_corpus(
+        None,
+        germaparl['corpus_name'],
+        germaparl['registry_path'],
+        p_atts=['lemma', 'pos']
+    )
+    assert(isinstance(df1.index, pd.MultiIndex))
+    assert(isinstance(df2.index, pd.MultiIndex))
+    assert(df1.index.names == ['word'])
+    assert(df2.index.names == ['lemma', 'pos'])
+    assert(df1.columns == df2.columns)
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_marginals(germaparl):
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.marginals(["Helmut", "Kohl", "CDU"])
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    print(freqframe.index)
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_marginals_patterns(germaparl):
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.marginals(["H.*", "Kohl", "CDU"])
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(freqframe.loc['H.*']['freq'] == 0)
+    freqframe = corpus.marginals(["H.*", "Kohl", "CDU"], pattern=True)
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(freqframe.loc['H.*']['freq'] == 2466)
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos(germaparl):
     corpus = get_corpus(germaparl)
-    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
-    assert(type(counts) == pd.DataFrame)
+    freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(isinstance(freqframe.index, pd.MultiIndex))
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos_combo(germaparl):
     corpus = get_corpus(germaparl)
-    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
-    assert(type(counts) == pd.DataFrame)
-    assert(counts.index.names == ['lemma', 'pos'])
-
-
-@pytest.mark.cwb_counts
-def test_marginals(germaparl):
-    corpus = get_corpus(germaparl)
-    counts = corpus.marginals(["Helmut", "Kohl", "CDU"])
-    assert(len(counts) == 3)
-
-
-@pytest.mark.cwb_counts
-def test_marginals_patterns(germaparl):
-    corpus = get_corpus(germaparl)
-    counts = corpus.marginals(["H*", "Kohl", "CDU"])
-    assert(len(counts) == 3)
-    counts = corpus.marginals(["H*", "Kohl", "CDU"], pattern=True)
-    assert(len(counts) == 3)
+    freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(isinstance(freqframe.index, pd.MultiIndex))
 
 
 @pytest.mark.cwb_counts
@@ -89,12 +128,12 @@ def test_count_items(germaparl):
     # whole corpus
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
+    print(counts1, counts2)
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
     # subcorpus
     cqp.nqr_from_query(query='[lemma="und"] expand to s', name='und')
     cqp.nqr_activate(corpus.corpus_name, 'und')
-
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
     assert(counts1.loc[items[0], 'freq'] > counts2.loc[queries[0], 'freq'])
@@ -153,7 +192,7 @@ def test_count_mwus_strategies(germaparl):
 
     # whole corpus
     corpus = get_corpus(germaparl)
-    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324"]
     queries = [
         formulate_cqp_query([item]) for item in items
     ]
