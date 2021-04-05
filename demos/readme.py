@@ -125,3 +125,24 @@ copymd(collocates)
 
 collocates = dump.collocates(['lemma', 'pos'], order='log_likelihood')
 copymd(collocates)
+
+
+# SUBCORPORA
+dump = corpus.query('"SPD" expand to s')
+dump = corpus.query_s_att("s")
+# dump = corpus.query_s_att("np")
+copymd(corpus.query('[lemma="sagen"]').breakdown(), cut_off=None)
+corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+corpus.activate_subcorpus("Union")
+copymd(corpus.query('[lemma="sagen"]').breakdown(), cut_off=None)
+corpus.activate_subcorpus()
+print(corpus.subcorpus)
+
+copymd(corpus.show_nqr())
+
+
+# KEYWORDS
+dump = corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+copymd(dump.keywords(order="log_likelihood"))
+
+copymd(dump.keywords(['lemma', 'pos'], order="log_likelihood"))

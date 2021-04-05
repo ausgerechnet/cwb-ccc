@@ -414,14 +414,14 @@ lines = dump.concordance(
 
 
 ### Collocation Analyses ###
-After executing a query, you can use the `dump.collocates()` method to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items as index and frequency signatures and association measures as columns.
+After executing a query, you can use the `dump.collocates()` method to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
 
 ```python
 dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 ```
 
 <details>
-<summary><code>collocates()</code></summary>
+<summary><code>dump.collocates()</code></summary>
 <p>
 
 | *lemma*   |   f |   marginal |   in\_nodes |    f2 |      N |   f1 |   z\_score |   t\_score |      dice |   log\_likelihood |   mutual\_information |   log\_ratio |   O11 |   O12 |   O21 |    O22 |      E11 |     E12 |       E21 |    E22 |
@@ -439,19 +439,19 @@ dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 
 By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus).
 
-New in version 0.9.14: You can now perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
+**New in version 0.9.14**: You can now perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
 <details>
 <summary><code>dump.collocates(['lemma', 'pos'], order='log_likelihood')</code></summary>
 <p>
 
-| *lemma*   | *pos*   |   f |   marginal |   in\_nodes |   f2 |      N |   f1 |   z\_score |   t\_score |      dice |   log\_likelihood |   mutual\_information |   log\_ratio |   O11 |   O12 |   O21 |    O22 |     E11 |     E12 |      E21 |    E22 |
-|:----------|:--------|----:|-----------:|------------:|-----:|-------:|-----:|-----------:|-----------:|----------:|------------------:|----------------------:|-------------:|------:|------:|------:|-------:|--------:|--------:|---------:|-------:|
-| bei       | APPR    | 360 |       1229 |           0 | 1229 | 149168 | 5186 |    48.5376 |    16.7217 | 0.112237  |          1014.28  |              0.925594 |      3.16661 |   360 |  4826 |   869 | 143113 | 42.7276 | 5143.27 | 1186.27  | 142796 |
-| (         | $(      | 314 |       1758 |           0 | 1758 | 149168 | 5186 |    32.3466 |    14.2709 | 0.0904378 |           574.854 |              0.710754 |      2.43408 |   314 |  4872 |  1444 | 142538 | 61.1189 | 5124.88 | 1696.88  | 142285 |
-| Beifall   | NN      | 199 |        670 |           0 |  670 | 149168 | 5186 |    36.406  |    12.4555 | 0.0679645 |           561.382 |              0.931621 |      3.14473 |   199 |  4987 |   471 | 143511 | 23.2933 | 5162.71 |  646.707 | 143335 |
-| [         | $(      | 161 |        420 |           0 |  420 | 149168 | 5186 |    38.3118 |    11.5378 | 0.0574385 |           545.131 |              1.04242  |      3.50427 |   161 |  5025 |   259 | 143723 | 14.6018 | 5171.4  |  405.398 | 143577 |
-| ]:        | $(      | 139 |        479 |           0 |  479 | 149168 | 5186 |    29.9811 |    10.3773 | 0.0490733 |           383.895 |              0.921522 |      3.09579 |   139 |  5047 |   340 | 143642 | 16.653  | 5169.35 |  462.347 | 143520 |
-|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
+| *lemma* | *pos* |   f | marginal | in\_nodes |   f2 |      N |   f1 | z\_score | t\_score |      dice | log\_likelihood | mutual\_information | log\_ratio | O11 |  O12 |  O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
+|:--------|:------|----:|---------:|----------:|-----:|-------:|-----:|---------:|---------:|----------:|----------------:|--------------------:|-----------:|----:|-----:|-----:|-------:|--------:|--------:|--------:|-------:|
+| bei     | APPR  | 360 |     1229 |         0 | 1229 | 149168 | 5186 |  48.5376 |  16.7217 |  0.112237 |         1014.28 |            0.925594 |    3.16661 | 360 | 4826 |  869 | 143113 | 42.7276 | 5143.27 | 1186.27 | 142796 |
+| (       | $(    | 314 |     1758 |         0 | 1758 | 149168 | 5186 |  32.3466 |  14.2709 | 0.0904378 |         574.854 |            0.710754 |    2.43408 | 314 | 4872 | 1444 | 142538 | 61.1189 | 5124.88 | 1696.88 | 142285 |
+| Beifall | NN    | 199 |      670 |         0 |  670 | 149168 | 5186 |   36.406 |  12.4555 | 0.0679645 |         561.382 |            0.931621 |    3.14473 | 199 | 4987 |  471 | 143511 | 23.2933 | 5162.71 | 646.707 | 143335 |
+| [       | $(    | 161 |      420 |         0 |  420 | 149168 | 5186 |  38.3118 |  11.5378 | 0.0574385 |         545.131 |             1.04242 |    3.50427 | 161 | 5025 |  259 | 143723 | 14.6018 |  5171.4 | 405.398 | 143577 |
+| ]:      | $(    | 139 |      479 |         0 |  479 | 149168 | 5186 |  29.9811 |  10.3773 | 0.0490733 |         383.895 |            0.921522 |    3.09579 | 139 | 5047 |  340 | 143642 |  16.653 | 5169.35 | 462.347 | 143520 |
+| ...     | ...   | ... |      ... |       ... |  ... |    ... |  ... |      ... |      ... |       ... |             ... |                 ... |        ... | ... |  ... |  ... |    ... |     ... |     ... |     ... |    ... |
 
 </p>
 </details>
@@ -459,24 +459,19 @@ New in version 0.9.14: You can now perform collocation analyses on combinations 
 
 For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
 
-By default, the dataframe is annotated with "z\_score", "t\_score", "dice", "log\_likelihood", and "mutual\_information" (parameter `ams`).  For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html). Availability of association measures depends on their implementation in the [pandas-association-measures](https://pypi.org/project/association-measures/) package.
+By default, the dataframe is annotated with "z\_score", "t\_score", "dice", "log\_likelihood", and "mutual\_information" (parameter `ams`).  For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).  Availability of association measures depends on their implementation in the [pandas-association-measures](https://pypi.org/project/association-measures/) package.
 
 The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
 
 ### Subcorpora ###
 
-In cwb-ccc terms, every `dump` is a subcorpus. There are two
-possibilities to get a dump: either by running a traditional query as
-outlined [above](#queries-and-dumps); the following query e.g. defines
-a subcorpus of all sentences that contain the word "SPD":
+In **cwb-ccc terms**, every `dump` is a subcorpus.  There are two possibilities to get a dump: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain the word "SPD":
 
 ```python
 dump = corpus.query('"SPD" expand to s')
 ```
 
-Alternatively, you can define subcorpora via meta data stored in
-s-attributes.  A subcorpus of all noun phrases (indexed as
-s-attributes `np`) can e.g. be extracted using
+Alternatively, you can define subcorpora via values stored in s-attributes.  A subcorpus of all noun phrases (assuming they are indexed as structural attribute `np`) can e.g. be extracted using
 
 ```python
 dump = corpus.query_s_att("np")
@@ -488,54 +483,173 @@ You can also query the respective annotations:
 dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
 ```
 
-will e.g. retrieve all `text` spans with respective constraints on the
-`party` annotation.
+will e.g. retrieve all `text` spans with respective constraints on the `party` annotation.
 
-Note that while the CWB does allow storage of arbitrary meta data in
-s-attributes, it does not index these attributes.  The method thus
-creates a dataframe with the spans of the s-attribute encoded as
-matches and caches the result.  Consequently, the first query of an
-s-attribute will be compartively slow and subsequent queries will be
-faster.
+Implementation note: While the CWB does allow storage of arbitrary meta data in s-attributes, it does not index these attributes.  `corpus.query_s_att` thus creates a dataframe with the spans of the s-attribute encoded as matches and caches the result.  Consequently, the first query of an s-attribute will be compartively slow and subsequent queries will be faster.
 
-Note also that the CWB does not allow complex queries on s-attributes.
-It is thus reasonable to store meta data in separate spreadsheets or
-relational databases and link to text spans via simple identifiers.
-This way (1) you can work with natural meta data queries and (2)
-working with a small number of s-attributes also unburdens the cache.
+Note also that the CWB does not allow complex queries on s-attributes.  It is thus reasonable to store meta data in separate spreadsheets or relational databases and link to text spans via simple identifiers.  This way (1) you can work with natural meta data queries and (2) working with a small number of s-attributes also unburdens the cache.
+
+In **CWB terms**, subcorpora are _named query results_ (NQRs), which consist of the corpus positions of match and matchend (and optional anchor points called _anchor_ and _keyword_).  If you give a `name` when using `corpus.query()` or `corpus.query_s_att()`, the respective matches of the dump will also be available as NQRs in CQP.
+
+This way you can run queries on NQRs in CQP.  Compare e.g. the frequency breakdown for a query on the whole corpus
+
+<details>
+<summary><code>corpus.query('[lemma="sagen"]').breakdown()</code></summary>
+<p>
+
+| *word*   |   freq |
+|:---------|-------:|
+| sagen    |    234 |
+| gesagt   |    131 |
+| sage     |     69 |
+| sagt     |     39 |
+| Sagen    |     12 |
+| sagte    |      6 |
+
+</p>
+</details>
+<br/>
+
+with the one a subcorpus:
+
+```python
+corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+corpus.activate_subcorpus("Union")
+print(corpus.subcorpus)
+> 'Union'
+```
+
+<details>
+<summary><code>corpus.query('[lemma="sagen"]').breakdown()</code></summary>
+<p>
+
+| *word*   |   freq |
+|:---------|-------:|
+| sagen    |     64 |
+| gesagt   |     45 |
+| sage     |     30 |
+| sagt     |     12 |
+| Sagen    |      6 |
+| sagte    |      3 |
+
+</p>
+</details>
+<br/>
+
+Don't forget to switch back to the main corpus when you are done with the analysis on the activated NQR:
+
+```python
+corpus.activate_subcorpus()  # switches to main corpus when given no name
+print(corpus.subcorpus)
+> None
+```
+
+You can access all available NQRs via
+
+<details>
+<summary><code>corpus.show_nqr()</code></summary>
+<p>
+
+| corpus        | subcorpus   |   size | storage   |
+|:--------------|:------------|-------:|:----------|
+| GERMAPARL1386 | Union       |     82 | md-       |
+
+</p>
+</details>
+<br/>
 
 
 ### Keyword Analyses ###
 
-You can retrieve keywords for a subcorpus (a `dump`) with
-
+Having created a subcorpus (a `dump`)
 ```python
-keywords = dump.keywords()
+dump = corpus.query_s_att("text_party", values={"CDU", "CSU"})
 ```
 
-Just as with collocates, the result is a `DataFrame` with lexical
-items (`p_query` layer) as index and frequency signatures and
-association measures as columns.
+you can use the `keywords` method for retrieving keywords:
 
+<details>
+<summary><code>dump.keywords()</code></summary>
+<p>
+
+| *lemma*    |   f |   f2 |      N |    f1 | z\_score | t\_score |       dice | log\_likelihood | mutual\_information | log\_ratio | O11 |   O12 |  O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
+|:-----------|----:|-----:|-------:|------:|---------:|---------:|-----------:|----------------:|--------------------:|-----------:|----:|------:|-----:|-------:|--------:|--------:|--------:|-------:|
+| deswegen   |  55 |   92 | 149800 | 44023 |  5.37785 |  3.77055 | 0.00249348 |         36.4851 |            0.308407 |    1.02542 |  55 | 43968 |   37 | 105740 | 27.0368 |   43996 | 64.9632 | 105712 |
+| CSU        | 255 |  635 | 149800 | 44023 |  5.00615 |  4.28257 |  0.0114201 |         33.6179 |            0.135599 |   0.452701 | 255 | 43768 |  380 | 105397 | 186.613 | 43836.4 | 448.387 | 105329 |
+| in         | 867 | 2498 | 149800 | 44023 |  4.90475 |  4.51323 |  0.0372735 |         33.5751 |           0.0722588 |   0.244474 | 867 | 43156 | 1631 | 104146 | 734.109 | 43288.9 | 1763.89 | 104013 |
+| CDU        | 260 |  650 | 149800 | 44023 |  4.99087 |  4.27789 |  0.0116401 |         33.4398 |            0.133892 |   0.447052 | 260 | 43763 |  390 | 105387 | 191.021 |   43832 | 458.979 | 105318 |
+| Wirtschaft |  39 |   64 | 149800 | 44023 |  4.65587 |  3.23327 | 0.00176923 |          27.294 |            0.316717 |    1.05277 |  39 | 43984 |   25 | 105752 | 18.8082 | 44004.2 | 45.1918 | 105732 |
+| ...        | ... |  ... |    ... |   ... |      ... |      ... |        ... |             ... |                 ... |        ... | ... |   ... |  ... |    ... |     ... |     ... |     ... |    ... |
+
+</p>
+</details>
+<br/>
+
+Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns.
+
+**New in version 0.9.14**: Keywords for p-attribute combinations:
+
+<details>
+<summary><code>dump.keywords(["lemma", "pos"], order="log_likelihood")</code></summary>
+<p>
+
+| *lemma*    | *pos* |   f |  f2 |      N |    f1 | z\_score | t\_score |       dice | log\_likelihood | mutual\_information | log\_ratio | O11 |   O12 | O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
+|:-----------|:------|----:|----:|-------:|------:|---------:|---------:|-----------:|----------------:|--------------------:|-----------:|----:|------:|----:|-------:|--------:|--------:|--------:|-------:|
+| F.         | NN    | 161 | 353 | 149800 | 44023 |  5.62195 |  4.51279 | 0.00725617 |          41.407 |            0.190883 |   0.635983 | 161 | 43862 | 192 | 105585 | 103.739 | 43919.3 | 249.261 | 105528 |
+| deswegen   | PROAV |  55 |  92 | 149800 | 44023 |  5.37785 |  3.77055 | 0.00249348 |         36.4851 |            0.308407 |    1.02542 |  55 | 43968 |  37 | 105740 | 27.0368 |   43996 | 64.9632 | 105712 |
+| CSU        | NE    | 255 | 635 | 149800 | 44023 |  5.00615 |  4.28257 |  0.0114201 |         33.6179 |            0.135599 |   0.452701 | 255 | 43768 | 380 | 105397 | 186.613 | 43836.4 | 448.387 | 105329 |
+| CDU        | NE    | 260 | 650 | 149800 | 44023 |  4.99087 |  4.27789 |  0.0116401 |         33.4398 |            0.133892 |   0.447052 | 260 | 43763 | 390 | 105387 | 191.021 |   43832 | 458.979 | 105318 |
+| Wirtschaft | NN    |  39 |  64 | 149800 | 44023 |  4.65587 |  3.23327 | 0.00176923 |          27.294 |            0.316717 |    1.05277 |  39 | 43984 |  25 | 105752 | 18.8082 | 44004.2 | 45.1918 | 105732 |
+| ...        | ...   | ... | ... |    ... |   ... |      ... |      ... |        ... |             ... |                 ... |        ... | ... |   ... | ... |    ... |     ... |     ... |     ... |    ... |
+
+</p>
+</details>
+<br/>
+
+Implementation note: `dump.keywords()` looks at all unigrams at the corpus positions in match..matchend, and compares the frequencies of their surface realizations with their marginal frequencies.  Similarly, `dump.collocates()` uses the the union of the corpus positions in context..match and matchend..contextend.
 
 ## Testing ##
-The module is shipped with a small test corpus ("GERMAPARL1386"),
-which contains all speeches of the 86th session of the 13th German
-Bundestag on Feburary 8, 1996. The corpus consists of 149,800 tokens
-in 7332 paragraphs (s-attribute `p` with annotation _type_ ("regular"
-or "interjection")) split into 11,364 sentences (s-attribute `s`).
-The p-attributes are `pos` and `lemma`. The s-attributes are 1
-`sitzung` (with annotations _date_, _period_, _session_), 10 `div`s
-corresponding to different agenda items (annotations _desc_, _n_,
-_type_, _what_), and 346 `text`s corresponding to all speeches
-(annotations _name_, _parliamentary\_group_, _party_, _position_,
-_role_, _who_).
+The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.
 
-The corpus is located in this [repository](tests/test-corpora/), but
-you will have to manually update the path to the binary data files
-(line 10 of the [registry
-file](tests/test-corpora/registry/germaparl8613)), since the CWB
-requires an absolute path here.
+The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
+
+<details>
+<summary><code>corpus.attributes_available</code></summary>
+<p>
+
+| type   | attribute                  | annotation   | active   |
+|:-------|:---------------------------|:-------------|:---------|
+| p-Att  | word                       | False        | True     |
+| p-Att  | pos                        | False        | False    |
+| p-Att  | lemma                      | False        | False    |
+| s-Att  | corpus                     | False        | False    |
+| s-Att  | corpus\_name               | True         | False    |
+| s-Att  | sitzung                    | False        | False    |
+| s-Att  | sitzung\_date              | True         | False    |
+| s-Att  | sitzung\_period            | True         | False    |
+| s-Att  | sitzung\_session           | True         | False    |
+| s-Att  | div                        | False        | False    |
+| s-Att  | div\_desc                  | True         | False    |
+| s-Att  | div\_n                     | True         | False    |
+| s-Att  | div\_type                  | True         | False    |
+| s-Att  | div\_what                  | True         | False    |
+| s-Att  | text                       | False        | False    |
+| s-Att  | text\_id                   | True         | False    |
+| s-Att  | text\_name                 | True         | False    |
+| s-Att  | text\_parliamentary\_group | True         | False    |
+| s-Att  | text\_party                | True         | False    |
+| s-Att  | text\_position             | True         | False    |
+| s-Att  | text\_role                 | True         | False    |
+| s-Att  | text\_who                  | True         | False    |
+| s-Att  | p                          | False        | False    |
+| s-Att  | p\_type                    | True         | False    |
+| s-Att  | s                          | False        | False    |
+
+</p>
+</details>
+<br/>
+
+The corpus is located in this [repository](tests/test-corpora/), but you will have to manually update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl8613)) in order to make the tests, since the CWB requires an absolute path here.
 
 You can test the module using pytest. Make sure you install all
 development dependencies:
@@ -552,28 +666,10 @@ and
 
 
 ## Acknowledgements ##
-The module relies on
-[cwb-python](https://pypi.org/project/cwb-python/), thanks to **Yannick
-Versley** and **Jorg Asmussen** for the implementation. Special thanks to
-**Markus Opolka** for the implementation of
-[association-measures](https://pypi.org/project/association-measures/)
-and for forcing me to write tests.
+The module relies on [cwb-python](https://pypi.org/project/cwb-python/), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** and **Jorg Asmussen** for the implementation.  Special thanks to **Markus Opolka** for the implementation of [association-measures](https://pypi.org/project/association-measures/) and for forcing me to write tests.
 
-The test corpus was extracted from the
-[GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the
-[PolMine Project](https://polmine.github.io/)); many thanks to **Andreas
-Blätte**.
+The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 
-This work was supported by the [Emerging Fields Initiative
-(EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/)
-of Friedrich-Alexander-Universität Erlangen-Nürnberg, project title
-[Exploring the *Fukushima
-Effect*](https://www.linguistik.phil.fau.de/projects/efe/)
-(2017-2020).
+This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
 
-Further development of the package is funded by the Deutsche
-Forschungsgemeinschaft (DFG) within the project [Reconstructing
-Arguments from Noisy
-Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number
-377333057 (2018-2023), as part of the Priority Program [Robust
-Argumentation Machines](http://www.spp-ratio.de/home/) (SPP-1999).
+Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/home/) (SPP-1999).
