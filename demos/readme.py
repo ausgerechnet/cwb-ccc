@@ -1,6 +1,5 @@
 """readme.py: test all snippets and create tables for the README.md"""
 
-from pandas import MultiIndex
 import pyperclip
 import sys
 sys.path.append("/home/ausgerechnet/implementation/cwb-ccc/")
@@ -112,3 +111,17 @@ copymd(lines)
 dump.correct_anchors({3: +1, 4: -1})
 lines = dump.concordance(form='slots', slots={"name": [1, 2], "party": [3, 4]})
 copymd(lines)
+
+
+# COLLOCATES
+dump = corpus.query(
+  '[lemma="SPD"]',
+  context=10, context_break='s'
+)
+
+collocates = dump.collocates()
+copymd(collocates)
+
+
+collocates = dump.collocates(['lemma', 'pos'], order='log_likelihood')
+copymd(collocates)

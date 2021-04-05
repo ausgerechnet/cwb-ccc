@@ -414,53 +414,54 @@ lines = dump.concordance(
 
 
 ### Collocation Analyses ###
-After executing a query, you can use the `dump.collocates()` method to
-extract collocates for a given window size (symmetric windows around
-the corpus matches). The result will be a `DataFrame` with lexical
-items as index and frequency signatures and association measures as
-columns.
+After executing a query, you can use the `dump.collocates()` method to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items as index and frequency signatures and association measures as columns.
 
 ```python
-dump = corpus.query(
-  '[lemma="Angela"] [lemma="Merkel"]',
-  context=10, context_break='s'
-)
-collocates = dump.collocates()
-print(collocates)
+dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 ```
 
-| *item* | O11 | O12  | O21   | O22    | E11        | E12         | E21          | E22           | log_likelihood | ... |
-|--------|-----|------|-------|--------|------------|-------------|--------------|---------------|----------------|-----|
-| die    | 813 | 4373 | 12952 | 131030 | 478.556326 | 4707.443674 | 13286.443674 | 130695.556326 | 226.512603     | ... |
-| bei    | 366 | 4820 | 991   | 142991 | 47.177692  | 5138.822308 | 1309.822308  | 142672.177692 | 967.728153     | ... |
-| (      | 314 | 4872 | 1444  | 142538 | 61.118926  | 5124.881074 | 1696.881074  | 142285.118926 | 574.853985     | ... |
-| [      | 221 | 4965 | 477   | 143505 | 24.266786  | 5161.733214 | 673.733214   | 143308.266786 | 654.834131     | ... |
-| )      | 207 | 4979 | 1620  | 142362 | 63.517792  | 5122.482208 | 1763.482208  | 142218.517792 | 218.340710     | ... |
-| ...    | ... | ...  | ...   | ...    | ...        | ...         | ...          | ...           | ...            | ... |
+<details>
+<summary><code>collocates()</code></summary>
+<p>
 
+| *lemma*   |   f |   marginal |   in\_nodes |    f2 |      N |   f1 |   z\_score |   t\_score |      dice |   log\_likelihood |   mutual\_information |   log\_ratio |   O11 |   O12 |   O21 |    O22 |      E11 |     E12 |       E21 |    E22 |
+|:----------|----:|-----------:|------------:|------:|-------:|-----:|-----------:|-----------:|----------:|------------------:|----------------------:|-------------:|------:|------:|------:|-------:|---------:|--------:|----------:|-------:|
+| die       | 813 |      13765 |           0 | 13765 | 149168 | 5186 |    15.2882 |    11.7295 | 0.0858002 |           226.513 |              0.230157 |     0.870887 |   813 |  4373 | 12952 | 131030 | 478.556  | 4707.44 | 13286.4   | 130696 |
+| bei       | 366 |       1357 |           0 |  1357 | 149168 | 5186 |    46.4174 |    16.6651 | 0.111875  |           967.728 |              0.889744 |     3.04807  |   366 |  4820 |   991 | 142991 |  47.1777 | 5138.82 |  1309.82  | 142672 |
+| (         | 314 |       1758 |           0 |  1758 | 149168 | 5186 |    32.3466 |    14.2709 | 0.0904378 |           574.854 |              0.710754 |     2.43408  |   314 |  4872 |  1444 | 142538 |  61.1189 | 5124.88 |  1696.88  | 142285 |
+| [         | 221 |        698 |           0 |   698 | 149168 | 5186 |    39.9366 |    13.2337 | 0.075119  |           654.834 |              0.95938  |     3.24305  |   221 |  4965 |   477 | 143505 |  24.2668 | 5161.73 |   673.733 | 143308 |
+| )         | 207 |       1827 |           0 |  1827 | 149168 | 5186 |    18.0032 |     9.9727 | 0.0590332 |           218.341 |              0.513075 |     1.74539  |   207 |  4979 |  1620 | 142362 |  63.5178 | 5122.48 |  1763.48  | 142219 |
+|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
 
-By default, collocates are calculated on the "lemma"-layer, assuming
-that this is an available p-attribute in the corpus. The corresponding
-parameter is `p_query` (which will fall back to "word" if the
-specified attribute is not annotated in the corpus).
+</p>
+</details>
+<br/>
 
-For improved performance, all hapax legomena in the context are
-dropped after calculating the context size. You can change this
-behaviour via the `min_freq` parameter.
+By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus).
 
-By default, the dataframe is annotated with "z\_score", "t\_score",
-"dice", "log\_likelihood", and "mutual\_information" (parameter
-`ams`).  For notation and further information regarding association
-measures, see
-[collocations.de](http://www.collocations.de/AM/index.html). Availability
-of association measures depends on their implementation in the
-[pandas-association-measures](https://pypi.org/project/association-measures/)
-package.
+New in version 0.9.14: You can now perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
+<details>
+<summary><code>dump.collocates(['lemma', 'pos'], order='log_likelihood')</code></summary>
+<p>
 
-The dataframe is sorted by co-occurrence frequency (column "O11"), and
-only the first 100 most frequently co-occurring collocates are
-retrieved. You can (and should) change this behaviour via the `order`
-and `cut_off` parameters.
+| *lemma*   | *pos*   |   f |   marginal |   in\_nodes |   f2 |      N |   f1 |   z\_score |   t\_score |      dice |   log\_likelihood |   mutual\_information |   log\_ratio |   O11 |   O12 |   O21 |    O22 |     E11 |     E12 |      E21 |    E22 |
+|:----------|:--------|----:|-----------:|------------:|-----:|-------:|-----:|-----------:|-----------:|----------:|------------------:|----------------------:|-------------:|------:|------:|------:|-------:|--------:|--------:|---------:|-------:|
+| bei       | APPR    | 360 |       1229 |           0 | 1229 | 149168 | 5186 |    48.5376 |    16.7217 | 0.112237  |          1014.28  |              0.925594 |      3.16661 |   360 |  4826 |   869 | 143113 | 42.7276 | 5143.27 | 1186.27  | 142796 |
+| (         | $(      | 314 |       1758 |           0 | 1758 | 149168 | 5186 |    32.3466 |    14.2709 | 0.0904378 |           574.854 |              0.710754 |      2.43408 |   314 |  4872 |  1444 | 142538 | 61.1189 | 5124.88 | 1696.88  | 142285 |
+| Beifall   | NN      | 199 |        670 |           0 |  670 | 149168 | 5186 |    36.406  |    12.4555 | 0.0679645 |           561.382 |              0.931621 |      3.14473 |   199 |  4987 |   471 | 143511 | 23.2933 | 5162.71 |  646.707 | 143335 |
+| [         | $(      | 161 |        420 |           0 |  420 | 149168 | 5186 |    38.3118 |    11.5378 | 0.0574385 |           545.131 |              1.04242  |      3.50427 |   161 |  5025 |   259 | 143723 | 14.6018 | 5171.4  |  405.398 | 143577 |
+| ]:        | $(      | 139 |        479 |           0 |  479 | 149168 | 5186 |    29.9811 |    10.3773 | 0.0490733 |           383.895 |              0.921522 |      3.09579 |   139 |  5047 |   340 | 143642 | 16.653  | 5169.35 |  462.347 | 143520 |
+|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
+
+</p>
+</details>
+<br/>
+
+For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
+
+By default, the dataframe is annotated with "z\_score", "t\_score", "dice", "log\_likelihood", and "mutual\_information" (parameter `ams`).  For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html). Availability of association measures depends on their implementation in the [pandas-association-measures](https://pypi.org/project/association-measures/) package.
+
+The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
 
 ### Subcorpora ###
 
@@ -488,7 +489,7 @@ dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
 ```
 
 will e.g. retrieve all `text` spans with respective constraints on the
-`party`.
+`party` annotation.
 
 Note that while the CWB does allow storage of arbitrary meta data in
 s-attributes, it does not index these attributes.  The method thus

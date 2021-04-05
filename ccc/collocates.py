@@ -133,8 +133,8 @@ class Collocates:
 
         # deal with index
         if len(self.p_query) == 1:
-            collocates.index.names = self.p_query
             collocates.index = collocates.index.map(lambda x: x[0])
+            collocates.index.name = self.p_query[0]
 
         return collocates
 
