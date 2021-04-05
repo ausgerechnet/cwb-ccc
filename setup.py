@@ -24,9 +24,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/ausgerechnet/cwb-ccc",
     install_requires=[
-        "cwb-python>=0.2.2",
         "association-measures>=0.1.5",
+        "cwb-python>=0.2.2",
         "pandas>=1.0.0",
+        "numexpr>=2.7.3",
+        "Bottleneck>=2.7.3",
         "unidecode>=1.2.0",
         "pyyaml>=5.2.1"
     ],
@@ -36,5 +38,5 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: Unix",
     ],
-    python_requires='>=3.5',
+    python_requires='>=3.6',
 )
