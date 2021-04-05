@@ -179,7 +179,14 @@ def test_create_cached_nqr(germaparl):
     corpus.query('[lemma="jetzt"]')
     corpus.query('[lemma="jetzt"]', name='Jetzt')
     corpus.activate_subcorpus("Jetzt")
-    assert("Jetzt" in corpus.show_subcorpora().values)
+    assert("Jetzt" in corpus.show_nqr().values)
+
+
+def test_nqr_from_s_att(germaparl):
+
+    corpus = get_corpus(germaparl)
+    corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+    corpus.activate_subcorpus("Union")
 
 
 ################################################
