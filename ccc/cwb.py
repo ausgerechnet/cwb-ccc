@@ -456,26 +456,36 @@ class Corpus:
         cqp.__kill__()
         return df
 
-    def activate_subcorpus(self, subcorpus=None):
-        """Activate subcorpus.  This only sets self.subcorpus but logs an
-        error if subcorpus not defined.
+    def activate_subcorpus(self, name=None, df_dump=None):
+        """Activate subcorpus.  If no df_dump is given, this sets
+        self.subcorpus and logs an error if subcorpus not defined.  If
+        a df_dump is given, the df_dump will be undumped.
 
         :param str subcorpus: subcorpus name defined in CQP
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+                                  with optional columns 'target' and 'keyword'
+
         """
 
-        if subcorpus is not None:
+        if df_dump is not None:
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_dump, name)
+            cqp.nqr_save(self.corpus_name, name)
+            cqp.__kill__()
+
+        if name is not None:
             subcorpora = self.show_subcorpora()['subcorpus'].values
             # raise an error if subcorpus not available
-            if subcorpus not in subcorpora:
-                logger.error('subcorpus "%s" not defined)' % subcorpus)
+            if name not in subcorpora:
+                logger.error('subcorpus "%s" not defined)' % name)
                 self.activate_subcorpus()
             else:
-                logger.info('switched to subcorpus "%s"' % subcorpus)
+                logger.info('switched to subcorpus "%s"' % name)
         else:
             logger.info('switched to corpus "%s"' % self.corpus_name)
 
         # activate subcorpus
-        self.subcorpus = subcorpus
+        self.subcorpus = name
 
     ##################
     # CREATING DUMPS #
@@ -890,7 +900,7 @@ class Corpus:
     #################################################
     # QUERY ALIASES #################################
     #################################################
-    def query_s_att(self, s_att, values=set()):
+    def query_s_att(self, s_att, values=set(), name=None):
         """Get s-attribute spans as Dump, optionally restricting the spans by
         matching the provided values against the s-att annotations.
 
@@ -917,6 +927,14 @@ class Corpus:
                 values = set(values)
                 logger.info("restricting spans using %d values" % len(values))
                 df_spans = df_spans.loc[df_spans[s_att].isin(values)]
+
+        # save as NQR
+        if name is not None:
+            # undump the dump and save to disk
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_spans, name)
+            cqp.nqr_save(self.corpus_name, name)
+            cqp.__kill__()
 
         # return proper Dump
         return Dump(self.copy(), df_spans, name_cqp=None)
@@ -964,7 +982,8 @@ class Corpus:
         )
 
         # if dump has been retrieved from cache, NQR might not exist
-        if self.show_subcorpora().empty or name not in self.show_subcorpora()['subcorpus'].values:
+        if self.show_subcorpora().empty or \
+           name not in self.show_subcorpora()['subcorpus'].values:
             # undump the dump and save to disk
             cqp = self.start_cqp()
             cqp.nqr_from_dump(df_dump, name)
