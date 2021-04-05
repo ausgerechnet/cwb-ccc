@@ -81,3 +81,15 @@ def test_keywords_switch(germaparl):
     lines_tail = keywords.show(order='log_likelihood')
 
     assert(not lines_head.equals(lines_tail))
+
+
+@pytest.mark.query
+def test_keywords_combo(germaparl):
+
+    # get subcorpus as dump
+    corpus = get_corpus(germaparl)
+    dump = corpus.query('"und" expand to s')
+
+    # keywords
+    lines = dump.keywords(["lemma", "pos"], order='log_likelihood', min_freq=10)
+    assert(lines.index[1] == ("Dame", "NN"))
