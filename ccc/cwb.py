@@ -182,7 +182,7 @@ class Corpus:
     .cpos2patts                 # p-attributes
     .marginals                  # p-attributes
     .cpos2sid                   # s-attributes
-    .show_subcorpora            # subcorpora
+    .show_nqr                   # subcorpora
     .dump_from_s_att            # creating dumps
     .dump_from_query            # creating dumps
     .dump2patt                  # working on dumps
@@ -432,7 +432,7 @@ class Corpus:
     ##############
     # subcorpora #
     ##############
-    def show_subcorpora(self):
+    def show_nqr(self):
         """Get subcorpora defined in CQP as DataFrame.
 
         :return: available subcorpora
@@ -456,7 +456,7 @@ class Corpus:
         cqp.__kill__()
         return df
 
-    def activate_subcorpus(self, name=None, df_dump=None):
+    def activate_subcorpus(self, nqr=None, df_dump=None):
         """Activate subcorpus.  If no df_dump is given, this sets
         self.subcorpus and logs an error if subcorpus not defined.  If
         a df_dump is given, the df_dump will be undumped.
@@ -469,23 +469,22 @@ class Corpus:
 
         if df_dump is not None:
             cqp = self.start_cqp()
-            cqp.nqr_from_dump(df_dump, name)
-            cqp.nqr_save(self.corpus_name, name)
+            cqp.nqr_from_dump(df_dump, nqr)
+            cqp.nqr_save(self.corpus_name, nqr)
             cqp.__kill__()
 
-        if name is not None:
-            subcorpora = self.show_subcorpora()['subcorpus'].values
+        if nqr is not None:
             # raise an error if subcorpus not available
-            if name not in subcorpora:
-                logger.error('subcorpus "%s" not defined)' % name)
+            if nqr not in self.show_nqr()['subcorpus'].values:
+                logger.error('subcorpus "%s" not defined)' % nqr)
                 self.activate_subcorpus()
             else:
-                logger.info('switched to subcorpus "%s"' % name)
+                logger.info('switched to subcorpus "%s"' % nqr)
         else:
             logger.info('switched to corpus "%s"' % self.corpus_name)
 
         # activate subcorpus
-        self.subcorpus = name
+        self.subcorpus = nqr
 
     ##################
     # CREATING DUMPS #
@@ -982,8 +981,8 @@ class Corpus:
         )
 
         # if dump has been retrieved from cache, NQR might not exist
-        if self.show_subcorpora().empty or \
-           name not in self.show_subcorpora()['subcorpus'].values:
+        if self.show_nqr().empty or \
+           name not in self.show_nqr()['subcorpus'].values:
             # undump the dump and save to disk
             cqp = self.start_cqp()
             cqp.nqr_from_dump(df_dump, name)
