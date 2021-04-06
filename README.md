@@ -107,7 +107,7 @@ If everything is set up correctly, you can list all available attributes of the 
 ## Usage ##
 
 ### Queries and Dumps ###
-The usual starting point for using this module is to run a query with the `corpus.query()` method, which accepts valid CQP queries such as
+The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
 
 ```python
 query = r'"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ "\]"'
@@ -162,7 +162,7 @@ dump = corpus.query(
 </details>
 <br/>
 
-There are two reasons for defining the context when running the queries:
+There are two reasons for defining the context when running a query:
 
 1. If you provide a `context_break` parameter, the query will be automatically confined to spans delimited by this s-attribute; this is equivalent to formulating a query that ends on a respective "within" clause.
 2. Subsequent analyses (concordancing, collocation) will all work on the same context.
@@ -200,7 +200,7 @@ We are set up to analyze the query result. Here's the frequency breakdown:
 
 ### Concordancing ###
 
-You can access concordance lines via the `concordance` method of the dump.  This method returns a DataFrame with information about the query matches in context:
+You can access concordance lines via the `concordance()` method of the dump.  This method returns a DataFrame with information about the query matches in context:
 
 <details>
 <summary><code>dump.concordance()</code></summary>
@@ -383,8 +383,6 @@ lines = dump.concordance(
 </details>
 <br/>
 
-
-
 The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) – note that this works inplace:
    
 ```python
@@ -414,7 +412,7 @@ lines = dump.concordance(
 
 
 ### Collocation Analyses ###
-After executing a query, you can use the `dump.collocates()` method to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
+After executing a query, you can use `dump.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
 
 ```python
 dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
@@ -465,7 +463,7 @@ The dataframe is sorted by co-occurrence frequency (column "O11"), and only the 
 
 ### Subcorpora ###
 
-In **cwb-ccc terms**, every `dump` is a subcorpus.  There are two possibilities to get a dump: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain the word "SPD":
+In **cwb-ccc terms**, every instance of a `Dump` is a subcorpus.  There are two possibilities to get a `dump`: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain the word "SPD":
 
 ```python
 dump = corpus.query('"SPD" expand to s')
@@ -485,7 +483,7 @@ dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
 
 will e.g. retrieve all `text` spans with respective constraints on the `party` annotation.
 
-Implementation note: While the CWB does allow storage of arbitrary meta data in s-attributes, it does not index these attributes.  `corpus.query_s_att` thus creates a dataframe with the spans of the s-attribute encoded as matches and caches the result.  Consequently, the first query of an s-attribute will be compartively slow and subsequent queries will be faster.
+Implementation note: While the CWB does allow storage of arbitrary meta data in s-attributes, it does not index these attributes.  `corpus.query_s_att()` thus creates a dataframe with the spans of the s-attribute encoded as matches and caches the result.  Consequently, the first query of an s-attribute will be compartively slow and subsequent queries will be faster.
 
 Note also that the CWB does not allow complex queries on s-attributes.  It is thus reasonable to store meta data in separate spreadsheets or relational databases and link to text spans via simple identifiers.  This way (1) you can work with natural meta data queries and (2) working with a small number of s-attributes also unburdens the cache.
 
@@ -566,7 +564,7 @@ Having created a subcorpus (a `dump`)
 dump = corpus.query_s_att("text_party", values={"CDU", "CSU"})
 ```
 
-you can use the `keywords` method for retrieving keywords:
+you can use its `keywords()` method for retrieving keywords:
 
 <details>
 <summary><code>dump.keywords()</code></summary>
@@ -672,4 +670,4 @@ The test corpus was extracted from the [GermaParl](https://github.com/PolMine/Ge
 
 This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
 
-Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/home/) (SPP-1999).
+Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
