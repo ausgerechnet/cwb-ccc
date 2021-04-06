@@ -3,17 +3,15 @@
 ##
 
 # long descriptive name for the corpus
-NAME ""
+NAME "GermaParl1386: all speeches of the 86th session of the 13th German Bundestag"
 # corpus ID (must be lowercase in registry!)
 ID   germaparl1386
 # path to binary data files
-HOME /home/ausgerechnet/repositories/cwb-ccc/tests/test-corpora/data/germaparl1386
-# optional info file (displayed by "info;" command in CQP)
-INFO /home/ausgerechnet/repositories/cwb-ccc/tests/test-corpora/data/germaparl1386/.info
+HOME /home/ausgerechnet/implementation/cwb-ccc/tests/corpora/data/germaparl1386
 
 # corpus properties provide additional information about the corpus:
 ##:: charset = "utf8"	# character encoding of corpus data
-##:: language = "??"	# insert ISO code for language (de, en, fr, ...)
+##:: language = "de"	# insert ISO code for language (de, en, fr, ...)
 #========================================================================#
 
 

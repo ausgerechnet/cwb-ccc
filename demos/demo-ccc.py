@@ -1,10 +1,102 @@
-from ccc import Corpus
+from ccc import Corpus, Corpora
+from pandas import read_csv
+import json
+
+from .conftest import LOCAL
 import pytest
 
-from .conftest import local
+
+corpus = Corpus(
+    corpus_name="SZ_2009_14"
+)
+
+query = r'[lemma="Angela"]? [lemma="Merkel"] [word="\("] [lemma="CDU"] [word="\)"]'
+result = corpus.query(query)
+concordance = corpus.concordance(result)
+
+print(concordance.breakdown)
+print(concordance.size)
+print(concordance.meta.head())
+print(concordance.lines([567792]))
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+corpus = Corpus(
+    corpus_name="SZ_2009_14"
+)
+
+query = r'@0[lemma="Angela"]? @1[lemma="Merkel"] [word="\("] @2[lemma="CDU"] [word="\)"]'
+result = corpus.query(query)
+concordance = corpus.concordance(result)
+
+print(concordance.breakdown)
+print(concordance.size)
+print(concordance.lines([567792]))
+
+
+corpus = Corpus(
+    corpus_name="SZ_2009_14"
+)
+
+query = '[lemma="Angela"]? [lemma="Merkel"] [word="\\("] [lemma="CDU"] [word="\\)"]'
+result = corpus.query(query, s_meta=['text_id'])
+collocates = corpus.collocates(result)
+
+print(collocates.show(window=5, order="log_likelihood").head())
+
+
+@pytest.mark.readme_keywords
+def test_keywords_sz():
+    meta = read_csv("/home/ausgerechnet/corpora/cwb/upload/efe/sz-2009-14.tsv.gz",
+                    sep="\t", index_col=0, dtype=str)
+    ids = set(meta.loc[
+        (meta['ressort'] == "Panorama") & (meta['month'] == '201103')
+    ].index.values)
+    meta['s_id'] = meta.index
+
+    corpus = Corpus(
+        corpus_name="SZ_2009_14",
+        s_meta="text_id"
+    )
+    corpus.subcorpus_from_ids(ids, name='tmp_keywords')
+    keywords = corpus.keywords('tmp_keywords')
+    print(keywords.show(order='dice').head(50))
+
+
+@pytest.mark.skip
+@pytest.mark.readme_argmin
+def test_argmin():
+    corpus = Corpus(
+        corpus_name="BREXIT_V20190522",
+        registry_path="/home/ausgerechnet/corpora/cwb/registry/",
+        lib_path="/home/ausgerechnet/projects/spheroscope/app/instance-stable/lib/",
+        s_meta="tweet_id"
+    )
+
+    query_path = "/home/ausgerechnet/projects/cwb-ccc/tests/gold/query-example.json"
+    with open(query_path, "rt") as f:
+        query = json.loads(f.read())
+    query_result = corpus.query(query['query'], context=None, s_break='tweet',
+                                match_strategy='longest')
+    concordance = corpus.concordance(query_result)
+
+    result = concordance.show_argmin(query['anchors'], query['regions'])
+    print(result.keys())
+    print(result['nr_matches'])
+    from pandas import DataFrame
+    print(DataFrame(result['matches'][0]['df']))
+
+
+@pytest.mark.setup
+@pytest.mark.now
+def test_corpora(germaparl):
+    corpora = Corpora(registry_path=germaparl['registry_path'])
+    print(corpora)
+    corpus = corpora.activate(germaparl["corpus_name"])
+    print(corpus)
+    print(corpus.attributes_available)
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.setup
 def test_init_corpus(germaparl):
@@ -13,7 +105,7 @@ def test_init_corpus(germaparl):
     print(corpus)
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.setup
 def test_macro(brexit):
@@ -138,6 +230,26 @@ def test_collocates(germaparl):
     print(collocates[[
         'O11', 'O12', 'O21', 'O22', 'E11', 'E12', 'E21', 'E22', 'log_likelihood'
     ]])
+
+
+# @pytest.mark.now
+def test_query_satt(germaparl):
+
+    corpus = Corpus(germaparl['corpus_name'],
+                    registry_path=germaparl['registry_path'])
+    dump = corpus.query_s_att('p_type', {'interjection'})
+    conc = dump.concordance(form='simple')
+    print(conc)
+
+
+# @pytest.mark.now
+def test_query_satt_easy(brexit):
+
+    corpus = Corpus(brexit['corpus_name'],
+                    registry_path=brexit['registry_path'])
+    dump = corpus.query_s_att('np')
+    conc = dump.concordance(form='simple')
+    print(conc)
 
 
 @pytest.mark.keywords

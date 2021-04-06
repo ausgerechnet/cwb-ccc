@@ -8,14 +8,13 @@ from glob import glob
 from .cqp import CQP
 from .cache import Cache
 from .counts import Counts
-from .utils import (
-    preprocess_query, merge_s_atts,
-    chunk_anchors, correct_anchors
-)
+from .utils import preprocess_query
+from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
+from .counts import cwb_scan_corpus
 # requirements
-from CWB.CL import Corpus as Crps
-from pandas import DataFrame, read_csv, to_numeric
+from CWB.CL import Corpus as Attributes
+from pandas import DataFrame, read_csv
 from pandas.errors import EmptyDataError
 from numpy import minimum, maximum
 # logging
@@ -23,13 +22,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
+def start_cqp(cqp_bin, registry_path,
+              data_path=None, corpus_name=None,
               lib_path=None, subcorpus=None):
+    """Start CQP process, activate (sub-)corpus, set paths, and read
+    library (macros and wordlists).
+
+    :param str cqp_bin: /path/to/cqp-binary
+    :param str registry_path: /path/to/cwb/registry/
+    :param str data_path: /path/to/data/and/cache/
+    :param str corpus_name: name of corpus in CWB registry
+    :param str lib_path: /path/to/macros/and/wordlists/
+    :param str subcorpus: name of subcorpus (NQR)
+
+    :return: CQP process
+    :rtype: CQP
+
+    """
 
     cqp = CQP(
-        bin=cqp_bin,
+        binary=cqp_bin,
         options='-c -r ' + registry_path
     )
+
     if data_path is not None:
         cqp.Exec('set DataDirectory "%s"' % data_path)
     if corpus_name is not None:
@@ -44,9 +59,7 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
-            cqp_exec = 'define $%s < "%s";' % (
-                name, abs_path
-            )
+            cqp_exec = 'define $%s < "%s";' % (name, abs_path)
             cqp.Exec(cqp_exec)
 
         # macros
@@ -55,9 +68,8 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             cqp.Exec(cqp_exec)
-
         # execute each macro once (avoids CQP shortcoming for nested macros)
-        macros = cqp.Exec("show macro;")
+        macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
             cqp.Exec(macro)
 
@@ -65,24 +77,47 @@ def start_cqp(cqp_bin, registry_path, data_path=None, corpus_name=None,
 
 
 class Corpora:
-    """ interface to CWB-indexed corpora """
+    """Interface to CWB-indexed corpora."""
 
-    def __init__(self,
-                 cqp_bin='cqp',
+    def __init__(self, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/'):
+        """Establish connection to registry and CQP.
+
+        :param str cqp_bin: /path/to/cqp-binary
+        :param str registry_path: /path/to/cwb/registry/
+
+        """
 
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
-    def cqp(self):
-        return start_cqp(self.cqp_bin, self.registry_path)
+    def __str__(self):
+        """Method for printing.
+
+        :return: available corpora
+        :rtype: str
+        """
+
+        return "\n" + "\n".join([
+            'registry-path: "%s"' % self.registry_path,
+            'cqp-bin      : "%s"' % self.cqp_bin,
+            "corpora:",
+            self.show().to_string(),
+        ])
 
     def show(self):
+        """Show all corpora defined in registry and available via CQP
+        alongside corpus size (number of tokens).
 
-        cqp = self.cqp()
+        :return: available corpora
+        :rtype: DataFrame
+
+        """
 
         # get all corpora defined in registry
+        cqp = start_cqp(self.cqp_bin, self.registry_path)
         corpora = cqp.Exec("show corpora;").split("\n")
+        cqp.__kill__()
 
         # check availability and corpus sizes
         corpora_available = list()
@@ -90,76 +125,85 @@ class Corpora:
         for corpus_name in corpora:
 
             try:
-                corpus = Corpus(corpus_name,
-                                cqp_bin=self.cqp_bin,
-                                registry_path=self.registry_path,
-                                data_path=None)
-
+                corpus = Corpus(
+                    corpus_name, cqp_bin=self.cqp_bin,
+                    registry_path=self.registry_path, data_path=None
+                )
                 corpora_available.append(corpus_name)
                 sizes.append(corpus.corpus_size)
 
             except SystemError:
                 logger.warning(
-                    "corpus %s defined in registry but not available" % corpus_name
+                    'corpus "%s" defined in registry but not available' % corpus_name
                 )
+
+        # create dataframe
         corpora = DataFrame({'corpus': corpora_available,
                              'tokens': sizes})
         corpora = corpora.set_index('corpus')
+
         return corpora
+
+    def activate(self, corpus_name,
+                 lib_path=None, data_path='/tmp/ccc-data/'):
+
+        return Corpus(corpus_name,
+                      lib_path=lib_path,
+                      cqp_bin=self.cqp_bin,
+                      registry_path=self.registry_path,
+                      data_path=data_path)
 
 
 class Corpus:
-    """ interface to CWB-indexed corpus """
+    """Interface to CWB-indexed corpus.
+
+    After initializing, the corpus class has ...
+
+    ... the following attributes:
+    .data_path
+    .registry_path
+    .cqp_bin
+    .lib_path
+    .corpus_name
+    .subcorpus [None]
+    .attributes_available
+    .corpus_size
+
+    ... the following initialized classes:
+    .attributes
+    .cache
+    .counts
+
+    ... the following methods:
+    .__str__
+    ._attributes_available
+    .start_cqp
+    .copy
+    .cpos2patts                 # p-attributes
+    .marginals                  # p-attributes
+    .cpos2sid                   # s-attributes
+    .show_nqr                   # subcorpora
+    .dump_from_s_att            # creating dumps
+    .dump_from_query            # creating dumps
+    .dump2patt                  # working on dumps
+    .dump2satt                  # working on dumps
+    .dump2context               # working on dumps
+    .query_s_att                # query alias
+    .query                      # query alias
+
+    """
 
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
-                 data_path="/tmp/ccc-data/"):
-        """Establishes connection to CQP and corpus attributes; imports macros
-        and wordlists. Raises KeyError if corpus not in registry.
-
-        attributes:
-        .registry_path
-        .corpus_name
-        .data_path
-        .attributes_available
-        .corpus_size
-        .lib_path
-        .subcorpus [None]
-
-        methods:
-        .__str__
-        .read_lib
-
-        .get_s_extents
-        .get_s_id
-        .get_s_annotation
-        .get_s_annotations
-
-        .cpos2patts
-
-        .show_subcorpora
-        .activate_subcorpus
-        .save_subcorpus
-        .subcorpus_from_query
-        .subcorpus_from_dump
-        .subcorpus_from_s_att
-
-        .dump_from_query
-        .extend_df_dump
-        .query_cache
-        .query
-
-        classes:
-        .cache
-        .cqp
-        .attributes
-        .counts
+                 data_path='/tmp/ccc-data/'):
+        """Establish connection to CQP and corpus attributes, set paths, read
+        library. Raises KeyError if corpus not in registry.
 
         :param str corpus_name: name of corpus in CWB registry
-        :param str lib_path: path/to/macros/and/wordlists
-        :param str cqp_bin: cqp binary
-        :param str registry_path: path/to/cwb/registry/
-        :param str data_path: path/to/store/cwb/data/and/cache
+        :param str lib_path: /path/to/macros/and/wordlists/
+        :param str cqp_bin: /path/to/cqp-binary
+        :param str registry_path: /path/to/cwb/registry/
+        :param str data_path: /path/to/data/and/cache/
 
         """
 
@@ -179,49 +223,36 @@ class Corpus:
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
 
+        # macros and wordlists
+        self.lib_path = lib_path
+
         # init (sub-)corpus information
         self.corpus_name = corpus_name
         self.subcorpus = None
 
-        # macros and wordlists
-        self.lib_path = lib_path
+        # init attributes
+        self.attributes = Attributes(self.corpus_name, registry_dir=self.registry_path)
 
-        # init Attributes
-        self.attributes = Crps(
-            self.corpus_name,
-            registry_dir=self.registry_path
-        )
         # get corpus size
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
         # get available corpus attributes
-        self.attributes_available = self._get_attributes()
+        self.attributes_available = self._attributes_available()
 
-        # init Cache
-        self.cache = Cache(
-            cache_path
-        )
+        # init cache
+        self.cache = Cache(cache_path)
 
-        # init Counts
-        self.counts = Counts(
-            self.corpus_name, self.registry_path
-        )
-
-    def _get_attributes(self):
-        cqp = self.start_cqp()
-        cqp_ret = cqp.Exec('show cd;')
-        cqp.__kill__()
-
-        attributes = read_csv(
-            StringIO(cqp_ret), sep='\t',
-            names=['type', 'attribute', 'annotation', 'active']
-        ).fillna(False)
-
-        attributes['active'] = (attributes['active'] == "*")
-        attributes['annotation'] = (attributes['annotation'] == '-V')
-        return attributes
+        # init counts
+        self.counts = Counts(self.corpus_name, self.registry_path)
 
     def __str__(self):
+        """Method for printing.
+
+        :return: corpus_name, corpus_size, data_path, subcorpus
+        :rtype: str
+
+        """
+
         return "\n".join([
             'a ccc.Corpus: "%s"' % self.corpus_name,
             "size        : %s" % str(self.corpus_size),
@@ -231,7 +262,40 @@ class Corpus:
             self.attributes_available.to_string(),
         ])
 
+    def _attributes_available(self):
+        """Get indexed p- and s-attributes. Will be run once when initializing
+        the corpus.
+
+        :return: attributes and annotation info
+        :rtype: DataFrame
+
+        """
+
+        # use CQP's context descriptor
+        cqp = self.start_cqp()
+        cqp_ret = cqp.Exec('show cd;')
+        cqp.__kill__()
+
+        # read as dataframe
+        attributes = read_csv(
+            StringIO(cqp_ret), sep='\t',
+            names=['type', 'attribute', 'annotation', 'active']
+        ).fillna(False)
+
+        # post-process Boolean columns
+        attributes['active'] = (attributes['active'] == "*")
+        attributes['annotation'] = (attributes['annotation'] == '-V')
+
+        return attributes
+
     def start_cqp(self):
+        """Start CQP process.
+
+        :return: CQP process
+        :rtype: CQP
+
+        """
+
         return start_cqp(
             self.cqp_bin,
             self.registry_path,
@@ -242,6 +306,13 @@ class Corpus:
         )
 
     def copy(self):
+        """Get a fresh initialization of the corpus.
+
+        :return: corpus
+        :rtype: Corpus
+
+        """
+
         return Corpus(
             self.corpus_name,
             self.lib_path,
@@ -251,145 +322,21 @@ class Corpus:
         )
 
     ################
-    # s-attributes #
-    ################
-    def get_s_extents(self, s_att):
-        """Maps s_att to corresponding extents, returns DataFrame.
-
-        :param str s_att: s-attribute to get extents for
-
-        :return: df indexed by match, matchend; CWBID, annotation
-        :rtype: DataFrame
-
-        """
-
-        logger.info("enter get_s_extents")
-
-        # retrieve from cache
-        parameters = ['s_extents', s_att]
-        df = self.cache.get(parameters)
-        if df is not None:
-            logger.info('using cached version of extents of "%s"' % s_att)
-            return df
-
-        # compute
-        logger.info('computing extents of "%s"' % s_att)
-        s_regions = self.attributes.attribute(s_att, 's')
-
-        # check if there's annotations
-        annotation = self.attributes_available.loc[
-            self.attributes_available['attribute'].values == s_att
-        ]['annotation'].values[0]
-
-        records = list()
-        for s in s_regions:
-            s_id = self.get_s_id(s[0], s_att)
-            if annotation:
-                ann = s[2].decode()
-            else:
-                ann = True
-            records.append({
-                'match': s[0],
-                'matchend': s[1],
-                s_att + '_CWBID': s_id,
-                s_att: ann
-            })
-        df = DataFrame(records)
-        df = df.set_index(['match', 'matchend'])
-
-        # put into cache
-        self.cache.set(parameters, df)
-
-        return df
-
-    def get_s_id(self, cpos, s_att):
-        """gets ID of s_att at cpos"""
-        s_regions = self.attributes.attribute(s_att, "s")
-        try:
-            return s_regions.cpos2struc(cpos)
-        except KeyError:
-            return -1
-
-    def get_s_annotation(self, df, s_att):
-        """Retrieves CWBIDs and annotations of s-attribute of match.
-
-        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-        :param str s_att: s-attribute to retrieve
-
-        """
-        # TODO remove double entries (tweet_id_CWBID = tweet_CWBID etc.)
-
-        logger.info("cwb.get_s_annotation")
-
-        # get IDs
-        df[s_att + "_CWBID"] = df.match.apply(
-                lambda x: self.get_s_id(x, s_att)
-            )
-
-        # check if there is any annotation
-        annotation = self.attributes_available.loc[
-            self.attributes_available['attribute'].values == s_att
-        ]['annotation'].values[0]
-        if not annotation:
-            logger.info('no annotation in s-att "%s"' % s_att)
-        else:
-            # only retrieve where applicable
-            s_regions = self.attributes.attribute(s_att, "s")
-            df_applicable = df.loc[df[s_att + "_CWBID"] != -1]
-            s_region = DataFrame(
-                index=df_applicable.index,
-                data=df_applicable.match.apply(
-                    lambda x: s_regions.find_pos(x)
-                ).to_list()
-            )
-
-            # decode annotations
-            s_region[s_att] = s_region[2].apply(
-                lambda x: x.decode('utf-8')
-            )
-
-            nr = len(s_region[s_att]) - s_region[s_att].isna().sum()
-            logger.info(
-                'retrieved %d annotations of s-att %s' % (nr, s_att)
-            )
-            # join to dataframe
-            df = df.join(s_region[s_att])
-
-        return df
-
-    def get_s_annotations(self, df_dump, s_atts):
-        """Gets all annotations of all s-att in s_atts at match positions.
-
-        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-        :param list s_atts: s-attributes to show (id + annotation)
-
-        :return: s_annotations
-        :rtype: DataFrame
-
-        """
-        df = df_dump.reset_index()
-        df = df[['match', 'matchend']]
-        for s in s_atts:
-            df = self.get_s_annotation(df, s)
-        df = df.set_index(['match', 'matchend'])
-        return df
-
-    ################
     # p-attributes #
     ################
-    def cpos2patts(self, cpos, p_atts=['word'], ignore_missing=True):
-        """Retrieves p-attributes of corpus position.
+    def cpos2patts(self, cpos, p_atts=['word'], ignore=True):
+        """Retrieve p-attributes of corpus position.
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
-        :param bool ignore_missing: whether to return -1 for out-of-bounds
+        :param bool ignore: whether to return (None, .*) for -1
 
-        :return: p_att(s) to retrieve
+        :return: p-attribute(s) at cpos
         :rtype: tuple
 
         """
 
-        if ignore_missing and cpos == -1:
+        if cpos == -1 and ignore:
             token = [None] * len(p_atts)
         else:
             token = [
@@ -399,21 +346,25 @@ class Corpus:
         return tuple(token)
 
     def marginals(self, items, p_att='word', flags=0, pattern=False):
-        """Extracts marginal frequencies for given unigram patterns.
-        0 if not in corpus.
+        """Extract marginal frequencies for given unigrams or unigram patterns
+        of a single p-attribute.  0 if not in corpus.  For
+        combinations of p-attributes, see marginals_complex.
 
         :param list items: items to get marginals for
-        :param str p_att: p-attribute to get counts for
-        :param int flags: 1 = %c, 2 = %d, 3 = %cd
+        :param str p_att: p-attribute to get frequencies for
+        :param int flags: 1 = %c, 2 = %d, 3 = %cd (will activate wildcards)
         :param bool pattern: activate wildcards?
 
-        :return: counts of the items in the whole corpus
-        :rtype: DataFrame
+        :return: frequencies of the items in the whole corpus indexed by items
+        :rtype: FreqFrame
 
         """
+
+        pattern = True if flags > 0 else pattern
+
         tokens_all = self.attributes.attribute(p_att, 'p')
-        if flags:
-            pattern = True
+
+        # loop through items and collect frequencies
         counts = list()
         for item in items:
             if not pattern:
@@ -424,16 +375,65 @@ class Corpus:
             else:
                 cpos = tokens_all.find_pattern(item, flags=flags)
                 counts.append(len(cpos))
-        df = DataFrame(data=counts, index=items, columns=['freq'])
-        df.index.name = p_att
-        df = df.sort_values(by='freq', ascending=False)
+
+        # create dataframe
+        df = DataFrame({'freq': counts, p_att: items})
+        df = df.set_index(p_att)
+
         return df
+
+    def marginals_complex(self, items, p_atts=['word']):
+        """Extract marginal frequencies for p-attribute combinations,
+        e.g. ["word", "lemma"].  0 if not in corpus.  Marginals are
+        retrieved using cwb-scan-corpus, result is cached.
+
+        :param list items: list of tuples
+        :param list p_atts: list of p-attributes
+
+        :return: counts of the items in the whole corpus indexed by items
+        :rtype: FreqFrame
+
+        """
+
+        # retrieve all marginals for p-att combination from cache if possible
+        identifier = "_".join(p_atts) + "_marginals"
+        df = self.cache.get(identifier)
+        if df is not None:
+            logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
+        else:
+            # calculate all marginals for p-att combination
+            df = cwb_scan_corpus(None, self.corpus_name, self.registry_path, p_atts)
+            self.cache.set(identifier, df)
+
+        # select relevant rows
+        df = df.reindex(items)
+        df = df.fillna(0, downcast='infer')
+        return df
+
+    ################
+    # s-attributes #
+    ################
+    def cpos2sid(self, cpos, s_att):
+        """Get cwb-id of s-att at cpos. -1 if not present.
+
+        :param int cpos: corpus position
+        :param str s_atts: s-attribute to get cwb-id for
+
+        :return: cwb-id
+        :rtype: int
+
+        """
+        s_attributes = self.attributes.attribute(s_att, "s")
+        try:
+            return s_attributes.cpos2struc(cpos)
+        except KeyError:
+            return -1
 
     ##############
     # subcorpora #
     ##############
-    def show_subcorpora(self):
-        """Returns subcorpora defined in CQP as DataFrame.
+    def show_nqr(self):
+        """Get subcorpora defined in CQP as DataFrame.
 
         :return: available subcorpora
         :rtype: DataFrame
@@ -450,134 +450,164 @@ class Corpus:
             df.drop('corpus:subcorpus', axis=1, inplace=True)
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
         except EmptyDataError:
-            logger.warning("no subcorpora defined")
+            logger.info("no subcorpora defined")
             df = DataFrame()
 
         cqp.__kill__()
         return df
 
-    # def activate_subcorpus(self, cqp, subcorpus=None, save=True):
-    #     """Activates subcorpus or switches to main corpus.
+    def activate_subcorpus(self, nqr=None, df_dump=None):
+        """Activate subcorpus.  If no df_dump is given, this sets
+        self.subcorpus and logs an error if subcorpus not defined.  If
+        a df_dump is given, the df_dump will be undumped.
 
-    #     :param str subcorpus: named subcorpus to activate
+        :param str subcorpus: subcorpus name defined in CQP
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+                                  with optional columns 'target' and 'keyword'
 
-    #     """
-    #     if subcorpus is not None:
-    #         self.subcorpus = subcorpus
-    #         cqp.Exec(self.subcorpus)
-    #         if save:
-    #             self.save_subcorpus(cqp, subcorpus)
-    #         logger.info('switched to subcorpus "%s"' % subcorpus)
-    #     else:
-    #         self.subcorpus = self.corpus_name
-    #         cqp.Exec(self.subcorpus)
-    #         logger.info('switched to corpus "%s"' % self.corpus_name)
+        """
 
-    # def save_subcorpus(self, cqp, name='Last'):
-    #     """Saves subcorpus to disk.
+        if df_dump is not None:
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_dump, nqr)
+            cqp.nqr_save(self.corpus_name, nqr)
+            cqp.__kill__()
 
-    #     :param str name: named subcorpus to save
+        if nqr is not None:
+            # raise an error if subcorpus not available
+            if nqr not in self.show_nqr()['subcorpus'].values:
+                logger.error('subcorpus "%s" not defined)' % nqr)
+                self.activate_subcorpus()
+            else:
+                logger.info('switched to subcorpus "%s"' % nqr)
+        else:
+            logger.info('switched to corpus "%s"' % self.corpus_name)
 
-    #     """
-    #     cqp.Exec("save %s;" % name)
-    #     logger.info(
-    #         'CQP saved subcorpus "%s:%s" to disk' % (self.corpus_name, name)
-    #     )
+        # activate subcorpus
+        self.subcorpus = nqr
 
-    # def subcorpus_from_query(self, cqp, query, name='Last',
-    #                          match_strategy='longest',
-    #                          return_dump=True):
-    #     """Defines subcorpus from query, returns dump.
+    ##################
+    # CREATING DUMPS #
+    ##################
+    def dump_from_s_att(self, s_att, annotation=True):
+        """Create s-attribute spans as DataFrame of corpus positions.
+        Resulting df_dump is indexed by (match, matchend).
 
-    #     :param str query: valid CQP query
-    #     :param str name: subcorpus name
-    #     :param str match_strategy: CQP matching strategy
+        Note that s-attribute values are not indexed by the CWB.
+        CWB.CL implementation just iterates over all annotations.
 
-    #     :return: df_dump
-    #     :rtype: DataFrame
+        This method thus creates a dataframe with the
+        (non-overlapping) spans encoded as matches
 
-    #     """
+        === (match, matchend) $s_cwbid, $s* ===
 
-    #     logger.info('defining subcorpus "%s" from query' % name)
-    #     subcorpus_query = '%s=%s;' % (name, query)
-    #     cqp.Query(subcorpus_query)
-    #     if return_dump:
-    #         logger.info('dumping result')
-    #         df_dump = cqp.Dump(name)
-    #         return df_dump
+        and caches the result.
 
-    # def subcorpus_from_dump(self, cqp, df_dump, name='Last'):
-    #     """Defines subcorpus from dump.
+        $s is only created if annotation is True and attribute is
+        actually annotated.
 
-    #     :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-    #                               with optional columns 'target' and 'keyword'
-    #     :param str name: subcorpus name
-
-    #     """
-    #     logger.info('defining subcorpus "%s" from dump ' % name)
-    #     cqp.Undump(name, df_dump)
-
-    # def subcorpus_from_s_att(self, cqp, s_att, values, name='Last'):
-    #     """Defines a subcorpus via s-attribute restriction.
-
-    #     :param str s_att: s-att that stores values
-    #     :param set values: set (or list) of values
-    #     :param str name: subcorpus name to create
-
-    #     """
-    #     extents = self.dump_from_s_att(s_att, values).df
-    #     self.subcorpus_from_dump(cqp, extents, name=name)
-
-    def dump_from_s_att(self, s_att, values):
-        values = set(values)
-        logger.info("defining subcorpus from %d values" % len(values))
-        extents = self.get_s_extents(s_att)
-        extents = extents.loc[extents[s_att].isin(values)]
-        extents = extents.drop(extents.columns, axis=1)
-        # what a waste of lines that follows here ...
-        cotext = extents.reset_index()
-        cotext.index = extents.index
-        cotext.columns = ['context', 'contextend']
-        return Dump(
-            self.copy(),
-            cotext,
-            name_cache=None,
-            name_cqp=None
-        )
-
-    #########
-    # query #
-    #########
-    def dump_from_query(self, query, s_query=None, anchors=[],
-                        match_strategy='standard', name='Last',
-                        save=False):
-        """Executes query, gets DataFrame of corpus positions (dump of CWB).
-        df_dump is indexed by (match, matchend).  Optional columns for
-        each anchor:
-
-        === (match, matchend), 0, ..., 9 ===
-
-        :param str query: valid CQP query (without 'within' clause)
-        :param str s_query: s-attribute used for initial query
-        :param list anchors: anchors to search for
-        :param str match_strategy: CQP matching strategy
+        :param str s_att: s-attribute to get spans and annotation for
+        :param bool annotation: whether to retrieve annotation (if present)
 
         :return: df_dump
         :rtype: DataFrame
 
         """
 
-        # match strategy
+        # retrieve from cache if possible
+        identifier = s_att + "_spans"
+        df = self.cache.get(identifier)
+        if df is not None:
+            logger.info('using cached version of spans of "%s"' % s_att)
+            return df
+
+        # compute
+        logger.info('creating dataframe of spans of "%s"' % s_att)
+
+        df = DataFrame(list(self.attributes.attribute(s_att, 's')))
+
+        # two or three columns: 0 (start), 1 (end), 2* (annotation)
+        if annotation:
+            annotation = (2 in df.columns)  # just to make sure ...
+            if not annotation:
+                logger.info('s-att "%s" does not have any annotation' % s_att)
+            else:
+                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+
+        # post-process
+        df = df.reset_index()
+        df = df.rename({'index': s_att + '_cwbid',
+                        0: 'match',
+                        1: 'matchend',
+                        2: s_att}, axis=1)
+        df = df.set_index(['match', 'matchend'])
+
+        # put into cache
+        self.cache.set(identifier, df)
+
+        return df
+
+    def dump_from_query(self, query, s_query=None, anchors=[],
+                        match_strategy='standard', name='Last', save=False):
+        """Execute query, get DataFrame of corpus positions (CWB dump).
+        Resulting df_dump is indexed by (match, matchend).
+
+        Note that in the CWB, only two anchors can be active
+        simultaneously. The method thus runs the query once with
+        anchors set to [0, 1], and then collects the remaining anchor
+        points by running the query again on the NQR of the first
+        query run for each pair of remaining anchor points.  Optional
+        columns for each anchor:
+
+        === (match, matchend), 0*, ..., 9* ===
+
+        The result is cached.
+
+        :param str query: valid CQP query (without 'within' clause)
+        :param str s_query: s-attribute used for initial query
+        :param list anchors: anchors to search for
+        :param str match_strategy: CQP matching strategy
+        :param str name: name for NQR
+        :param bool save: whether to save NQR to disk
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
+
+        # identify query
+        if self.subcorpus is not None:
+            # check subcorpus size to avoid confusion when re-naming
+            cqp = self.start_cqp()
+            sbcrpssize = cqp.Exec("size %s" % self.subcorpus)
+            cqp.__kill__()
+        else:
+            sbcrpssize = None
+        identifier = self.cache.generate_idx([
+             query, s_query, anchors, match_strategy, self.subcorpus, sbcrpssize
+        ], prefix="df_dump:")
+
+        # retrieve from cache if possible
+        df_dump = self.cache.get(identifier)
+        if df_dump is not None:
+            logger.info(
+                'using cached version "%s" of df_dump with %d matches' % (
+                    identifier, len(df_dump)
+                )
+            )
+            return df_dump
+
+        # init cqp and set matching strategy
         cqp = self.start_cqp()
         cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
 
-        # optional within statement
+        # include optional within clause
         if s_query is None:
             start_query = query
         else:
             start_query = query + ' within ' + s_query
 
-        # first run: 0 and 1 (considering within statement)
+        # first run: anchors at 0 and 1 (considering within clause)
         logger.info("running CQP query")
         cqp.Exec('set ant 0; ank 1;')
         df_dump = cqp.nqr_from_query(
@@ -595,12 +625,13 @@ class Corpus:
             return df_dump
 
         # join all other anchors
-        if len(anchors) > 0:
+        remaining_anchors = list(chunk_anchors(anchors, 2))
+        if len(remaining_anchors) > 0:
 
             # restrict subsequent queries on initial matches
             cqp.nqr_activate(self.corpus_name, name)
 
-            for pair in chunk_anchors(anchors, 2):
+            for pair in remaining_anchors:
                 logger.info(".. running query for anchor(s) %s" % str(pair))
                 # set appropriate anchors
                 cqp.Exec('set ant %d;' % pair[0])
@@ -621,12 +652,14 @@ class Corpus:
 
             # NA handling
             logger.info("post-processing dataframe")
-            df_dump.dropna(axis=1, how='all', inplace=True)
-            df_dump = df_dump.apply(to_numeric, downcast='integer')
-            df_dump.fillna(-1, inplace=True)
+            df_dump = df_dump.dropna(axis=1, how='all')
+            df_dump = df_dump.fillna(-1, downcast='integer')
 
-        # drop constant columns (contain only -1)
-        df_dump = df_dump.loc[:, (df_dump != df_dump.iloc[0]).any()]
+        # restrict output to requested anchors
+        df_dump = df_dump[anchors]
+
+        # put into cache
+        self.cache.set(identifier, df_dump)
 
         if save:
             cqp.nqr_save(self.corpus_name, name)
@@ -635,21 +668,173 @@ class Corpus:
 
         return df_dump
 
-    def extend_df_dump(self, df_dump, context_left, context_right, context_break):
-        """Extends a df_dump to context, breaking the context at context_break:
+    #################################################
+    # WORKING ON DUMPS ##############################
+    #################################################
+    def _dump2patt_row(self, row, p_att, start, end):
+        """Retrieve p-attribute annotation from start to end of one row.
 
-        === (match, matchend), 0, ..., 9, context, contextend ===
+        :param Series row: dataframe row that contain start and end keys
+        :param str p_att: p-attribute to retrieve
+        :param str start: key of start column (int or str)
+        :param str end: key of end column (int or str)
 
-        left_context -> context
-        (1) context_break is None, context_left is None
+        :return: p-attribute annotation
+        :rtype: str
+        """
+
+        cpos_start = row[start]
+        cpos_end = row[end]
+
+        # if both are missing, return empty string
+        if cpos_start == cpos_end == -1:
+            return ""
+        # if one of them is missing, set start = end or end = start
+        if cpos_start == -1:
+            cpos_start = cpos_end
+        if cpos_end == -1:
+            cpos_end = cpos_start
+
+        # lexicalize
+        p = self.attributes.attribute(p_att, 'p')
+        return " ".join(p[int(cpos_start): int(cpos_end) + 1])
+
+    def dump2patt(self, df_dump, p_att='word', start='match', end='matchend'):
+        """Retrieve p-attribute annotation from start to end.
+
+        === (match, matchend), $p ===
+
+        Any additional columns of df_dump are preserved as long as
+        there are no conflicts (in which case the original column will
+        be overwritten).
+
+        :param DataFrame df_dump: DataFrame with specified columns (possibly as index)
+        :param str p_att: p-attribute to retrieve
+        :param str start: key of start column (int or str)
+        :param str end: key of end column (int or str)
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
+
+        # pre-process
+        index_names = df_dump.index.names
+        df = df_dump.reset_index()
+
+        # retrieve attribute
+        df[p_att] = df.apply(
+            lambda row: self._dump2patt_row(row, p_att, start, end), axis=1
+        )
+
+        # post-process
+        df = df.set_index(index_names)
+
+        return df
+
+    def dump2satt(self, df_dump, s_att, annotation=True):
+        """Retrieve cwb-id, span, and annotation of s-attribute at match.
+
+        Note that this only takes into account the match, not the
+        matchend. This is reasonable assuming that the retrieved s-att
+        comprises complete matches (match..matchend).
+
+        === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s*  ===
+
+        $s is only created if annotation is True and attribute is
+        actually annotated.
+
+        Any additional columns of df_dump are preserved as long as
+        there are no conflicts (in which case the original columns
+        will be overwritten).
+
+        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
+        :param str s_att: s-attribute to retrieve
+        :param bool annotation: whether to retrieve annotation of s-att
+
+        :return: df_dump
+        :rtype: DataFrame
+
+        """
+
+        # init dataframe
+        df = df_dump.reset_index()[['match', 'matchend']]
+
+        # get $s_id
+        df[s_att + "_cwbid"] = df.match.apply(
+            lambda x: self.cpos2sid(x, s_att)
+        )
+        nr_missing = (df[s_att + '_cwbid'] == -1).sum()
+        logger.info('s-att "%s" exists at %d of %d matches' % (
+            s_att, len(df) - nr_missing, len(df)
+        ))
+
+        # retrieve where possible
+        s_attributes = self.attributes.attribute(s_att, "s")
+        df_s = df.loc[~(df[s_att + "_cwbid"] == -1)]
+        df = df.join(DataFrame(
+            index=df_s.index,
+            data=df_s[s_att + "_cwbid"].apply(lambda x: s_attributes[int(x)]).to_list()
+        ))
+
+        # two or three columns: 0 (start), 1 (end), 2* (annotation)
+        if annotation:
+            annotation = (2 in df.columns)  # just to make sure ...
+            if not annotation:
+                logger.info('s-att "%s" does not have any annotation' % s_att)
+            else:
+                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+
+        # restore original index and post-process
+        df = df.set_index(['match', 'matchend'])
+        df = df.rename({0: s_att + '_span',
+                        1: s_att + '_spanend',
+                        2: s_att}, axis=1)
+
+        # join to original dataframe
+        df_dump = df_dump.join(df, lsuffix='_bak')
+        df_dump = df_dump[[col for col in df_dump if not str(col).endswith('_bak')]]
+        df_dump[[
+            s_att + '_span', s_att + '_spanend'
+        ]] = df[[
+            s_att + '_span', s_att + '_spanend'
+        ]].fillna(-1, downcast='infer')
+
+        return df_dump
+
+    def dump2context(self, df_dump, context_left, context_right, context_break):
+        """Extend df_dump to context, breaking the context at context_break.
+
+        === (match, matchend), contextid*, context, contextend  ===
+
+        Columns for $context_break, $context_break_cwbid,
+        $context_break_span, $context_break_spanend, are also created
+        (if applicable).
+
+        Any additional columns of df_dump are preserved.
+
+        Note that in contrast to matches, contexts may overlap.
+
+        For positions where the s-att specified by context_break does
+        not exist, context_break is ignored.
+
+        The context creation algorithm does not take into account that
+        match and matchend may be part of different spans defined by
+        context_break; it only looks at the s-attributes of match, not
+        of matchend.
+
+        For the _context_ column (left hand side), the strategy is as
+        follows; the strategy for _contextend_ (right hand side) is
+        analogous (using context_right, matchend and
+        context_break_spanend).
+        if context_break_span is None and context_left is None
             => context = match
-        (2) context_break is None, context_left is not None
-            => context = match - context_left
-        (3) context_break is not None, context_left is None
-            => context = s_start
-        (4) context_break is not None, context_left is not None
+        if context_break_span is None and context_left is not None
+            => context = max(0, match - context_left)
+        if context_break_span is not None and context_left is None
+            => context = context_break_span
+        if context_break_span is not None and context_left is not None
             => context = max(match - context_left, s_start)
-        right_context -> contextend analogous
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param int context_left: maximum context to the left of match
@@ -658,10 +843,8 @@ class Corpus:
 
         """
 
-        # move index to columns
-        df = df_dump.reset_index()
-
         if context_break is None:
+            df = df_dump.reset_index()
             # left
             if context_left is None:
                 df['context'] = df.match
@@ -671,156 +854,158 @@ class Corpus:
             if context_right is None:
                 df['contextend'] = df.matchend
             else:
-                df['contextend'] = minimum(self.corpus_size - 1, df.matchend + context_right)
+                df['contextend'] = minimum(
+                    self.corpus_size - 1, df.matchend + context_right
+                )
         else:
-            # get context confined by s-attribute if necessary
-            s_regions = self.attributes.attribute(context_break, 's')
-            s_region = DataFrame(
-                df.match.apply(lambda x: s_regions.find_pos(x)).tolist()
-            )
-            df['s_start'] = s_region[0]
-            df['s_end'] = s_region[1]
-            df['context_id'] = df.match.apply(lambda x: s_regions.cpos2struc(x))
+            # get context confined by s-attribute
+            df = self.dump2satt(df_dump, context_break, annotation=False).reset_index()
+
+            # save contextid
+            df['contextid'] = df[context_break + '_cwbid']
+
+            # replace -1 to not confuse min()
+            df[[
+                context_break + '_spanend'
+            ]] = df[[context_break + '_spanend']].replace(-1, self.corpus_size + 1)
 
             # left
             if context_left is None:
-                df['context'] = df['s_start']
+                df['context'] = df[context_break + '_span']
             else:
                 df['context'] = df.match - context_left
-                df['context'] = df[['context', 's_start']].max(axis=1)
+                df['context'] = df[[
+                    'context', context_break + '_span'
+                ]].max(axis=1)
             # right
             if context_right is None:
-                df['contextend'] = df['s_end']
+                df['contextend'] = df[context_break + '_spanend']
             else:
                 df['contextend'] = df.matchend + context_right
-                df['contextend'] = df[['contextend', 's_end']].min(axis=1)
+                df['contextend'] = df[[
+                    'contextend', context_break + '_spanend'
+                ]].min(axis=1)
 
-        # drop columns, downcast dataframe
-        df = df.drop(['s_start', 's_end'], axis=1, errors='ignore')
-        df = df.apply(to_numeric, downcast='integer')
+            # revert replacement
+            df[[
+                context_break + '_spanend'
+            ]] = df[[context_break + '_spanend']].replace(self.corpus_size + 1, -1)
 
-        # move (match, matchend) back to index
+        # restore original index
         df = df.set_index(['match', 'matchend'])
 
         return df
 
-    def query_cache(self, query, context_left, context_right,
-                    context_break, corrections, match_strategy):
-        """Queries the corpus, computes (context-extended) df_dump and caches
-        the result. Name will be generated automatically from query
-        parameters and returned.  Otherwise see query() for
-        parameters.
+    #################################################
+    # QUERY ALIASES #################################
+    #################################################
+    def query_s_att(self, s_att, values=set(), name=None):
+        """Get s-attribute spans as Dump, optionally restricting the spans by
+        matching the provided values against the s-att annotations.
+
+        === (match, matchend), $s_cwbid, $s* ===
+
+        :param str s_att: s-attribute to use for spans
+        :param set values: values of s-att annotation to restrict spans to
+
+        :return: dump
+        :rtype: Dump
 
         """
 
-        # check subcorpus size to avoid confusion when re-naming
-        if self.subcorpus is not None:
+        df_spans = self.dump_from_s_att(s_att)
+
+        # restrict to certain values
+        if len(values) > 0:
+            if s_att not in df_spans.columns:
+                logger.error("cannot restrict spans without annotation")
+                df_spans = DataFrame(columns=['match', 'matchend']).set_index(
+                    ['match', 'matchend']
+                )
+            else:
+                values = set(values)
+                logger.info("restricting spans using %d values" % len(values))
+                df_spans = df_spans.loc[df_spans[s_att].isin(values)]
+
+        # save as NQR
+        if name is not None:
+            # undump the dump and save to disk
             cqp = self.start_cqp()
-            subcorpus = cqp.Exec("size %s" % self.subcorpus)
+            cqp.nqr_from_dump(df_spans, name)
+            cqp.nqr_save(self.corpus_name, name)
             cqp.__kill__()
-            subcorpus = str(subcorpus) + self.subcorpus
-        else:
-            subcorpus = None
 
-        # identify query
-        identifiers = ['df_dump', query, context_left, context_right,
-                       context_break, corrections, match_strategy, subcorpus]
-        name_cache = self.cache.generate_idx(identifiers)
-
-        df_dump = self.cache.get(name_cache)
-        if df_dump is not None:
-            # retrieve from cache
-            logger.info('using version "%s" of df_dump' % name_cache)
-            logger.info('df_dump has %d matches' % len(df_dump))
-        else:
-            # compute
-            dump = self.query(query, None, context_left,
-                              context_right, context_break,
-                              corrections, match_strategy, name_cache)
-            df_dump = dump.df
-            # put into cache
-            self.cache.set(name_cache, df_dump)
-
-        return df_dump, name_cache
+        # return proper Dump
+        return Dump(self.copy(), df_spans, name_cqp=None)
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name='mnemosyne', save=False):
-        """Queries the corpus, computes df_dump.
+              match_strategy='standard', name=None):
+        """Get query result as (context-extended) Dump (with corrected
+        anchors). If a name is given, the resulting NQR (without
+        context and before anchor correction) will be written to disk
+        in CWB binary format.
 
-        === (match, matchend), 0*, ..., 9*, context*, contextend* ===
-
-        If the magic word 'mnemosyne' is given as name of the result,
-        the query parameters will be used to create an identifier and
-        the resulting subcorpus will be saved, so that the result can
-        be accessed directly by later queries with the same parameters
-        on the same subcorpus.
+        === (match, matchend), 0*, ..., 9*, contextid*, context*, contextend* ===
 
         :param str query: CQP query
-        :param int context: maximum context around match (symmetric)
+        :param int context: maximum context around match..matchend (symmetric)
         :param int context_left: maximum context left to the match
-        :param int context_right: maximum context right to the match
-        :param str context_break: s-attribute to confine context
-        :param dict corrections: corrections to apply to anchors {nr: offset}
+        :param int context_right: maximum context right to the matchend
+        :param str context_break: s-attribute to confine context to
+        :param dict corrections: corrections {anchor: offset}
         :param str match_strategy: CQP matching strategy
-        :param str name: name for resulting subcorpus
+        :param str name: name for NQR
 
-        :return: df_dump
-        :rtype: DataFrame
+        :return: dump
+        :rtype: Dump
 
         """
 
-        name_cache = None
-        name_cqp = None
-        cqp = self.start_cqp()
-
         # preprocess input
+        save = False if name is None else True  # save NQR from CQP to disk?
+        name = 'Last' if name is None else name  # name in CQP
         query, s_query, anchors = preprocess_query(cqp_query)
-        s_query, context_break, s_meta = merge_s_atts(s_query, context_break, None)  # ToDo
-        if context_left is None:
-            context_left = context
-        if context_right is None:
-            context_right = context
+        s_query = context_break if s_query is None else s_query
+        context_left = context if context_left is None else context_left
+        context_right = context if context_right is None else context_right
 
-        # use cached version?
-        if name == 'mnemosyne':
-            df_dump, name_cache = self.query_cache(
-                query, context_left, context_right,
-                context_break, corrections, match_strategy
-            )
-            cqp.Exec("save %s;" % name_cache)  # save to disk
-
-        else:
-            # get df_dump
-            logger.info("running query to get df_dump")
-            df_dump = self.dump_from_query(
-                query=query,
-                s_query=s_query,
-                anchors=anchors,
-                match_strategy=match_strategy,
-                name=name,
-                save=save
-            )
-            # empty return?
-            if len(df_dump) == 0:
-                logger.warning("found 0 matches")
-                df_dump = DataFrame()
-            else:
-                # extend dump
-                df_dump = self.extend_df_dump(
-                    df_dump, context_left, context_right, context_break
-                )
-                # apply corrections to anchor points
-                df_dump = correct_anchors(df_dump, corrections)
-
-        # create return object
-        dump = Dump(
-            self.copy(),
-            df_dump,
-            name_cache,
-            name_cqp
+        # get dump from query
+        df_dump = self.dump_from_query(
+            query=query,
+            s_query=s_query,
+            anchors=anchors,
+            match_strategy=match_strategy,
+            name=name,
+            save=save
         )
 
-        cqp.__kill__()
+        # if dump has been retrieved from cache, NQR might not exist
+        if self.show_nqr().empty or \
+           name not in self.show_nqr()['subcorpus'].values:
+            # undump the dump and save to disk
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_dump, name)
+            cqp.nqr_save(self.corpus_name, name)
+            cqp.__kill__()
 
-        return dump
+        # empty return?
+        if len(df_dump) == 0:
+            logger.warning("found 0 matches")
+            df_dump = DataFrame(columns=['match', 'matchend']).set_index(
+                ['match', 'matchend']
+            )
+        else:
+            # extend dump to context
+            df_dump = self.dump2context(
+                df_dump, context_left, context_right, context_break
+            )
+            # apply corrections to anchor points
+            df_dump = correct_anchors(df_dump, corrections)
+
+        # return proper dump
+        return Dump(
+            self.copy(),
+            df_dump,
+            name_cqp=name
+        )

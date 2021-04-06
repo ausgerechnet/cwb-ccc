@@ -3,7 +3,7 @@ legacy/
 *.pyc
 __pycache__/
 
-instance/
+tests/data-dir/
 
 .pytest_cache/
 .coverage
@@ -21,5 +21,3 @@ build/
 .Rhistory
 
 Pipfile.lock
-
-*CACHE*

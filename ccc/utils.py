@@ -244,7 +244,7 @@ def calculate_offset(row):
 # s-att handling #
 ##################
 def merge_s_atts(s_query, s_break, s_meta):
-    """ consistencize s-atts """
+    """ DEPRECATED consistencize s-atts """
     # s_query < s_break < s_meta
 
     # case 1.1: only s_query
@@ -284,23 +284,42 @@ def merge_s_atts(s_query, s_break, s_meta):
 # p-att handling #
 ##################
 def fold_item(item, flags="%cd"):
+
     if flags is None:
         return item
 
+    isstr = False
+    if isinstance(item, str):
+        isstr = True
+        item = (item, )
+
     if "c" in flags:
         # lower-case
-        item = item.lower()
+        item = [i.lower() for i in item]
 
     if "d" in flags:
         # TODO align with CWB
         # remove diacritica
-        item = unidecode(item)
+        item = [unidecode(i) for i in item]
+
+    item = item[0] if isstr else tuple(item)
 
     return item
 
 
 def fold_df(df, flags="%cd"):
+
+    if flags is None:
+        return df
+
     df.index = df.index.map(lambda x: fold_item(x, flags))
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)
     return df
+
+
+def filter_df(df, path):
+    import pkgutil
+    data = pkgutil.get_data(__name__, path)
+    items = set(data.decode().split("\n"))
+    return df.loc[~df.index.isin(items)]

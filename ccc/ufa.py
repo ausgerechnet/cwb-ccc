@@ -9,7 +9,7 @@ class UFA:
     def __init__(self, corpus, s_dict, s_att='text_id'):
         """
         :param Corpus corpus: corpus to work on
-        :param dict ids: dicitonary of {subcorpus_name: set of values for context_break}
+        :param dict ids: dicitonary of {subcorpus_name: set of values for s_att}
         :param str context_break: s-attribute that is used for definition of regions
         """
 
@@ -23,7 +23,7 @@ class UFA:
         for s in self.s_dict.keys():
             i += 1
             logger.info("... subcorpus %d of %d" % (i, len(self.s_dict)))
-            dumps[s] = corpus.dump_from_s_att(
+            dumps[s] = corpus.query_s_att(
                 self.s_att, self.s_dict[s]
             )
 
@@ -74,12 +74,8 @@ class UFA:
             cqp_query,
             context=window,
             context_break=context_break
-        )
-        df_glob = dump_glob.df.join(
-            self.corpus.get_s_annotations(
-                dump_glob.df, [self.s_att]
-            )
-        )
+        ).df
+        df_glob = self.corpus.dump2satt(dump_glob, context_break)
 
         logger.info("computing collocate tables ...")
         tables = dict()

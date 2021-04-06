@@ -13,7 +13,7 @@ class Cache:
     def __init__(self, path=None):
         self.path = path
 
-    def generate_idx(self, identifiers, prefix='CACHE_', length=10):
+    def generate_idx(self, identifiers, prefix='', length=10):
         string = ''.join([str(idx) for idx in identifiers])
         h = sha256(str(string).encode()).hexdigest()
         return prefix + h[:length]
@@ -23,7 +23,7 @@ class Cache:
         if self.path is None:
             return None
 
-        if type(identifier) is str:
+        if isinstance(identifier, str):
             key = identifier
         else:
             key = self.generate_idx(identifier)
@@ -40,7 +40,7 @@ class Cache:
         if self.path is None:
             return None
 
-        if type(identifier) is str:
+        if isinstance(identifier, str):
             key = identifier
         else:
             key = self.generate_idx(identifier)

@@ -6,7 +6,7 @@
 #   corpus_name: BREXIT_V20190522_DEDUP
 #   lib_path: null
 # display:
-#   p_show: [word, lemma]
+#   p_show: [word]
 #   s_show: [tweet_id]
 #   p_slots: lemma
 #   p_text: word

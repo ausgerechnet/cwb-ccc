@@ -1,31 +1,34 @@
 import os
 import pytest
+from pandas import read_csv
 
 
-local = False
+LOCAL = True
+DIR_PATH = os.path.dirname(os.path.realpath(__file__))
+DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
 
 
 @pytest.fixture
 def germaparl():
     """ settings for small germaparl testing corpus """
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    registry_path = os.path.join(dir_path, "test-corpora/registry/")
+    registry_path = os.path.join(DIR_PATH, "corpora/registry/")
+    dump_path = os.path.join(DIR_PATH, "gold", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
 
     context = 50
     s_context = 'text'
+    s_meta = 'text_id'
 
     s_query = 's'
-    query = (
-        r'[lemma="Horst"]? [lemma="Seehofer"]'
-        r'"\[" "CDU" "/" "CSU" "\]"'
-    )
+    query = '[lemma="Seehofer"]'
     query_anchor = (
         r'@0[lemma="Horst"]? @1[lemma="Seehofer"] @2:[::]'
     )
     anchors = [0, 1, 2]
     query_within = query_anchor + " within " + s_query + ";"
+    seehofer_dump = read_csv(dump_path, sep="\t", header=None, dtype=int,
+                             index_col=[0, 1], names=['match', 'matchend'])
 
     return {
         'registry_path': registry_path,
@@ -33,10 +36,12 @@ def germaparl():
         'context': context,
         's_context': s_context,
         's_query': s_query,
+        's_meta': s_meta,
         'query': query,
         'query_anchor': query_anchor,
         'anchors': anchors,
-        'query_full': query_within
+        'query_full': query_within,
+        'dump': seehofer_dump
     }
 
 
@@ -49,17 +54,14 @@ def brexit():
     )
     corpus_name = "BREXIT_V20190522_DEDUP"
     lib_path = (
-        "/home/ausgerechnet/repositories/spheroscope/library/BREXIT_V20190522_DEDUP/"
+        "/home/ausgerechnet/implementation/spheroscope/library/BREXIT_V20190522_DEDUP/"
     )
     meta_path = (
         "/home/ausgerechnet/corpora/cwb/upload/"
         "brexit/brexit-preref-rant/brexit_v20190522_dedup.tsv.gz"
     )
 
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    query_path = (
-        os.path.join(dir_path, "as_a_x_i_y_knowledge.json")
-    )
+    query_path = (os.path.join(DIR_PATH, "gold", "as_a_x_i_y_knowledge.json"))
 
     context = 50
     s_context = 'tweet'

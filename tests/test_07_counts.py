@@ -3,79 +3,121 @@ from ccc.counts import cwb_scan_corpus
 from ccc.utils import formulate_cqp_query
 import pandas as pd
 import pytest
+from tempfile import NamedTemporaryFile
 
-from .conftest import local
+from .conftest import LOCAL, DATA_PATH
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
-@pytest.mark.brexit
+def get_corpus(corpus_settings, data_path=DATA_PATH):
+
+    return Corpus(
+        corpus_settings['corpus_name'],
+        registry_path=corpus_settings['registry_path'],
+        lib_path=corpus_settings.get('lib_path', None),
+        data_path=data_path
+    )
+
+
 @pytest.mark.cwb_counts
-def test_cwb_scan_corpus(germaparl):
-    from tempfile import NamedTemporaryFile
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+def test_cwb_scan_corpus_subcorpora(germaparl):
+
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
-    cqp.nqr_from_query('[lemma="Helmut"]', name='tmp')
+
+    # get a DumpFrame
+    cqp.nqr_from_query('[lemma="Helmut"]', name='Tmp')
+
+    # run cwb-scan-corpus on dump
     with NamedTemporaryFile(mode="wt") as f:
-        cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump Tmp > "%s"' % f.name)
         df1 = cwb_scan_corpus(f.name, germaparl['corpus_name'],
                               germaparl['registry_path'])
 
-    cqp.nqr_from_query(query='[lemma="und"] expand to s',
-                       name='und')
-
+    # activate a sub-corpus
+    cqp.nqr_from_query(query='[lemma="und"] expand to s', name='und')
     cqp.nqr_activate(corpus.corpus_name, 'und')
-    cqp.nqr_from_query('[lemma="Kohl"]', name='tmp')
 
+    # run same query on sub-corpus
+    cqp.nqr_from_query('[lemma="Helmut"]', name='Tmp')
+
+    # run cwb-scan-corpus on dump
     with NamedTemporaryFile(mode="wt") as f:
-        cqp.Exec('dump tmp > "%s"' % f.name)
+        cqp.Exec('dump Tmp > "%s"' % f.name)
         df2 = cwb_scan_corpus(f.name, germaparl['corpus_name'],
                               germaparl['registry_path'])
 
-    cqp.__kill__()
+    # check that results are different
     assert(sum(df2['freq']) != sum(df1['freq']))
+
+    cqp.__kill__()
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_cwb_scan_corpus_marginal(germaparl):
+
+    df1 = cwb_scan_corpus(
+        None,
+        germaparl['corpus_name'],
+        germaparl['registry_path']
+    )
+    df2 = cwb_scan_corpus(
+        None,
+        germaparl['corpus_name'],
+        germaparl['registry_path'],
+        p_atts=['lemma', 'pos']
+    )
+    assert(isinstance(df1.index, pd.MultiIndex))
+    assert(isinstance(df2.index, pd.MultiIndex))
+    assert(df1.index.names == ['word'])
+    assert(df2.index.names == ['lemma', 'pos'])
+    assert(df1.columns == df2.columns)
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_marginals(germaparl):
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.marginals(["Helmut", "Kohl", "CDU"])
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    print(freqframe.index)
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
+def test_marginals_patterns(germaparl):
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.marginals(["H.*", "Kohl", "CDU"])
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(freqframe.loc['H.*']['freq'] == 0)
+    freqframe = corpus.marginals(["H.*", "Kohl", "CDU"], pattern=True)
+    assert(len(freqframe) == 3)
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(freqframe.loc['H.*']['freq'] == 2466)
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
-    assert(type(counts) == pd.DataFrame)
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(isinstance(freqframe.index, pd.MultiIndex))
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos_combo(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    counts = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
-    assert(type(counts) == pd.DataFrame)
-    assert(counts.index.names == ['lemma', 'pos'])
-
-
-@pytest.mark.cwb_counts
-def test_marginals(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    counts = corpus.marginals(["Helmut", "Kohl", "CDU"])
-    assert(len(counts) == 3)
-
-
-@pytest.mark.cwb_counts
-def test_marginals_patterns(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    counts = corpus.marginals(["H*", "Kohl", "CDU"])
-    assert(len(counts) == 3)
-    counts = corpus.marginals(["H*", "Kohl", "CDU"], pattern=True)
-    assert(len(counts) == 3)
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
+    assert(isinstance(freqframe, pd.DataFrame))
+    assert(isinstance(freqframe.index, pd.MultiIndex))
 
 
 @pytest.mark.cwb_counts
 def test_count_items(germaparl):
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
 
     items = ["Helmut", "Kohl", "CDU"]
@@ -86,12 +128,12 @@ def test_count_items(germaparl):
     # whole corpus
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
+    print(counts1, counts2)
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
     # subcorpus
     cqp.nqr_from_query(query='[lemma="und"] expand to s', name='und')
     cqp.nqr_activate(corpus.corpus_name, 'und')
-
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
     assert(counts1.loc[items[0], 'freq'] > counts2.loc[queries[0], 'freq'])
@@ -105,20 +147,20 @@ def test_count_items(germaparl):
     cqp.__kill__()
 
 
-@pytest.mark.skipif(not local, reason='works on my machine')
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.brexit
 @pytest.mark.cwb_counts
 def test_count_matches(brexit):
-    corpus = Corpus(brexit['corpus_name'])
+    corpus = get_corpus(brexit)
     corpus.query(
         cqp_query='[lemma="nigel"]',
         context=10,
         context_break='tweet',
-        name='Test',
-        save=True
+        name='Nigel'
     )
     cqp = corpus.start_cqp()
-    counts = corpus.counts.matches(cqp, 'Test')
+    counts = corpus.counts.matches(cqp, 'Nigel')
+    cqp.__kill__()
     assert("Nigel" in counts.index)
 
 
@@ -126,8 +168,7 @@ def test_count_matches(brexit):
 def test_count_mwus_3(germaparl):
 
     # whole corpus
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
     queries = [
         formulate_cqp_query([item]) for item in items
@@ -150,9 +191,8 @@ def test_count_mwus_3(germaparl):
 def test_count_mwus_strategies(germaparl):
 
     # whole corpus
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
-    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
+    corpus = get_corpus(germaparl)
+    items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324"]
     queries = [
         formulate_cqp_query([item]) for item in items
     ]
@@ -189,12 +229,11 @@ def test_count_mwus_strategies(germaparl):
 def test_count_items_subcorpora(germaparl):
 
     # subcorpus
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     dump = corpus.dump_from_s_att("text_role", ["presidency"])
-    cqp.nqr_from_dump(dump.df, 'presidency')
-    cqp.nqr_activate(corpus.corpus_name, 'presidency')
+    cqp.nqr_from_dump(dump, 'Presidency')
+    cqp.nqr_activate(corpus.corpus_name, 'Presidency')
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
     queries = [formulate_cqp_query([item]) for item in items]
 
@@ -226,7 +265,7 @@ def test_count_items_subcorpora(germaparl):
 # def test_count_dump_1(germaparl):
 
 #     strategy = 1
-#     corpus = Corpus(germaparl['corpus_name'])
+#     corpus = get_corpus(germaparl)
 #     df_dump = corpus.dump_from_query(
 #         query=germaparl['query'],
 #         s_query=germaparl['s_query'],
@@ -266,7 +305,7 @@ def test_count_items_subcorpora(germaparl):
 # def test_count_dump_2(germaparl):
 
 #     strategy = 2
-#     corpus = Corpus(germaparl['corpus_name'])
+#     corpus = get_corpus(germaparl)
 #     df_dump = corpus.dump_from_query(
 #         query=germaparl['query'],
 #         s_query=germaparl['s_query'],
@@ -307,8 +346,7 @@ def test_count_items_subcorpora(germaparl):
 def test_counts_dump_1_split(germaparl):
     strategy = 1
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.dump_from_query('[lemma="die" %cd] [pos="N.*"]')
 
     df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
@@ -322,8 +360,7 @@ def test_counts_dump_1_split(germaparl):
 def test_counts_dump_1_no_split(germaparl):
     strategy = 1
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.dump_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]')
 
     # no split
@@ -338,8 +375,7 @@ def test_counts_dump_1_no_split(germaparl):
 def test_counts_dump_2(germaparl):
     strategy = 2
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     dump = corpus.dump_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]')
 
     df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
@@ -361,8 +397,7 @@ def test_counts_dump_2(germaparl):
 def test_counts_matches_1(germaparl):
     strategy = 1
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     cqp.nqr_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]', name='Last')
     cqp.nqr_activate(corpus.corpus_name, 'Last')
@@ -389,8 +424,7 @@ def test_counts_matches_1(germaparl):
 def test_counts_matches_2(germaparl):
     strategy = 2
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
 
     cqp = corpus.start_cqp()
     cqp.nqr_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]', name='Last')
@@ -417,8 +451,7 @@ def test_counts_matches_2(germaparl):
 def test_counts_matches_3(germaparl):
     strategy = 3
 
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     cqp.nqr_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]', name='Last')
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
@@ -437,8 +470,7 @@ def test_counts_matches_3(germaparl):
 
 @pytest.mark.cwb_counts
 def test_counts_mwus(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     queries = ['[lemma="Helmut"%cd & pos="NE"] [lemma="Kohl"]', '[lemma="Horst"]']
     df = corpus.counts.mwus(cqp,
@@ -463,8 +495,7 @@ def test_counts_mwus(germaparl):
 
 @pytest.mark.cwb_counts
 def test_cwb_counts(germaparl):
-    corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+    corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     queries = ['[lemma="Helmut"%cd & pos="NE"] [lemma="Kohl"]', '[lemma="Horst"]']
     df = corpus.counts.mwus(cqp,

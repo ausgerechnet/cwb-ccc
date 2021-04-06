@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" queries.py: read-write support for CQPY query files
+""" cqpy.py: read-write support for CQPY query files
 
 - a CQPY file contains a YAML header and the actual CQP input
 - YAML header *can* be commented
@@ -103,7 +103,7 @@ def load_query_json(query_path):
 
 def cqpy_load(path):
     """
-    load cqpy query file from path, return string
+    load cqpy query file from path, return dictionary
     """
 
     doc = open(path, 'rt').read()
@@ -150,7 +150,7 @@ def cqpy_dump(query, comment=True):
 
 
 def run_query(corpus, query, match_strategy='longest',
-              cut_off=None, form='extended'):
+              cut_off=None, form='slots'):
     """
     query needs following sections:
     - cqp
@@ -160,10 +160,19 @@ def run_query(corpus, query, match_strategy='longest',
     - anchors > slots
     - display > p_show
     - display > s_show
-    - display > p_text
-    - display > p_slots
     """
 
+    # ensure backwards compatability
+    if 'p_slots' in query['display']:
+        logger.warning("use of 'p_slots' is deprecated")
+        if query['display']['p_slots'] not in query['display']['p_show']:
+            query['display']['p_show'] += [query['display']['p_slots']]
+    if 'p_text' in query['display']:
+        logger.warning("use of 'p_text' is deprecated")
+        if query['display']['p_text'] not in query['display']['p_show']:
+            query['display']['p_show'] += [query['display']['p_text']]
+
+    # query the corpus
     dump = corpus.query(
         cqp_query=query['cqp'],
         context=query['query']['context'],
@@ -172,12 +181,10 @@ def run_query(corpus, query, match_strategy='longest',
         match_strategy=match_strategy,
     )
 
+    # create appropriately formatted concordance lines
     lines = dump.concordance(
-        matches=None,
         p_show=query['display']['p_show'],
         s_show=query['display']['s_show'],
-        p_text=query['display']['p_text'],
-        p_slots=query['display']['p_slots'],
         slots=query['anchors']['slots'],
         cut_off=cut_off,
         form=form

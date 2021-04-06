@@ -9,103 +9,101 @@ from ccc.collocates import Collocates
 # requirements
 from pandas import merge, DataFrame
 # logging
+from .utils import time_it
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Disc:
+class Discourseme:
     """
-    realization of a discourseme given a corpus and query parameters
+    realization of a discourseme with context in a corpus
     """
 
-    def __init__(self, corpus, items, p_query, s_query, s_context,
-                 context=20, flags="%cd", escape=False):
+    def __init__(self, corpus, items, p_query, s_query, flags="%cd", escape=False):
         """
-        .items
-        .parameters
+        .nodes
         .idx
         .dump
         """
 
-        self.items = items
-
-        self.parameters = {
+        self.nodes = {
+            'items': items,
             'p_query': p_query,
             's_query': s_query,
-            's_context': s_context,
-            'context': context,
             'flags': flags,
-            'escape': escape
+            'escape': escape,
+            'corpus': corpus.corpus_name
         }
+        self.query = formulate_cqp_query(items, p_query, s_query, flags, escape)
+        self.idx = corpus.cache.generate_idx(self.nodes.values(), prefix='nodes_')
+        self.dump = corpus.query(self.query, context=None, context_break=s_query)
 
-        # run query
-        query = formulate_cqp_query(
-            items, p_query, s_query, flags, escape
-        )
-        dump = corpus.query(
-            query, context, context_break=s_context
-        )
-        self.dump = dump
-        self.idx = dump.name_cache
-
-        self._context = None
-        self._matches = None
-
-    def concordance(self, context=None, matches=None,
+    def concordance(self, context=None, context_left=None,
+                    context_right=None, context_break=None,
                     p_show=['word'], s_show=[], order='random',
-                    cut_off=100, form='dataframes'):
+                    cut_off=100, matches=None, form='dataframe'):
 
-        # deal with context
-        if context is None:
-            context = self.parameters['context']
-        if context > self.parameters['context']:
-            logger.warning(
-                "out of context; falling back to context=%d" %
-                self.parameters['context']
-            )
-            context = self.parameters['context']
-            df = self.dump.df
-        elif context < self.parameters['context']:
-            df = self.dump.df.reset_index()
-            df['context_new'] = df['match'] - context
-            df['contextend_new'] = df['matchend'] + context
-            df['context'] = df[['context', 'context_new']].max(axis=1)
-            df['contextend'] = df[['contextend', 'contextend_new']].min(axis=1)
-            df = df.drop(['context_new', 'contextend_new'], axis=1)
-            df = df.set_index(['match', 'matchend'])
-        else:
-            df = self.dump.df
+        self.dump.set_context(context, context_break,
+                              context_left, context_right)
 
-        conc = Concordance(self.dump.corpus.copy(), df)
-        return conc.lines(
+        return self.dump.concordance(
             matches=matches, p_show=p_show, s_show=s_show,
-            p_text=None, p_slots=None, slots=[], order=order,
+            slots=[], order=order,
             cut_off=cut_off, form=form
         )
 
-    def collocates(self, window=5, order='f', cut_off=100,
+    def collocates(self, window_sizes=[3, 5, 7], context_break=None,
+                   order='log_likelihood', cut_off=100,
                    p_query="lemma", ams=None, min_freq=2,
                    frequencies=True, flags=None):
 
-        coll = Collocates(self.dump.corpus.copy(), self.dump.df, p_query)
-        return coll.show(
-            window=window, order=order, cut_off=cut_off, ams=ams,
-            min_freq=min_freq, frequencies=frequencies, flags=flags
+        # determine mode and mws
+        if type(window_sizes) is int:
+            single = True
+            mws = window_sizes
+        elif type(window_sizes) is list:
+            single = False
+            mws = max(window_sizes)
+        else:
+            raise NotImplementedError("window_sizes must be int or list")
+
+        self.dump.set_context(context=mws, context_break=context_break)
+
+        coll = Collocates(
+            corpus=self.dump.corpus.copy(),
+            df_dump=self.dump.df,
+            p_query=p_query,
+            mws=mws
         )
 
+        if single:
+            return coll.show(
+                window=mws, order=order, cut_off=cut_off, ams=ams,
+                min_freq=min_freq, frequencies=frequencies, flags=flags
+            )
 
-class DiscCon:
+        else:
+            collocates = dict()
+            for window in window_sizes:
+                collocates[window] = coll.show(
+                    window=window, order=order, cut_off=cut_off, ams=ams,
+                    min_freq=min_freq, frequencies=frequencies, flags=flags
+                )
+            return collocates
+
+
+class DiscoursemeConstellation:
     """
     realization of a discourseme constellation given a topic and discoursemes
 
     discoursemes can be added after initialization
     """
 
-    def __init__(self, topic, discoursemes=[], name='Last'):
+    def __init__(self, topic, discoursemes={}, name='Last'):
         """
         .topic
         .corpus
-        .parameters
+        .nodes
         .name
 
         .discoursemes: dict of Discs with key == Disc.idx
@@ -115,7 +113,7 @@ class DiscCon:
         self.topic = topic
 
         self.corpus = topic.dump.corpus
-        self.parameters = topic.parameters
+        self.nodes = topic.nodes
         self.name = name
 
         self.discoursemes = dict()
@@ -134,31 +132,36 @@ class DiscCon:
 
     def add_items(self, items):
 
-        disc = Disc(
+        disc = Discourseme(
             corpus=self.corpus.copy(),
             items=items,
-            **self.parameters
+            **{i: self.nodes[i] for i in self.nodes if i not in ['corpus', 'items']}
         )
         self.add_disc(disc)
         return disc.idx
 
-    def slice_discs(self, window=None):
+    @time_it
+    def slice_discs(self, window=5, context_break=None):
         """ intersects all discoursemes
-        :return: df_nodes with topic match, matchend,
-        context_id, context, contextend, match_disc1_idx, matchend_disc1_idx, ...
+        :return: df_nodes indexed by topic-matches:
+
+        == (m, m-end) c-id, c, c-end, m_d1, m-e_d1, ... ==
+
+        with duplicates for each match, matchend where necessary
         """
 
-        if window is None:
-            window = self.topic.parameters['context']
-
-        df_nodes = self.topic.dump.df.reset_index()
+        topic_dump = self.topic.dump
+        topic_dump.set_context(context=window, context_break=context_break)
+        df_nodes = topic_dump.df.reset_index()
 
         for disc in self.discoursemes.values():
-            # get dump
+
             df = disc.dump.df.reset_index()
             df = df.drop(['context', 'contextend'], axis=1)
             # merge nodes; NB: this adds duplicates where necessary
-            df_nodes = merge(df_nodes, df, on='context_id')
+            # s_break = self.topic.nodes['s_query'] + '_cwbid'
+            s_break = 'contextid'
+            df_nodes = merge(df_nodes, df, on=s_break)
             # remove lines where items are too far away
             df_nodes['offset'] = df_nodes.apply(calculate_offset, axis=1)
             df_nodes = df_nodes[
@@ -176,9 +179,10 @@ class DiscCon:
 
         return df_nodes
 
+    @time_it
     def concordance(self, window=5, matches=None,
                     p_show=['word'], s_show=[], order='random',
-                    cut_off=100, form='dataframes'):
+                    cut_off=100, form='dataframe'):
 
         """ self.df_nodes has duplicate entries
         (1) convert to (match matchend) disc_1_set disc_2_set ...
@@ -203,7 +207,7 @@ class DiscCon:
             df_loc = df_nodes.loc[df_nodes.match == match]
             row['match'] = match
             row['matchend'] = df_loc.iloc[0]['matchend']
-            row['context_id'] = df_loc.iloc[0]['context_id']
+            row['context id'] = df_loc.iloc[0]['contextid']
             row['context'] = df_loc.iloc[0]['context']
             row['contextend'] = df_loc.iloc[0]['contextend']
             for idx in disc_ids:
@@ -219,7 +223,7 @@ class DiscCon:
         conc = Concordance(self.corpus.copy(), df)
         lines = conc.lines(
             matches=matches, p_show=p_show, s_show=s_show,
-            p_text=None, p_slots=None, slots=[], order=order,
+            slots=[], order=order,
             cut_off=cut_off, form=form
         )
 
@@ -227,20 +231,21 @@ class DiscCon:
         # TODO mark out of context
         dfs = list()
         for line in lines.iterrows():
-            df = line[1]['df']
+            df = line[1]['dataframe']
             # indicate topic matches
             match, matchend = line[0]
             df[self.topic.idx] = df.index.isin(set(range(match, matchend + 1)))
             # indicate discourseme matches
             for idx in disc_ids:
                 df[idx] = df.index.isin(line[1][idx])
-            df = df.drop(['match', 'matchend', 'context', 'contextend'], axis=1)
+            # df = df.drop(['match', 'matchend', 'context', 'contextend'], axis=1)
             dfs.append(df)
-        lines['df'] = dfs
+        lines['dataframe'] = dfs
 
         return lines
 
-    def collocates(self, window=5, order='f', cut_off=100,
+    @time_it
+    def collocates(self, window=5, order='log_likelihood', cut_off=100,
                    p_query="lemma", ams=None, min_freq=2,
                    frequencies=True, flags=None):
 
@@ -353,8 +358,6 @@ class DiscCon:
     #     logger.info("excluding all discourseme matches from context")
     #     df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-    #     # 
-        
     #     # do it once for max_window
     #     relevant = df_cooc.loc[abs(df_cooc['offset']) <= max_window]
 
@@ -400,3 +403,27 @@ class DiscCon:
     #         print(w)
 
     #     return collocates
+
+
+# class DiscoursemeConstellation:
+
+#     def __init__(self, topic, discoursemes={}, name='Last'):
+#         """
+#         :param DataFrame topic.dump.df: (match, matchend) context contextend contextid
+#         :param Corpus topic.corpus: corpus with subcorpus = topic
+#         :
+#         .discoursemes: dict of Discs with key == Disc.idx
+#         .df_nodes = dict of df_nodes with key == window
+#         """
+
+#         self.topic = topic
+
+#         self.corpus = topic.dump.corpus
+#         self.nodes = topic.nodes
+#         self.name = name
+
+#         self.discoursemes = dict()
+#         for d in discoursemes:
+#             self.add_disc(d)
+
+#         self.df_nodes = dict()

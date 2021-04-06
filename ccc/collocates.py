@@ -5,7 +5,7 @@ from itertools import chain
 # part of module
 from .utils import node2cooc, fold_df
 # requirements
-from pandas import DataFrame
+from pandas import DataFrame, MultiIndex
 from association_measures.measures import calculate_measures
 import association_measures.frequencies as fq
 # logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ collocation analysis """
 
-    def __init__(self, corpus, df_dump, p_query='lemma', mws=10):
+    def __init__(self, corpus, df_dump, p_query=['lemma'], mws=10):
 
         # consistency check
         if len(df_dump) == 0:
@@ -35,31 +35,31 @@ class Collocates:
         self.mws = mws
 
         # determine layer to work on
-        if p_query not in self.corpus.attributes_available['attribute'].values:
-            logger.warning(
-                'p_att "%s" not available, falling back to primary layer' % p_query
-            )
-            p_query = 'word'
-        self.p_query = p_query
+        self.p_query = [p_query] if isinstance(p_query, str) else p_query
 
-        # collect context and save result
-        logger.info('collecting contexts')
+        # TODO: also comprises s-att -- implement convenient retrieval
+        p_available = set(self.corpus.attributes_available['attribute'].values)
+        if not set(self.p_query).issubset(p_available):
+            logger.warning(
+                'specfied p-attribute(s) (%s) not available' % " ".join(self.p_query)
+            )
+            logger.warning('falling back to primary layer')
+            self.p_query = ['word']
+
+        # collect cpos of matches and context
+        logger.info('collecting cpos of matches and context')
         deflated, f1_set = df_node_to_cooc(self.df_dump, self.mws)
-        logger.info('collected %d token positions' % len(deflated))
+        logger.info('collected %d corpus positions' % len(deflated))
         self.deflated = deflated
         self.f1_set = f1_set
 
     def count(self, window):
 
-        if self.mws is None:
-            mws = window
-        else:
-            mws = self.mws
+        # check window
+        mws = window if self.mws is None else self.mws
         if window > mws:
-            logger.warning(
-                'requested window outside maximum window size,'
-                ' falling back to %d' % mws
-            )
+            logger.warning('requested window outside maximum window size')
+            logger.info('using window %d' % mws)
             window = mws
 
         # slice relevant window
@@ -70,10 +70,9 @@ class Collocates:
 
         # get frequency counts
         counts = self.corpus.counts.cpos(
-            relevant['cpos'], [self.p_query]
+            relevant['cpos'], self.p_query
         )
         counts.columns = ['f']
-        counts.index = counts.index.get_level_values(self.p_query)
 
         return counts, f1_inflated
 
@@ -90,24 +89,34 @@ class Collocates:
         f, f1_inflated = self.count(window)
 
         # determine reference frequency
-        if type(marginals) == str and marginals == 'corpus':
-            # get marginals
-            f2 = self.corpus.marginals(
-                f.index, self.p_query
-            )
-            f2.columns = ['marginal']
-            N = self.corpus.corpus_size - len(self.f1_set)
+        if isinstance(marginals, str):
+            if marginals == 'corpus':
+                N = self.corpus.corpus_size - len(self.f1_set)
+                # get marginals
+                if len(self.p_query) == 1:
+                    # coerce to multiindex (what was I thinking?)
+                    f2 = self.corpus.marginals(
+                        f.index.get_level_values(self.p_query[0]), self.p_query[0]
+                    )
+                    f2.index = MultiIndex.from_tuples(
+                        f2.index.map(lambda x: (x, )), names=self.p_query
+                    )
+                else:
+                    f2 = self.corpus.marginals_complex(f.index, self.p_query)
+                f2.columns = ['marginal']
+            else:
+                raise NotImplementedError
 
-        elif type(marginals) == DataFrame:
+        elif isinstance(marginals, DataFrame):
             f2 = marginals
             f2.columns = ['marginal']
-
-            # get corpus size
             N = f2['marginal'].sum()  # - len(self.f1_set)
 
+        else:
+            raise NotImplementedError
+
         # deduct node frequencies from marginals
-        node_freq = self.corpus.counts.cpos(self.f1_set, [self.p_query])
-        node_freq.index = node_freq.index.get_level_values(self.p_query)
+        node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
         node_freq.columns = ['in_nodes']
         f2 = f2.join(node_freq)
         f2 = f2.fillna(0)
@@ -121,6 +130,11 @@ class Collocates:
             f, f1, f2, N,
             min_freq, order, cut_off, flags, ams, frequencies
         )
+
+        # deal with index
+        if len(self.p_query) == 1:
+            collocates.index = collocates.index.map(lambda x: x[0])
+            collocates.index.name = self.p_query[0]
 
         return collocates
 
@@ -232,10 +246,8 @@ def add_ams(f, f1, f2, N,
 
     # init contingency table with f and f2
     contingencies = f.join(f2)
-
     # post-processing: fold items
     contingencies = fold_df(contingencies, flags)
-
     # add constant columns
     contingencies['N'] = N
     contingencies['f1'] = f1
@@ -252,11 +264,10 @@ def add_ams(f, f1, f2, N,
         contingencies = contingencies.join(
             fq.expected_frequencies(contingencies)
         )
-    contingencies.index.name = 'item'
 
     # sort dataframe
     contingencies = contingencies.sort_values(
-        by=[order, 'item'], ascending=False
+        by=[order, 'f'], ascending=False
     )
 
     # apply cut-off

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from random import sample
+import itertools
 # part of module
 from .utils import node2cooc
 # requirements
@@ -19,84 +20,254 @@ class Concordance:
         # bind corpus
         self.corpus = corpus
 
-        # what's in the dump?
+        # make sure there's context
+        if 'context' not in df_dump.columns:
+            df_dump['context'] = df_dump.index.get_level_values('match')
+        if 'contextend' not in df_dump.columns:
+            df_dump['contextend'] = df_dump.index.get_level_values('matchend')
+
+        # bind dump and check size
         self.df_dump = df_dump
         self.size = len(df_dump)
-        anchors = [i for i in range(10) if i in df_dump.columns]
-        anchors += ['match', 'matchend', 'context', 'contextend']
-        self.anchors = anchors
-
-        if len(df_dump) == 0:
+        if self.size == 0:
             logger.warning('empty dump')
 
-    def text_line(self, index, columns, p_show=['word']):
-        """Translates one row of self.df_dump into a concordance_line.
+        # init anchor points
+        anchors = [i for i in range(10) if i in df_dump.columns]
+        self.anchors = anchors
 
-        :return: dictionary of [match, cpos, offset, anchors] + p_show
-        :rtype: dict
+    def simple(self, df, p_show=['word'], start='context', end='contextend'):
+        """Retrieve concordance lines of provided df in 'simple'
+        formatting, i.e. one column for each $p in p_show.
+
+        """
+        for p_att in p_show:
+            df = self.corpus.dump2patt(
+                df, p_att=p_att, start=start, end=end
+            )
+
+        return df[p_show]
+
+    def kwic(self, df, p_show=['word']):
+        """Retrieve concordance lines of provided df in 'kwic' formatting. The
+        resulting dataframe has 3 times len(p_show) columns, namely
+        for each $p in p_show:
+        - left_$p: context .. match - 1
+        - node_$p: match .. matchend
+        - right_$p: matchend + 1 .. contextend
 
         """
 
-        # pack values
+        df = df.reset_index()
+        df['leftend'] = df['match'] - 1
+        df['rightstart'] = df['matchend'] + 1
+        df = df.set_index(['match', 'matchend'])
+
+        for p in p_show:
+            df['left' + "_" + p] = self.corpus.dump2patt(
+                df, p, start='context', end='leftend'
+            )[p]
+            df['node' + "_" + p] = self.corpus.dump2patt(
+                df, p, start='match', end='matchend'
+            )[p]
+            df['right' + "_" + p] = self.corpus.dump2patt(
+                df, p, start='rightstart', end='contextend'
+            )[p]
+
+        return df[["_".join(combo) for combo in itertools.product(
+            ['left', 'node', 'right'], p_show
+        )]]
+
+    def slots(self, df, p_show=['word'], slots=None):
+        """Retrieve concordance lines of provided df in 'slot' formatting.
+        Slots are singletons or pairs of self.anchors.  By default,
+        all single anchors are slots.
+
+        If slots is a list, it will be translated into a dictionary
+        with keys of the form "$slot[0]..$slot[1]".
+
+        For each single slot $s and each p-attribute $p in p_show,
+        $slot_$p is retrieved.  For pairs, $slot[0]..$slot[1]_$p is
+        retrieved.
+
+        If $slot[0] or $slot[1] is not defined in a row (hence the
+        entry is -1), the pair is treated as a singleton.  If both
+        positions are not defined, an empty string is returned.
+
+        """
+
+        if slots is None:
+            slots = self.anchors + [('match', 'matchend')]
+
+        # translate list into dict
+        if isinstance(slots, list):
+            slots_dict = dict()
+            for slot in slots:
+                if isinstance(slot, (int, str)):
+                    key = slot
+                else:
+                    key = "..".join([str(s) for s in slot])
+                slots_dict[key] = slot
+            slots = slots_dict
+
+        # init output with simple view
+        df_lines = self.simple(df, p_show)
+
+        # add slots
+        for key in slots.keys():
+            # allow definition of slots as singletons
+            if isinstance(slots[key], (int, str)):
+                start = end = slots[key]
+            else:
+                start, end = slots[key]
+            df_lines[[str(key) + "_" + p for p in p_show]] = self.simple(
+                df, p_show=p_show, start=start, end=end
+            )[p_show]
+
+        return df_lines
+
+    def _export(self, index, row, p_show, form='dict'):
+        """Translates one row of a df_dump into a dictionary or a DataFrame.
+
+        :return: [cpos, offset, anchors] + p_show
+        :rtype: dict or DataFrame
+
+        """
+
+        # pack all values into a dictionary
+        row = dict(row)
         match, matchend = index
-        row = dict(columns)
         row['match'] = match
         row['matchend'] = matchend
 
         # create cotext
         cotext = node2cooc(row)
-        cpos = cotext['cpos_list']
-
-        # init output dictionary
-        out = {
-            'cpos': cpos,
-            'offset': cotext['offset_list'],
-            'match': match
-        }
-        assert(match == cotext['match_list'][0])
 
         # lexicalize positions
         attribute_lists = zip(
-            *list(map(lambda x: self.corpus.cpos2patts(x, p_show), cpos))
+            *list(map(lambda x: self.corpus.cpos2patts(x, p_show), cotext['cpos_list']))
         )
-        for a, p in zip(p_show, attribute_lists):
-            out[a] = list(p)
 
-        # process anchors
-        out['anchors'] = dict()
-        for a in self.anchors:
-            out['anchors'][a] = row[a]
+        # init output dictionary
+        d = {
+            'cpos': cotext['cpos_list'],
+            'offset': cotext['offset_list']
+        }
+        # add attributes
+        for p, a in zip(p_show, attribute_lists):
+            d[p] = list(a)
 
-        return out
+        if form == 'dict':
+            # add match as identifier
+            d['match'] = match
+            # process anchors
+            d['anchors'] = dict()
+            for a in self.anchors:
+                d['anchors'][a] = row[a]
+            return d
 
-    def lines(self, matches=None, p_show=['word'], s_show=[],
-              p_text=None, p_slots=None, slots=[], order='first',
-              cut_off=100, form='raw'):
-        """ creates concordance lines from self.df_dump
+        elif form == 'dataframe':
+            # convert to dataframe and sort columns
+            df = DataFrame.from_records(d).set_index('cpos')
+            df = df[['offset'] + p_show]
+            # process anchors
+            for a in self.anchors:
+                df[a] = False
+                if row[a] in df.index:
+                    df.at[row[a], a] = True
+            return df
 
-        :param str form: raw / simple / kwic / dataframes / extended
+    def dict(self, df, p_show=['word']):
+        """Retrieve concordance lines of provided df in 'dict' formatting.
+
+        Each dictionary has the following keys:
+        - match: single integer as ID
+        - cpos: list of corpus positions of tokens
+        - offset: list of offset of token to match..matchend
+        - $p for in p_show: list of tokens
+        - anchors: dictionary of anchor: cpos
+
+        All lists are aligned.
 
         """
 
-        # check parameter consistency
+        df['dict'] = df.apply(
+            lambda row: self._export(row.name, row, p_show, form='dict'),
+            axis=1
+        )
+
+        return df
+
+    def dataframe(self, df, p_show=['word']):
+        """Retrieve concordance lines of provided df_dict in 'dataframe'
+        formatting.  df_dict must contain column 'dict' (return value
+        of self.dict()).
+
+        Each concordance line is a DataFrame with the cpos of each
+        token as index:
+
+        == (cpos), offset, p_show[0], p_show[1], ... ==
+
+        """
+
+        df['dataframe'] = df.apply(
+            lambda row: self._export(row.name, row, p_show, form='dataframe'),
+            axis=1
+        )
+
+        return df
+
+    def lines(self, form='simple', p_show=['word'], s_show=[],
+              order='first', cut_off=100, matches=None, slots=None):
+        """Retrieve concordance lines from self.df_dump.  Central entry point
+        for all methods.  Functionality includes:
+        (1) simple / kwic / dict / slots / dataframe format
+        (2) selection of p-attributes and s-attributes
+        (3) selection of matches using cut-off and order or a
+            pre-defined list of matches
+        (4) definition of slots via anchor points (only for form='slot')
+
+        Return value of all formats is a DataFrame indexed by (match,
+        matchend) and requested s-attributes of the match:
+
+        == (match, matchend), s_show[0], ... ==
+
+        Further columns depend on output format, see the respective
+        format implementations.
+
+        :param str form: simple / kwic / dict / slots / dataframe
+        :param list p_show: p-attributes to retrieve
+        :param list s_show: s-attributes (at match position)
+        :param str order: first / last / random
+        :param int cut_off: how many lines to retrieve
+        :param list matches: specific matches to retrieve
+        :param dict slots: definition of slots via anchor points
+
+        :return: concordance lines
+        :rtype: DataFrame
+
+        """
+
+        # check parameters
         if len(self.df_dump) == 0:
             logger.error("no concordance lines to show")
             return
-        if p_text is not None and p_text not in p_show:
-            logger.error('p_text not in p_show')
-            return
-        if p_slots is not None and p_slots not in p_show:
-            logger.error('p_slots not in p_show')
-            return
+        if form not in ['simple', 'kwic', 'dict', 'dataframe', 'slots']:
+            logger.error('format not implemented, using "simple" format')
+            form = 'simple'
+        if isinstance(p_show, str):
+            p_show = [p_show]
+        if isinstance(s_show, str):
+            p_show = [s_show]
 
         # select appropriate subset of matches
         logger.info('lines: selecting matches')
         if matches is None:
+            # select all matches
             matches = set(self.df_dump.index.droplevel('matchend'))
         # pre-process cut_off if necessary
         if (cut_off is None) or (len(matches) < cut_off):
             cut_off = len(matches)
-
         # order
         if order == 'random':
             matches = sample(matches, cut_off)
@@ -105,214 +276,30 @@ class Concordance:
         elif order == 'last':
             matches = sorted(list(matches))[-cut_off:]
         else:
-            raise NotImplementedError('concordance order not implemented')
-
+            logger.error('order not implemented, using "random" order')
+            order = 'random'
         logger.info("lines: retrieving %d concordance line(s)" % len(matches))
         df = self.df_dump.loc[matches, :]
 
-        # texts
+        # retrieve p-attributes in respective formatting
         if len(p_show) > 0:
+            if form == 'simple':
+                df = self.simple(df, p_show)
+            elif form == 'kwic':
+                df = self.kwic(df, p_show)
+            elif form == 'slots':
+                df = self.slots(df, p_show, slots)
+            elif form == 'dict':
+                df = self.dict(df, p_show)
+            elif form == 'dataframe':
+                df = self.dataframe(df, p_show)
 
-            # retrieve lines as Series
-            # - index: match, matchend
-            # - values: dictionaries
-            df_lines = df.apply(
-                lambda row: self.text_line(row.name, row, p_show),
-                axis=1,
-            )
-            df_lines.name = 'raw'
-
-            # format text
-            if form == 'raw':
-                concordance = df_lines
-            else:
-                concordance = format_lines(
-                    df_lines, p_show, p_text,
-                    p_slots, slots, form=form
-                )
-            df = df.join(DataFrame(concordance))
-
-        # meta data
-        if len(s_show) > 0:
-            meta = self.corpus.get_s_annotations(df, s_show)
-            df = df.join(meta)
+        # s-attributes
+        for s_att in s_show:
+            tmp = self.corpus.dump2satt(df, s_att)
+            if s_att in tmp.columns:  # annotation
+                df[s_att] = tmp[s_att]
+            else:               # ID if no annotation
+                df[s_att] = tmp[s_att + "_cwbid"]
 
         return df
-
-
-##########################
-# CONCORDANCE FORMATTING #
-##########################
-def format_lines(df_lines,
-                 p_show=['word'],
-                 p_text=None,   # only for form == 'extended'
-                 p_slots=None,  # only for form == 'extended'
-                 slots=[],    # only for form == 'extended'
-                 form='dataframes'):
-
-    # select p-attribute for simple and kwic
-    if form == 'simple' or form == 'kwic':
-        if len(p_show) > 1:
-            logger.warning(
-                'cannot show more than one p-attribute in simple/kwic format'
-            )
-            logger.info(
-                'showing p-attribute "%s"' % p_show[0]
-            )
-        p_show = p_show[0]
-
-    if form == 'simple':
-        df = DataFrame.from_records(
-            index=df_lines.index,
-            data=df_lines.apply(
-                lambda row: line2simple(row, p_show, kwic=False)
-            ).values
-        )
-
-    elif form == 'kwic':
-        df = DataFrame.from_records(
-            index=df_lines.index,
-            data=df_lines.apply(
-                lambda row: line2simple(row, p_show, kwic=True)
-            ).values
-        )
-
-    elif form == 'dataframes':
-        df = DataFrame.from_records(
-            index=df_lines.index,
-            data=df_lines.apply(
-                lambda row: line2df(row)
-            ).values
-        )
-
-    elif form == 'extended':
-        df = DataFrame.from_records(
-            index=df_lines.index,
-            data=df_lines.apply(
-                lambda row: line2extended(row, p_text, p_slots, slots)
-            ).values
-        )
-    else:
-        raise NotImplementedError('no support for format "%s"' % form)
-
-    return df
-
-
-def line2simple(line, p_show='word', kwic=False):
-    """transforms one text_line to dictionary to
-    {"text": str} (kwic=False) or
-    {"left": str, "node": str, "right": str} (kwic=True)
-    input is a dictionary {p_show: list, ("offset": list)}
-
-    :param dict line: dicionary with "p_show": list(), "offset": list()
-    :param str p_show: what layer to show
-    :param bool kwic: kwic view?
-
-    :return: dictionary with "text" or "left", "node", "right"
-    :rtype: dict
-
-    """
-
-    if not kwic:
-        return {
-            'text': " ".join(line[p_show])
-        }
-
-    # get and append left / node / right
-    left = list()
-    node = list()
-    right = list()
-    for offset, word in zip(line['offset'], line[p_show]):
-        if offset < 0:
-            left.append(word)
-        elif offset == 0:
-            node.append(word)
-        else:
-            right.append(word)
-
-    return {
-        'left': " ".join(left),
-        'node': " ".join(node),
-        'right': " ".join(right),
-    }
-
-
-def line2df(line):
-    """transforms one text_line to dictionary of {"df": DataFrame}. Pops
-    "anchors", "match"; everything else must be aligned.
-
-    :param dict line: dictionary
-
-    :return: {'df': DataFrame}
-    :rtype: dict
-
-    """
-
-    # pop non-lists
-    anchors = []
-    if 'anchors' in line.keys():
-        anchors = line.pop('anchors')
-    if 'match' in line:
-        line.pop('match')       # not needed
-
-    # transform to df
-    df = DataFrame.from_records(line).set_index('cpos')
-
-    # append anchors
-    for a in anchors:
-        df[a] = False
-        if anchors[a] in df.index:
-            df.at[anchors[a], a] = True
-
-    return {
-        'df': df
-    }
-
-
-def line2extended(line, p_text=None, p_slots=None, slots=dict()):
-    """transforms one text_line to dictionary of {"df": DataFrame,
-    "match_p_slots": str, ...}.
-
-    :param dict line: dictionary
-
-    :return: {'df': DataFrame, ...}
-    :rtype: dict
-
-    """
-
-    # init dataframe
-    out = line2df(line)
-
-    # get full text
-    if p_text is None:
-        p_text = 'word'
-    out['text'] = " ".join(out['df'][p_text].to_list())
-
-    # process slots
-    if p_slots:
-        for slot in slots.keys():
-
-            region = slots[slot]
-
-            if type(region) == int:
-                region = [region, region]
-
-            anchor_left = True in out['df'][region[0]].values
-            anchor_right = True in out['df'][region[1]].values
-
-            if not anchor_left and not anchor_right:
-                slots_p = None
-            elif anchor_left and anchor_right:
-                start = out['df'].index[out['df'][region[0]]].tolist()[0]
-                end = out['df'].index[out['df'][region[1]]].tolist()[0]
-                slots_p = " ".join(out['df'][p_slots].loc[start: end].to_list())
-            elif anchor_right:
-                end = out['df'].index[out['df'][region[1]]].tolist()[0]
-                slots_p = out['df'][p_slots].loc[end]
-            elif anchor_left:
-                start = out['df'].index[out['df'][region[0]]].tolist()[0]
-                slots_p = out['df'][p_slots][start]
-
-            out["_".join([str(slot), p_slots])] = slots_p
-
-    return out

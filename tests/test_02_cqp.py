@@ -30,31 +30,32 @@ def test_cqp_kill():
 
 def test_cqp_dump(germaparl):
     cqp = CQP(
-        bin="cqp",
+        binary="cqp",
         options='-c -r ' + germaparl['registry_path']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
     df = cqp.Dump()
     assert(len(df) == 55)
-    assert(type(df) == pd.DataFrame)
+    assert(isinstance(df, pd.DataFrame))
 
 
 def test_cqp_undump(germaparl):
     cqp = CQP(
-        bin="cqp",
+        binary="cqp",
         options='-c -r ' + germaparl['registry_path']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
     df = cqp.Dump()
     cqp.Undump("Test", df)
+    assert(int(cqp.Exec("size Test;")) > 0)
     assert(cqp.Exec("size Test;") == str(len(df)))
 
 
 def test_cqp_group(germaparl):
     cqp = CQP(
-        bin="cqp",
+        binary="cqp",
         options='-c -r ' + germaparl['registry_path']
     )
     cqp.Exec(germaparl['corpus_name'])
@@ -62,3 +63,32 @@ def test_cqp_group(germaparl):
     counts = cqp.Group(spec1="match.lemma", spec2="matchend.lemma")
     assert(type(counts) == str)
     assert(int(counts.split("\t")[-1]) == 11)
+
+
+def test_nqr_from_query(germaparl):
+    cqp = CQP(
+        binary="cqp",
+        options='-c -r ' + germaparl['registry_path']
+    )
+    cqp.Exec(germaparl['corpus_name'])
+    assert(int(cqp.Exec('size Seehofer;')) == 0)
+    cqp.nqr_from_query(
+        query='[lemma="Seehofer"];',
+        name='Seehofer',
+        return_dump=False
+    )
+    assert(int(cqp.Exec('size Seehofer;')) > 0)
+    cqp.__kill__()
+
+
+def test_nqr_from_dump(germaparl):
+    cqp = CQP(
+        binary="cqp",
+        options='-c -r ' + germaparl['registry_path']
+    )
+    cqp.Exec(germaparl['corpus_name'])
+    assert(int(cqp.Exec('size Seehof;')) == 0)
+    df_dump = germaparl['dump']
+    cqp.nqr_from_dump(df_dump, name='Seehof')
+    assert(int(cqp.Exec('size Seehof;')) > 0)
+    cqp.__kill__()

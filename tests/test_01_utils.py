@@ -1,6 +1,9 @@
 from ccc.utils import preprocess_query
 from ccc.utils import fold_item
 from ccc.utils import merge_intervals
+from ccc.utils import filter_df
+from ccc import Corpus
+import pytest
 
 
 def test_preprocess_anchor_query():
@@ -50,3 +53,11 @@ def test_merge_intervals():
     intervals = [[1, 3], [2, 4], [5, 9], [6, 10]]
     merge = merge_intervals(intervals)
     assert(merge == [[1, 4], [5, 10]])
+
+
+def test_filter_df(germaparl):
+    c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    dump = c.query(germaparl['query'])
+    coll = dump.collocates()
+    print(coll)
+    print(filter_df(coll, 'resources/stopwords-de.txt'))
