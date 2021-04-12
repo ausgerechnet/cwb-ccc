@@ -56,6 +56,8 @@ class Concordance:
         - node_$p: match .. matchend
         - right_$p: matchend + 1 .. contextend
 
+        TODO: rename left_$p ./. $p_left, ...
+
         """
 
         df = df.reset_index()
@@ -95,6 +97,8 @@ class Concordance:
         positions are not defined, an empty string is returned.
 
         """
+
+        # TODO: rename $slot_$p ./. $p_$slot[0]..$slot[1]
 
         if slots is None:
             slots = self.anchors + [('match', 'matchend')]
@@ -179,15 +183,17 @@ class Concordance:
 
     def dict(self, df, p_show=['word']):
         """Retrieve concordance lines of provided df in 'dict' formatting.
+        Primary export format.
 
-        Each dictionary has the following keys:
-        - match: single integer as ID
-        - cpos: list of corpus positions of tokens
-        - offset: list of offset of token to match..matchend
-        - $p for in p_show: list of tokens
-        - anchors: dictionary of anchor: cpos
-
-        All lists are aligned.
+        Each entry in column 'dict' has the following keys:
+        # identifier
+        - match <int>: single integer as ID
+        # aligned token-lists
+        - cpos <list>: corpus position
+        - offset <list>: offset to match..matchend
+        - $p for $p in p_show <list>: surface of p-attribute, each a <list>
+        # roles
+        - anchors <dict>: {anchor: cpos}
 
         """
 
