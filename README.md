@@ -604,7 +604,7 @@ Just as with collocates, the result is a `DataFrame` with lexical items (`p_quer
 </details>
 <br/>
 
-Implementation note: `dump.keywords()` looks at all unigrams at the corpus positions in match..matchend, and compares the frequencies of their surface realizations with their marginal frequencies.  Similarly, `dump.collocates()` uses the the union of the corpus positions in context..match and matchend..contextend.
+Implementation note: `dump.keywords()` looks at all unigrams at the corpus positions in match..matchend, and compares the frequencies of their surface realizations with their marginal frequencies.  Similarly, `dump.collocates()` uses the the union of the corpus positions in context..contextend, excluding all corpus positions containted in any match..matchend.
 
 ## Testing ##
 The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.
