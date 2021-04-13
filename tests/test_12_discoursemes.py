@@ -147,8 +147,6 @@ def test_constellation_conc():
 
     lines = const.concordance(s_show=['text_id'])
     print(lines)
-    # from pprint import pprint
-    # pprint(lines)
 
 
 @pytest.mark.discourseme
@@ -186,6 +184,7 @@ def test_constellation_coll():
 
 
 @pytest.mark.mmda
+@pytest.mark.concordance
 def test_get_concordance_simple():
 
     # init corpus
@@ -259,6 +258,7 @@ def test_get_collocates_simple():
 
 
 @pytest.mark.mmda
+@pytest.mark.concordance
 def test_get_concordance_constellation():
 
     # init corpus
@@ -374,6 +374,7 @@ def test_get_collocates_constellation1():
 
 
 @pytest.mark.mmda
+@pytest.mark.concordance
 def test_get_concordance_constellation1():
 
     # init corpus
