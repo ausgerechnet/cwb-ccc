@@ -1,6 +1,6 @@
 from ccc.cwb import Corpus
 from ccc.counts import cwb_scan_corpus
-from ccc.utils import formulate_cqp_query
+from ccc.utils import format_cqp_query
 import pandas as pd
 import pytest
 from tempfile import NamedTemporaryFile
@@ -122,7 +122,7 @@ def test_count_items(germaparl):
 
     items = ["Helmut", "Kohl", "CDU"]
     queries = [
-        formulate_cqp_query([item]) for item in items
+        format_cqp_query([item]) for item in items
     ]
 
     # whole corpus
@@ -171,7 +171,7 @@ def test_count_mwus_3(germaparl):
     corpus = get_corpus(germaparl)
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
     queries = [
-        formulate_cqp_query([item]) for item in items
+        format_cqp_query([item]) for item in items
     ]
 
     cqp = corpus.start_cqp()
@@ -194,7 +194,7 @@ def test_count_mwus_strategies(germaparl):
     corpus = get_corpus(germaparl)
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324"]
     queries = [
-        formulate_cqp_query([item]) for item in items
+        format_cqp_query([item]) for item in items
     ]
 
     cqp = corpus.start_cqp()
@@ -235,7 +235,7 @@ def test_count_items_subcorpora(germaparl):
     cqp.nqr_from_dump(dump, 'Presidency')
     cqp.nqr_activate(corpus.corpus_name, 'Presidency')
     items = ["Horst Seehofer", r"( CSU )", "CSU", "WES324", "CSU"]
-    queries = [formulate_cqp_query([item]) for item in items]
+    queries = [format_cqp_query([item]) for item in items]
 
     counts1 = corpus.counts.mwus(
         cqp,

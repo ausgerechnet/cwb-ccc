@@ -1,7 +1,7 @@
 from ccc import Corpus
 # from ccc.discoursemes import Discourseme, DiscoursemeConstellation
 import pytest
-from ccc.utils import formulate_cqp_query
+from ccc.utils import format_cqp_query
 from ccc.discoursemes import Constellation
 from ccc.discoursemes import get_concordance, get_collocates
 
@@ -41,9 +41,9 @@ CORPUS = Corpus(
 def test_constellation_init():
 
     # init constellation
-    topic_query = formulate_cqp_query(TOPIC_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     topic_dump = CORPUS.query(topic_query, context=None, context_break=S_CONTEXT)
 
@@ -55,9 +55,9 @@ def test_constellation_init():
 @pytest.mark.discourseme
 def test_constellation_add():
 
-    topic_query = formulate_cqp_query(TOPIC_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     # init constellation
     topic_dump = CORPUS.query(topic_query,
@@ -66,9 +66,9 @@ def test_constellation_add():
     const = Constellation(topic_dump)
 
     # add discourseme
-    disc1_query = formulate_cqp_query(DISC1_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     disc1_dump = CORPUS.query(disc1_query,
                               context=None, context_break=S_CONTEXT)
@@ -82,9 +82,9 @@ def test_constellation_add():
 @pytest.mark.discourseme
 def test_constellation_add2():
 
-    topic_query = formulate_cqp_query(TOPIC_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     # init constellation
     topic_dump = CORPUS.query(topic_query,
@@ -93,18 +93,18 @@ def test_constellation_add2():
     const = Constellation(topic_dump)
 
     # add discourseme 1
-    disc1_query = formulate_cqp_query(DISC1_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc1_dump = CORPUS.query(disc1_query,
                               context=None, context_break=S_CONTEXT)
 
     const.add_discourseme(disc1_dump, name='disc1')
 
     # add discourseme 2
-    disc2_query = formulate_cqp_query(DISC2_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc2_dump = CORPUS.query(disc2_query,
                               context=None, context_break=S_CONTEXT)
 
@@ -117,9 +117,9 @@ def test_constellation_add2():
 @pytest.mark.discourseme
 def test_constellation_conc():
 
-    topic_query = formulate_cqp_query(TOPIC_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     # init constellation
     topic_dump = CORPUS.query(topic_query,
@@ -128,18 +128,18 @@ def test_constellation_conc():
     const = Constellation(topic_dump)
 
     # add discourseme 1
-    disc1_query = formulate_cqp_query(DISC1_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc1_dump = CORPUS.query(disc1_query,
                               context=None, context_break=S_CONTEXT)
 
     const.add_discourseme(disc1_dump, name='disc1')
 
     # add discourseme 2
-    disc2_query = formulate_cqp_query(DISC2_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc2_dump = CORPUS.query(disc2_query,
                               context=None, context_break=S_CONTEXT)
 
@@ -154,9 +154,9 @@ def test_constellation_conc():
 @pytest.mark.discourseme
 def test_constellation_coll():
 
-    topic_query = formulate_cqp_query(TOPIC_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
     # init constellation
     topic_dump = CORPUS.query(topic_query,
@@ -164,18 +164,18 @@ def test_constellation_coll():
     const = Constellation(topic_dump)
 
     # add discourseme 1
-    disc1_query = formulate_cqp_query(DISC1_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc1_dump = CORPUS.query(disc1_query,
                               context=None, context_break=S_CONTEXT)
 
     const.add_discourseme(disc1_dump, name='disc1')
 
     # add discourseme 2
-    disc2_query = formulate_cqp_query(DISC2_ITEMS,
-                                      p_query=P_QUERY, s_query=S_QUERY,
-                                      flags="%cd", escape=False)
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
     disc2_dump = CORPUS.query(disc2_query,
                               context=None, context_break=S_CONTEXT)
 
@@ -363,8 +363,8 @@ def test_get_collocates_constellation1():
         s_context,
         context,
         additional_discoursemes,
-        p_show,
         windows,
+        p_show,
         flags_show,
         min_freq,
         order,

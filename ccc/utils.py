@@ -99,8 +99,8 @@ def cqp_escape(token):
     }))
 
 
-def formulate_cqp_query(items, p_query='word', s_query=None,
-                        flags="", escape=True):
+def format_cqp_query(items, p_query='word', s_query=None,
+                     flags="", escape=True):
     """ wrapper for easy queries
 
     :return: valid cqp query

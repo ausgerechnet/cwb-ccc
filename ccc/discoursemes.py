@@ -4,7 +4,7 @@
 # part of module
 from .collocates import df_node_to_cooc, add_ams
 from .concordances import Concordance
-from .utils import formulate_cqp_query
+from .utils import format_cqp_query
 from . import Corpus
 # requirements
 from pandas import NA, MultiIndex
@@ -259,20 +259,20 @@ def create_constellation(corpus_name,
 
     # init discourseme constellation
     corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
-    topic_query = formulate_cqp_query(topic_items,
-                                      p_query=p_query, s_query=s_query,
-                                      flags=flags, escape=escape)
+    topic_query = format_cqp_query(topic_items,
+                                   p_query=p_query, s_query=s_query,
+                                   flags=flags, escape=escape)
 
-    topic_dump = corpus.query(topic_query, context=context, context_break=s_context)
+    topic_dump = corpus.query(topic_query, context=context, context_break=s_context, match_strategy='longest')
     const = Constellation(topic_dump, topic_name)
 
     # add further discoursemes
     for disc_name in additional_discoursemes.keys():
         disc_items = additional_discoursemes[disc_name]
-        disc_query = formulate_cqp_query(disc_items,
-                                         p_query=p_query, s_query=s_query,
-                                         flags=flags, escape=escape)
-        disc_dump = corpus.query(disc_query, context=None, context_break=s_context)
+        disc_query = format_cqp_query(disc_items,
+                                      p_query=p_query, s_query=s_query,
+                                      flags=flags, escape=escape)
+        disc_dump = corpus.query(disc_query, context=None, context_break=s_context, match_strategy='longest')
         const.add_discourseme(disc_dump, disc_name)
 
     return const
@@ -280,7 +280,7 @@ def create_constellation(corpus_name,
 
 def get_concordance(corpus_name,
                     topic_name, topic_items,
-                    p_query='lemma', s_query=None, flags="%cd", escape=True,
+                    p_query='lemma', s_query=None, flags_query="%cd", escape_query=True,
                     s_context='s', context=20,
                     additional_discoursemes={},
                     p_show=['word', 'lemma'], s_show=[], window=None,
@@ -295,8 +295,8 @@ def get_concordance(corpus_name,
     :param list topic_items: list of lexical items
     :param str p_query: p-att layer to query
     :param str s_query: s-att to use for delimiting queries
-    :param str flags: flags to use for querying
-    :param bool escape: whether to cqp-escape the query items
+    :param str flags_query: flags to use for querying
+    :param bool escape_query: whether to cqp-escape the query items
     -- topic context --
     :param str s_context: s-att to use for delimiting contexts
     :param int context: context around the nodes used to identify relevant matches
@@ -319,15 +319,13 @@ def get_concordance(corpus_name,
     """
 
     # preprocess parameters
-    if s_query is None:
-        s_query = s_context
-    if window is None:
-        window = context
+    s_query = s_context if s_query is None else s_query
+    window = context if window is None else window
 
     # create constellation
     const = create_constellation(corpus_name,
                                  topic_name, topic_items,
-                                 p_query, s_query, flags, escape,
+                                 p_query, s_query, flags_query, escape_query,
                                  s_context, context,
                                  additional_discoursemes,
                                  lib_path, cqp_bin, registry_path, data_path)
@@ -349,10 +347,10 @@ def get_concordance(corpus_name,
 
 def get_collocates(corpus_name,
                    topic_items,
-                   p_query='lemma', s_query=None, flags="%cd", escape=True,
+                   p_query='lemma', s_query=None, flags_query="%cd", escape_items=True,
                    s_context='s', context=20,
                    additional_discoursemes={},
-                   p_show=['word', 'lemma'], windows=[3, 5, 7],
+                   windows=[3, 5, 7], p_show=['word', 'lemma'], flags_show="",
                    min_freq=2,
                    order='random', cut_off=100,
                    lib_path=None, cqp_bin='cqp',
@@ -364,16 +362,17 @@ def get_collocates(corpus_name,
     :param list topic_items: list of lexical items
     :param str p_query: p-att layer to query
     :param str s_query: s-att to use for delimiting queries
-    :param str flags: flags to use for querying
-    :param bool escape: whether to cqp-escape the query items
+    :param str flags_query: flags to use for querying
+    :param bool escape_items: whether to cqp-escape the query items
     -- context --
     :param str s_context: s-att to use for delimiting contexts
     :param int context: context around the nodes used to identify relevant matches
     -- discoursemes --
     :param dict additional_discoursemes: {name: items}
     -- display --
-    :param list p_show: p-atts to use for collocation analysis
     :param list windows: windows (int) to use for collocation analyses around nodes
+    :param list p_show: p-atts to use for collocation analysis
+    :param str flags_show: post-hoc folding ("%cd") with cwb-ccc-algorithm
     :param int min_freq: rare item treshold
     :param str order: collocation order (columns in scored table)
     :param int cut_off: number of collocates to retrieve
@@ -388,22 +387,21 @@ def get_collocates(corpus_name,
     """
 
     # preprocess parameters
-    if s_query is None:
-        s_query = s_context
-    topic_name = 'tmp0'
+    s_query = s_context if s_query is None else s_query
+    topic_name = 'topic'
     frequencies = True
     ams = None
 
     # create constellation
     const = create_constellation(corpus_name,
                                  topic_name, topic_items,
-                                 p_query, s_query, flags, escape,
+                                 p_query, s_query, flags_query, escape_items,
                                  s_context, context,
                                  additional_discoursemes,
                                  lib_path, cqp_bin, registry_path, data_path)
 
     collocates = const.collocates(windows=windows,
-                                  p_show=p_show, flags=flags,
+                                  p_show=p_show, flags=flags_show,
                                   ams=ams, frequencies=frequencies, min_freq=min_freq,
                                   order=order, cut_off=cut_off)
 
