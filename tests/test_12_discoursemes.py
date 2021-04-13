@@ -328,3 +328,95 @@ def test_get_collocates_constellation():
     )
     from pprint import pprint
     pprint(coll[5])
+
+
+@pytest.mark.mmda
+def test_get_collocates_constellation1():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    s_context = "s"
+    windows = list(range(1, 10))
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['lemma']
+    s_query = s_context
+    order = 'log_likelihood'
+    cut_off = 100
+
+    flags_query = "%cd"
+    flags_show = ""
+    escape = True
+    min_freq = 2
+    context = 20
+
+    get_collocates(
+        corpus_name,
+        topic_items,
+        p_query,
+        s_query,
+        flags_query,
+        escape,
+        s_context,
+        context,
+        additional_discoursemes,
+        p_show,
+        windows,
+        flags_show,
+        min_freq,
+        order,
+        cut_off,
+        LIB_PATH, CQP_BIN, REGISTRY_PATH, DATA_PATH
+    )
+
+
+@pytest.mark.mmda
+def test_get_concordance_constellation1():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    s_context = "s"
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['lemma']
+    s_query = s_context
+    order = 'log_likelihood'
+    cut_off = 100
+
+    flags_query = "%cd"
+    context = 20
+    escape_query = True
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    topic_name = "topic"
+    s_context = "s"
+    window = 3
+    context = 20
+    additional_discoursemes = {'temp': ['-Emission']}
+    p_query = 'lemma'
+    p_show = ['word', 'lemma']
+    s_show = []
+    s_query = 's'
+    order = 'random'
+    cut_off = 100
+
+    conc = get_concordance(
+        corpus_name,
+        topic_name, topic_items, p_query, s_query, flags_query, escape_query,
+        s_context, context,
+        additional_discoursemes,
+        p_show, s_show, window, order, cut_off,
+        LIB_PATH, CQP_BIN, REGISTRY_PATH, DATA_PATH
+    )
+    from pprint import pprint
+    pprint(conc[list(conc.keys())[0]])
