@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# from anycache import anycache
 # part of module
 from .collocates import df_node_to_cooc, add_ams
 from .concordances import Concordance
@@ -11,6 +12,46 @@ from pandas import NA, MultiIndex
 # logging
 import logging
 logger = logging.getLogger(__name__)
+
+
+# @anycache('tmp/anycache.my/')
+def constellation_merge(df1, df2, name, drop=True):
+
+    # merge dumps via contextid ###
+    df1 = df1.reset_index()
+    df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
+    m = df1.merge(df2, on='contextid', how='left')
+
+    # calculate offset ###
+    m['offset_y'] = 0       # init as overlap
+    # y .. x
+    m.at[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
+    # x .. y
+    m.at[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
+    # missing y
+    m.at[m['match_y'].isna(), 'offset_y'] = NA
+
+    # restrict to complete constellation ###
+    if drop:
+        m = m.dropna()
+        # also remove co-occurrences which are too far away
+        m = m.loc[
+            (m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])
+        ]
+
+    # rename columns ###
+    m = m.rename(columns={
+        'match_x': 'match',
+        'matchend_x': 'matchend',
+        'match_y': 'match_' + name,
+        'matchend_y': 'matchend_' + name,
+        'offset_y': 'offset_' + name
+    })
+
+    # set index ###
+    m = m.set_index(['match', 'matchend']).astype("Int64")
+
+    return m
 
 
 def role_formatter(row, names, s_show, window):
@@ -78,39 +119,7 @@ class Constellation:
             return
         self.discoursemes[name] = dump
 
-        # merge dumps via contextid ###
-        df1 = self.df.reset_index()
-        df2 = dump.df.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
-        m = df1.merge(df2, on='contextid', how='left')
-
-        # calculate offset ###
-        m['offset_y'] = 0       # init as overlap
-        # y .. x
-        m.at[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
-        # x .. y
-        m.at[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
-        # missing y
-        m.at[m['match_y'].isna(), 'offset_y'] = NA
-
-        # restrict to complete constellation ###
-        if drop:
-            m = m.dropna()
-            # also remove co-occurrences which are too far away
-            m = m.loc[
-                (m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])
-            ]
-
-        # rename columns ###
-        m = m.rename(columns={
-            'match_x': 'match',
-            'matchend_x': 'matchend',
-            'match_y': 'match_' + name,
-            'matchend_y': 'matchend_' + name,
-            'offset_y': 'offset_' + name
-        })
-
-        # set index ###
-        m = m.set_index(['match', 'matchend']).astype("Int64")
+        m = constellation_merge(self.df, dump.df, name, drop)
 
         self.df = m
 
@@ -195,56 +204,64 @@ class Constellation:
         # count for each window
         output = dict()
         for window in windows:
-
-            # move to requested window
-            relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
-
-            # number of possible occurrence positions within window
-            f1_inflated = len(relevant)
-
-            # get frequency counts
-            f = self.corpus.counts.cpos(relevant['cpos'], p_show)
-            f.columns = ['f']
-
-            # get marginals
-            if len(p_show) == 1:
-                # coerce to multiindex (what was I thinking?)
-                f2 = self.corpus.marginals(
-                    f.index.get_level_values(p_show[0]), p_show[0]
-                )
-                f2.index = MultiIndex.from_tuples(
-                    f2.index.map(lambda x: (x, )), names=p_show
-                )
-            else:
-                f2 = self.corpus.marginals_complex(f.index, p_show)
-            f2.columns = ['marginal']
-
-            # deduct node frequencies from marginals
-            f2 = f2.join(node_freq)
-            f2 = f2.fillna(0, downcast='infer')
-            f2['f2'] = f2['marginal'] - f2['in_nodes']
-
-            # get sub-corpus size
-            f1 = f1_inflated
-
-            # score
-            collocates = add_ams(
-                f, f1, f2, N,
-                min_freq, order, cut_off, flags, ams, frequencies
+            output[window] = calculate_collocates(
+                self.corpus, df_cooc, node_freq, window, p_show,
+                N, min_freq, order, cut_off, flags, ams, frequencies
             )
 
-            # throw away anti-collocates by default
-            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
-
-            # deal with index
-            if len(p_show) == 1:
-                collocates.index = collocates.index.map(lambda x: x[0])
-                collocates.index.name = p_show[0]
-
-            # add to output
-            output[window] = collocates
-
         return output
+
+
+# @anycache('/tmp/anycache.my/')
+def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
+                         N, min_freq, order, cut_off, flags, ams, frequencies):
+
+    # move to requested window
+    relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
+
+    # number of possible occurrence positions within window
+    f1_inflated = len(relevant)
+
+    # get frequency counts
+    f = corpus.counts.cpos(relevant['cpos'], p_show)
+    f.columns = ['f']
+
+    # get marginals
+    if len(p_show) == 1:
+        # coerce to multiindex (what was I thinking?)
+        f2 = corpus.marginals(
+            f.index.get_level_values(p_show[0]), p_show[0]
+        )
+        f2.index = MultiIndex.from_tuples(
+            f2.index.map(lambda x: (x, )), names=p_show
+        )
+    else:
+        f2 = corpus.marginals_complex(f.index, p_show)
+    f2.columns = ['marginal']
+
+    # deduct node frequencies from marginals
+    f2 = f2.join(node_freq)
+    f2 = f2.fillna(0, downcast='infer')
+    f2['f2'] = f2['marginal'] - f2['in_nodes']
+
+    # get sub-corpus size
+    f1 = f1_inflated
+
+    # score
+    collocates = add_ams(
+        f, f1, f2, N,
+        min_freq, order, cut_off, flags, ams, frequencies
+    )
+
+    # throw away anti-collocates by default
+    collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+
+    # deal with index
+    if len(p_show) == 1:
+        collocates.index = collocates.index.map(lambda x: x[0])
+        collocates.index.name = p_show[0]
+
+    return collocates
 
 
 def create_constellation(corpus_name,
@@ -252,18 +269,21 @@ def create_constellation(corpus_name,
                          p_query, s_query, flags, escape,
                          s_context, context,
                          additional_discoursemes,
-                         lib_path, cqp_bin, registry_path, data_path):
+                         lib_path, cqp_bin, registry_path, data_path,
+                         match_strategy='longest'):
     """
-    simple constellation creator
+    simple constellation creator, cached
     """
 
-    # init discourseme constellation
+    # init corpus
     corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+
+    # init discourseme constellation
     topic_query = format_cqp_query(topic_items,
                                    p_query=p_query, s_query=s_query,
                                    flags=flags, escape=escape)
-
-    topic_dump = corpus.query(topic_query, context=context, context_break=s_context, match_strategy='longest')
+    topic_dump = corpus.query(topic_query, context=context, context_break=s_context,
+                              match_strategy=match_strategy)
     const = Constellation(topic_dump, topic_name)
 
     # add further discoursemes
@@ -272,8 +292,12 @@ def create_constellation(corpus_name,
         disc_query = format_cqp_query(disc_items,
                                       p_query=p_query, s_query=s_query,
                                       flags=flags, escape=escape)
-        disc_dump = corpus.query(disc_query, context=None, context_break=s_context, match_strategy='longest')
+        disc_dump = corpus.query(disc_query, context=None, context_break=s_context,
+                                 match_strategy=match_strategy)
         const.add_discourseme(disc_dump, disc_name)
+
+    # put into cache
+    # cache.set(identifier, const)
 
     return const
 
