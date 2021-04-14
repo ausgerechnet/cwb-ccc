@@ -14,7 +14,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# @anycache('tmp/anycache.my/')
+# TODO how to make this path configurable?
+# ANYCACHE_PATH = '/tmp/ccc-anycache/'
+
+
+# @anycache(ANYCACHE_PATH)
 def constellation_merge(df1, df2, name, drop=True):
 
     # merge dumps via contextid ###
@@ -212,7 +216,7 @@ class Constellation:
         return output
 
 
-# @anycache('/tmp/anycache.my/')
+# @anycache(ANYCACHE_PATH)
 def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
                          N, min_freq, order, cut_off, flags, ams, frequencies):
 
@@ -302,6 +306,8 @@ def create_constellation(corpus_name,
     return const
 
 
+# @anycache(ANYCACHE_PATH)
+# TODO take care of caching for random order
 def get_concordance(corpus_name,
                     topic_name, topic_items,
                     p_query='lemma', s_query=None, flags_query="%cd", escape_query=True,
@@ -369,6 +375,7 @@ def get_concordance(corpus_name,
     return output
 
 
+# @anycache(ANYCACHE_PATH)
 def get_collocates(corpus_name,
                    topic_items,
                    p_query='lemma', s_query=None, flags_query="%cd", escape_items=True,
