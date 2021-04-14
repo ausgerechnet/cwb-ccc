@@ -12,5 +12,5 @@ clean:
 deploy:
 	python3 -m twine upload dist/*
 clear_cache:
-	/bin/rm -r /tmp/ccc-anycache/
-	rm tests/data-dir
+	rm -rf tests/data-dir
+	/bin/rm -rf /tmp/ccc-anycache/
