@@ -5,6 +5,7 @@ from ccc.utils import format_cqp_query
 from ccc.discoursemes import Constellation
 from ccc.discoursemes import get_concordance, get_collocates
 
+from .conftest import LOCAL
 
 # set CCC PATHS
 CORPUS_NAME = "GERMAPARL1318"
@@ -37,6 +38,7 @@ CORPUS = Corpus(
 )
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
 def test_constellation_init():
 
@@ -52,6 +54,7 @@ def test_constellation_init():
     print(const.df)
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
 def test_constellation_add():
 
@@ -79,6 +82,7 @@ def test_constellation_add():
     print(const.discoursemes.keys())
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
 def test_constellation_add2():
 
@@ -114,6 +118,7 @@ def test_constellation_add2():
     print(const.discoursemes.keys())
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
 def test_constellation_conc():
 
@@ -149,6 +154,7 @@ def test_constellation_conc():
     print(lines)
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
 def test_constellation_coll():
 
@@ -183,6 +189,7 @@ def test_constellation_coll():
     print(lines)
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 @pytest.mark.concordance
 def test_get_concordance_simple():
@@ -223,6 +230,7 @@ def test_get_concordance_simple():
     pprint(conc[list(conc.keys())[1]])
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 def test_get_collocates_simple():
 
@@ -257,6 +265,7 @@ def test_get_collocates_simple():
     pprint(coll[list(coll.keys())[0]])
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 @pytest.mark.concordance
 def test_get_concordance_constellation():
@@ -297,6 +306,7 @@ def test_get_concordance_constellation():
     pprint(conc[list(conc.keys())[0]])
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 def test_get_collocates_constellation():
 
@@ -330,6 +340,7 @@ def test_get_collocates_constellation():
     pprint(coll[5])
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 def test_get_collocates_constellation1():
 
@@ -373,6 +384,7 @@ def test_get_collocates_constellation1():
     )
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 @pytest.mark.concordance
 def test_get_concordance_constellation1():
