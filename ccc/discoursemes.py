@@ -1,429 +1,464 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# from anycache import anycache
 # part of module
-from ccc.utils import formulate_cqp_query, calculate_offset
-from ccc.collocates import df_node_to_cooc, add_ams
-from ccc.concordances import Concordance
-from ccc.collocates import Collocates
+from .collocates import df_node_to_cooc, add_ams
+from .concordances import Concordance
+from .utils import format_cqp_query
+from . import Corpus
 # requirements
-from pandas import merge, DataFrame
+from pandas import NA, MultiIndex
 # logging
-from .utils import time_it
 import logging
 logger = logging.getLogger(__name__)
 
 
-class Discourseme:
+# TODO how to make this path configurable?
+# ANYCACHE_PATH = '/tmp/ccc-anycache/'
+
+
+# @anycache(ANYCACHE_PATH)
+def constellation_merge(df1, df2, name, drop=True):
+
+    # merge dumps via contextid ###
+    df1 = df1.reset_index()
+    df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
+    m = df1.merge(df2, on='contextid', how='left')
+
+    # calculate offset ###
+    m['offset_y'] = 0       # init as overlap
+    # y .. x
+    m.at[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
+    # x .. y
+    m.at[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
+    # missing y
+    m.at[m['match_y'].isna(), 'offset_y'] = NA
+
+    # restrict to complete constellation ###
+    if drop:
+        m = m.dropna()
+        # also remove co-occurrences which are too far away
+        m = m.loc[
+            (m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])
+        ]
+
+    # rename columns ###
+    m = m.rename(columns={
+        'match_x': 'match',
+        'matchend_x': 'matchend',
+        'match_y': 'match_' + name,
+        'matchend_y': 'matchend_' + name,
+        'offset_y': 'offset_' + name
+    })
+
+    # set index ###
+    m = m.set_index(['match', 'matchend']).astype("Int64")
+
+    return m
+
+
+def role_formatter(row, names, s_show, window):
+    """Take a row of a dataframe indexed by match, matchend of the node,
+    columns for each discourseme with sets of tuples indicating discourseme positions,
+    columns for each s in s_show,
+    and a column 'dict' containing the pre-formatted concordance line.
+
+    creates a list (aligned with other lists) of lists of roles; roles are:
+    - 'node' (if cpos in index)
+    - 'out_of_window' (if offset of cpos from node > window)
+    - discourseme names
+
+    :return: concordance line for MMDA frontend
+    :rtype: dict
+
     """
-    realization of a discourseme with context in a corpus
-    """
+    d = row['dict']
+    roles = list()
+    # node role
+    role = ['out_of_window' if abs(t) > window else None for t in d['offset']]
+    for i in range(d['cpos'].index(row.name[0]), d['cpos'].index(row.name[1]) + 1):
+        role[i] = 'node'
+    roles.append(role)
+    # discourseme roles
+    for name in names:
+        role = [None] * len(d['offset'])
+        for t in row[name]:
+            for i in range(d['cpos'].index(t[1]), d['cpos'].index(t[2]) + 1):
+                role[i] = name
+        roles.append(role)
+    # combine individual roles into one list of lists
+    roles = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
+    # append to concordance line and line to output
+    d['role'] = roles
+    # append s-attributes
+    for s in s_show:
+        d[s] = row[s]
+    return d
 
-    def __init__(self, corpus, items, p_query, s_query, flags="%cd", escape=False):
+
+class Constellation:
+
+    def __init__(self, dump, name='topic'):
         """
-        .nodes
-        .idx
-        .dump
-        """
-
-        self.nodes = {
-            'items': items,
-            'p_query': p_query,
-            's_query': s_query,
-            'flags': flags,
-            'escape': escape,
-            'corpus': corpus.corpus_name
-        }
-        self.query = formulate_cqp_query(items, p_query, s_query, flags, escape)
-        self.idx = corpus.cache.generate_idx(self.nodes.values(), prefix='nodes_')
-        self.dump = corpus.query(self.query, context=None, context_break=s_query)
-
-    def concordance(self, context=None, context_left=None,
-                    context_right=None, context_break=None,
-                    p_show=['word'], s_show=[], order='random',
-                    cut_off=100, matches=None, form='dataframe'):
-
-        self.dump.set_context(context, context_break,
-                              context_left, context_right)
-
-        return self.dump.concordance(
-            matches=matches, p_show=p_show, s_show=s_show,
-            slots=[], order=order,
-            cut_off=cut_off, form=form
-        )
-
-    def collocates(self, window_sizes=[3, 5, 7], context_break=None,
-                   order='log_likelihood', cut_off=100,
-                   p_query="lemma", ams=None, min_freq=2,
-                   frequencies=True, flags=None):
-
-        # determine mode and mws
-        if type(window_sizes) is int:
-            single = True
-            mws = window_sizes
-        elif type(window_sizes) is list:
-            single = False
-            mws = max(window_sizes)
-        else:
-            raise NotImplementedError("window_sizes must be int or list")
-
-        self.dump.set_context(context=mws, context_break=context_break)
-
-        coll = Collocates(
-            corpus=self.dump.corpus.copy(),
-            df_dump=self.dump.df,
-            p_query=p_query,
-            mws=mws
-        )
-
-        if single:
-            return coll.show(
-                window=mws, order=order, cut_off=cut_off, ams=ams,
-                min_freq=min_freq, frequencies=frequencies, flags=flags
-            )
-
-        else:
-            collocates = dict()
-            for window in window_sizes:
-                collocates[window] = coll.show(
-                    window=window, order=order, cut_off=cut_off, ams=ams,
-                    min_freq=min_freq, frequencies=frequencies, flags=flags
-                )
-            return collocates
-
-
-class DiscoursemeConstellation:
-    """
-    realization of a discourseme constellation given a topic and discoursemes
-
-    discoursemes can be added after initialization
-    """
-
-    def __init__(self, topic, discoursemes={}, name='Last'):
-        """
-        .topic
-        .corpus
-        .nodes
-        .name
-
-        .discoursemes: dict of Discs with key == Disc.idx
-        .df_nodes = dict of df_nodes with key == window
+        param Dump dump: dump with dump.corpus, dump.df: == (m, me) ci, c, ce ==
+        param str name: name of the node
         """
 
-        self.topic = topic
+        self.df = dump.df[['contextid', 'context', 'contextend']].astype("Int64")
+        self.discoursemes = {}
+        self.add_discourseme(dump, name=name)
+        self.corpus = dump.corpus
 
-        self.corpus = topic.dump.corpus
-        self.nodes = topic.nodes
-        self.name = name
-
-        self.discoursemes = dict()
-        for d in discoursemes:
-            self.add_disc(d)
-
-        self.df_nodes = dict()
-
-    def add_disc(self, disc):
-
-        if disc.idx in self.discoursemes.keys():
-            logger.warning("discourseme already included in constellation")
-        else:
-            self.discoursemes[disc.idx] = disc
-            self.df_nodes = dict()  # reset df_nodes
-
-    def add_items(self, items):
-
-        disc = Discourseme(
-            corpus=self.corpus.copy(),
-            items=items,
-            **{i: self.nodes[i] for i in self.nodes if i not in ['corpus', 'items']}
-        )
-        self.add_disc(disc)
-        return disc.idx
-
-    @time_it
-    def slice_discs(self, window=5, context_break=None):
-        """ intersects all discoursemes
-        :return: df_nodes indexed by topic-matches:
-
-        == (m, m-end) c-id, c, c-end, m_d1, m-e_d1, ... ==
-
-        with duplicates for each match, matchend where necessary
+    def add_discourseme(self, dump, name='discourseme', drop=True):
+        """
+        :param Dump dump: dump.df: == (m, me) ci ==
+        :param str name: name of the discourseme
+        :param bool drop: remove matches without all discoursemes in node context
         """
 
-        topic_dump = self.topic.dump
-        topic_dump.set_context(context=window, context_break=context_break)
-        df_nodes = topic_dump.df.reset_index()
+        # register discourseme
+        if name in self.discoursemes.keys():
+            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            return
+        self.discoursemes[name] = dump
 
-        for disc in self.discoursemes.values():
+        m = constellation_merge(self.df, dump.df, name, drop)
 
-            df = disc.dump.df.reset_index()
-            df = df.drop(['context', 'contextend'], axis=1)
-            # merge nodes; NB: this adds duplicates where necessary
-            # s_break = self.topic.nodes['s_query'] + '_cwbid'
-            s_break = 'contextid'
-            df_nodes = merge(df_nodes, df, on=s_break)
-            # remove lines where items are too far away
-            df_nodes['offset'] = df_nodes.apply(calculate_offset, axis=1)
-            df_nodes = df_nodes[
-                abs(df_nodes['offset']) <= window
-            ]
-            df_nodes = df_nodes.rename(columns={
-                'match_x': 'match',
-                'matchend_x': 'matchend',
-                'match_y': 'match_' + disc.idx,
-                'matchend_y': 'matchend_' + disc.idx,
-                'offset': 'offset_' + disc.idx
-            })
+        self.df = m
 
-        self.df_nodes[window] = df_nodes
+    def group_lines(self):
+        """
+        convert dataframe:
+        === (m, me) ci c ce m0 m0e o0 m1 me1 o1 m2 me2 o2 ===
+        with duplicate indices to
+        === (m, me) ci c ce m0 m1 m2 ===
+        without duplicate indices
+        where
+        m0 = {(o0, m0, m0e), (o0, m0, m0e), ...}
+        m1 = {(o1, m1, m1e), ...}
 
-        return df_nodes
-
-    @time_it
-    def concordance(self, window=5, matches=None,
-                    p_show=['word'], s_show=[], order='random',
-                    cut_off=100, form='dataframe'):
-
-        """ self.df_nodes has duplicate entries
-        (1) convert to (match matchend) disc_1_set disc_2_set ...
-        (2) convert each line to dataframe
         """
 
-        # make sure we're having the right context
-        if window not in self.df_nodes.keys():
-            df_nodes = self.slice_discs(window).copy()
-        else:
-            df_nodes = self.df_nodes[window]
+        df = self.df.copy()
+        df_reduced = df[~df.index.duplicated(keep='first')][
+            ['contextid', 'context', 'contextend']
+        ]
+        for name in self.discoursemes.keys():
+            columns = [m + "_" + name for m in ['offset', 'match', 'matchend']]
+            df[name] = df[columns].values.tolist()
+            df[name] = df[name].apply(tuple)
+            df = df.drop(columns, axis=1)
+            df_reduced[name] = df.groupby(level=['match', 'matchend'])[name].apply(set)
+        return df_reduced
 
-        # get ids of all discoursemes
-        disc_ids = set(self.discoursemes.keys())
+    def concordance(self, window=5,
+                    p_show=['word', 'lemma'], s_show=[],
+                    order='random', cut_off=100):
+        """Retrieve concordance lines for constellation.
 
-        logger.info("converting discourse nodes to regular dump")
-        # TODO speed up
-        all_matches = set(df_nodes['match'])
-        rows = list()
-        for match in all_matches:
-            row = dict()
-            df_loc = df_nodes.loc[df_nodes.match == match]
-            row['match'] = match
-            row['matchend'] = df_loc.iloc[0]['matchend']
-            row['context id'] = df_loc.iloc[0]['contextid']
-            row['context'] = df_loc.iloc[0]['context']
-            row['contextend'] = df_loc.iloc[0]['contextend']
-            for idx in disc_ids:
-                disc_f1 = set()
-                for a, b in zip(df_loc['match_' + idx], df_loc['matchend_' + idx]):
-                    disc_f1.update(range(a, b + 1))
-                row[idx] = disc_f1
-            rows.append(row)
-        df = DataFrame(rows)
-        df = df.set_index(["match", "matchend"])
+        :param int window: cpos further away from node will be marked 'out_of_window'
 
-        logger.info("converting each line to dataframe")
-        conc = Concordance(self.corpus.copy(), df)
-        lines = conc.lines(
-            matches=matches, p_show=p_show, s_show=s_show,
-            slots=[], order=order,
-            cut_off=cut_off, form=form
-        )
+        :return: concordance lines
+        :rtype: list
+        """
 
-        logger.info("inserting discourseme and window/context info")
-        # TODO mark out of context
-        dfs = list()
-        for line in lines.iterrows():
-            df = line[1]['dataframe']
-            # indicate topic matches
-            match, matchend = line[0]
-            df[self.topic.idx] = df.index.isin(set(range(match, matchend + 1)))
-            # indicate discourseme matches
-            for idx in disc_ids:
-                df[idx] = df.index.isin(line[1][idx])
-            # df = df.drop(['match', 'matchend', 'context', 'contextend'], axis=1)
-            dfs.append(df)
-        lines['dataframe'] = dfs
+        # convert dataframe
+        df_grouped = self.group_lines()
+        # retrieve concordance lines
+        conc = Concordance(self.corpus.copy(), df_grouped)
+        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show,
+                           order=order, cut_off=cut_off)
+        # map roles
+        output = list(lines.apply(
+            lambda row: role_formatter(
+                row, self.discoursemes.keys(), s_show, window
+            ), axis=1
+        ))
+        # return
+        return output
 
-        return lines
+    def collocates(self, windows=[3, 5, 7],
+                   p_show=['lemma'], flags=None,
+                   ams=None, frequencies=True,
+                   min_freq=2, order='log_likelihood', cut_off=None):
+        """Retrieve collocates
+        :param int window: window around node for pre-selected matches
 
-    @time_it
-    def collocates(self, window=5, order='log_likelihood', cut_off=100,
-                   p_query="lemma", ams=None, min_freq=2,
-                   frequencies=True, flags=None):
+        :return: collocates
+        :rtype: list of DataFrames
+        """
 
-        # make sure we're having the right context
-        if window not in self.df_nodes.keys():
-            df_nodes = self.slice_discs(window)
-        else:
-            df_nodes = self.df_nodes[window]
+        # get relevant contexts
+        df = self.df.drop_duplicates(subset=['context', 'contextend'])
+        df_cooc, f1_set = df_node_to_cooc(df)
 
-        # get and correct df_cooc, f1_set
-        df_cooc, f1_set = df_node_to_cooc(df_nodes)
+        logging.info('get cpos that are consumed by discoursemes')
+        for idx in self.discoursemes.keys():
+            f1_set.update(self.discoursemes[idx].matches())
 
-        if len(f1_set) == 0:
-            logger.warning("no matches")
-            return DataFrame()
-
-        # check for presence of topic in topic context
-        # NB: this is necessary since we might have excluded
-        # some occurrences of the topic from df_nodes
-        # when selecting relevant instances in the constellation
-        logger.info('searching for topic discourseme in topic context')
-        f1_set = self.topic.dump.matches()
-
-        # check for presence of discoursemes in topic context
-        for idx in self.discoursemes:
-            logger.info('searching for discourseme "%s" in topic context' % idx)
-            matches = self.discoursemes[idx].dump.matches()
-            f1_set.update(matches)
-
-        logger.info("excluding all discourseme matches from context")
+        # correct df_cooc
         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-        # moving to requested window
-        relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
-
-        # number of possible occurrence positions within window
-        f1_inflated = len(relevant)
-
-        # get frequency counts
-        f = self.corpus.counts.cpos(
-            relevant['cpos'], [p_query]
-        )
-        f.columns = ['f']
-        f.index = f.index.get_level_values(p_query)
-
-        # get marginals
-        f2 = self.corpus.marginals(
-            f.index, p_query
-        )
-        f2.columns = ['marginal']
-
-        # deduct node frequencies from marginals
-        logger.info("deducting node frequencies")
-        node_freq = self.corpus.counts.cpos(f1_set, [p_query])
-        node_freq.index = node_freq.index.get_level_values(p_query)
-        node_freq.columns = ['in_nodes']
-        f2 = f2.join(node_freq)
-        f2 = f2.fillna(0)
-        f2['in_nodes'] = f2['in_nodes'].astype(int)
-        f2['f2'] = f2['marginal'] - f2['in_nodes']
-
-        # get sub-corpus size
-        f1 = f1_inflated
-
-        # get corpus size
+        # count once
         N = self.corpus.corpus_size - len(f1_set)
+        node_freq = self.corpus.counts.cpos(f1_set, p_show)
+        node_freq.columns = ['in_nodes']
 
-        collocates = add_ams(
-            f, f1, f2, N,
-            min_freq, order, cut_off, flags, ams, frequencies
+        # count for each window
+        output = dict()
+        for window in windows:
+            output[window] = calculate_collocates(
+                self.corpus, df_cooc, node_freq, window, p_show,
+                N, min_freq, order, cut_off, flags, ams, frequencies
+            )
+
+        return output
+
+
+# @anycache(ANYCACHE_PATH)
+def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
+                         N, min_freq, order, cut_off, flags, ams, frequencies):
+
+    # move to requested window
+    relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
+
+    # number of possible occurrence positions within window
+    f1_inflated = len(relevant)
+
+    # get frequency counts
+    f = corpus.counts.cpos(relevant['cpos'], p_show)
+    f.columns = ['f']
+
+    # get marginals
+    if len(p_show) == 1:
+        # coerce to multiindex (what was I thinking?)
+        f2 = corpus.marginals(
+            f.index.get_level_values(p_show[0]), p_show[0]
         )
+        f2.index = MultiIndex.from_tuples(
+            f2.index.map(lambda x: (x, )), names=p_show
+        )
+    else:
+        f2 = corpus.marginals_complex(f.index, p_show)
+    f2.columns = ['marginal']
 
-        return collocates
+    # deduct node frequencies from marginals
+    f2 = f2.join(node_freq)
+    f2 = f2.fillna(0, downcast='infer')
+    f2['f2'] = f2['marginal'] - f2['in_nodes']
 
-    # def collocates_range(self, windows=[3, 5, 7, 10], order='f', cut_off=100,
-    #                      p_query="lemma", ams=None, min_freq=2,
-    #                      frequencies=True, flags=None):
+    # get sub-corpus size
+    f1 = f1_inflated
 
-    #     # sort windows and start with largest
-    #     windows = sorted(windows, reverse=True)
-    #     max_window = windows[0]
+    # score
+    collocates = add_ams(
+        f, f1, f2, N,
+        min_freq, order, cut_off, flags, ams, frequencies
+    )
 
-    #     # make sure we're having the right context
-    #     if max_window not in self.df_nodes.keys():
-    #         df_nodes = self.slice_discs(max_window)
-    #     else:
-    #         df_nodes = self.df_nodes[max_window]
+    # throw away anti-collocates by default
+    collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
 
-    #     # get and correct df_cooc, f1_set
-    #     df_cooc, f1_set = df_node_to_cooc(df_nodes)
+    # deal with index
+    if len(p_show) == 1:
+        collocates.index = collocates.index.map(lambda x: x[0])
+        collocates.index.name = p_show[0]
 
-    #     if len(f1_set) == 0:
-    #         logger.warning("no matches")
-    #         return DataFrame()
-
-    #     # check for presence of topic in topic context
-    #     # NB: this is necessary since we might have excluded
-    #     # some occurrences of the topic from df_nodes
-    #     # when selecting relevant instances in the constellation
-    #     logger.info('searching for topic discourseme in topic context')
-    #     f1_set = self.topic.dump.matches()
-
-    #     # check for discoursemes in topic context
-    #     for idx in self.discoursemes:
-    #         logger.info('searching for discourseme "%s" in topic context' % idx)
-    #         matches = self.discoursemes[idx].dump.matches()
-    #         f1_set.update(matches)
-    #         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
-
-    #     logger.info("excluding all discourseme matches from context")
-    #     df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
-
-    #     # do it once for max_window
-    #     relevant = df_cooc.loc[abs(df_cooc['offset']) <= max_window]
-
-    #     # number of possible occurrence positions within window
-    #     f1_inflated = len(relevant)
-
-    #     # get frequency counts
-    #     f = self.corpus.counts.cpos(
-    #         relevant['cpos'], [p_query]
-    #     )
-    #     f.columns = ['f']
-    #     f.index = f.index.get_level_values(p_query)
-
-    #     # get marginals
-    #     f2 = self.corpus.marginals(
-    #         f.index, p_query
-    #     )
-    #     f2.columns = ['marginal']
-
-    #     # deduct node frequencies from marginals
-    #     logger.info("deducting node frequencies")
-    #     node_freq = self.corpus.counts.cpos(f1_set, [p_query])
-    #     node_freq.index = node_freq.index.get_level_values(p_query)
-    #     node_freq.columns = ['in_nodes']
-    #     f2 = f2.join(node_freq)
-    #     f2 = f2.fillna(0)
-    #     f2['in_nodes'] = f2['in_nodes'].astype(int)
-    #     f2['f2'] = f2['marginal'] - f2['in_nodes']
-
-    #     # get sub-corpus size
-    #     f1 = f1_inflated
-
-    #     # get corpus size
-    #     N = self.corpus.corpus_size - len(f1_set)
-
-    #     collocates = add_ams(
-    #         f, f1, f2, N,
-    #         min_freq, order, cut_off, flags, ams, frequencies
-    #     )
-
-    #     # repeat for all other window sizes
-    #     for w in windows[1:]:
-    #         print(w)
-
-    #     return collocates
+    return collocates
 
 
-# class DiscoursemeConstellation:
+def create_constellation(corpus_name,
+                         topic_name, topic_items,
+                         p_query, s_query, flags, escape,
+                         s_context, context,
+                         additional_discoursemes,
+                         lib_path, cqp_bin, registry_path, data_path,
+                         match_strategy='longest'):
+    """
+    simple constellation creator, cached
+    """
 
-#     def __init__(self, topic, discoursemes={}, name='Last'):
-#         """
-#         :param DataFrame topic.dump.df: (match, matchend) context contextend contextid
-#         :param Corpus topic.corpus: corpus with subcorpus = topic
-#         :
-#         .discoursemes: dict of Discs with key == Disc.idx
-#         .df_nodes = dict of df_nodes with key == window
-#         """
+    # init corpus
+    corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
 
-#         self.topic = topic
+    # init discourseme constellation
+    topic_query = format_cqp_query(topic_items,
+                                   p_query=p_query, s_query=s_query,
+                                   flags=flags, escape=escape)
+    topic_dump = corpus.query(topic_query, context=context, context_break=s_context,
+                              match_strategy=match_strategy)
+    const = Constellation(topic_dump, topic_name)
 
-#         self.corpus = topic.dump.corpus
-#         self.nodes = topic.nodes
-#         self.name = name
+    # add further discoursemes
+    for disc_name in additional_discoursemes.keys():
+        disc_items = additional_discoursemes[disc_name]
+        disc_query = format_cqp_query(disc_items,
+                                      p_query=p_query, s_query=s_query,
+                                      flags=flags, escape=escape)
+        disc_dump = corpus.query(disc_query, context=None, context_break=s_context,
+                                 match_strategy=match_strategy)
+        const.add_discourseme(disc_dump, disc_name)
 
-#         self.discoursemes = dict()
-#         for d in discoursemes:
-#             self.add_disc(d)
+    # put into cache
+    # cache.set(identifier, const)
 
-#         self.df_nodes = dict()
+    return const
+
+
+# @anycache(ANYCACHE_PATH)
+# TODO take care of caching for random order
+def get_concordance(corpus_name,
+                    topic_name, topic_items,
+                    p_query='lemma', s_query=None, flags_query="%cd", escape_query=True,
+                    s_context='s', context=20,
+                    additional_discoursemes={},
+                    p_show=['word', 'lemma'], s_show=[], window=None,
+                    order='random', cut_off=100,
+                    lib_path=None, cqp_bin='cqp',
+                    registry_path='/usr/local/share/cwb/registry/',
+                    data_path='/tmp/ccc-data/'):
+    """
+    :param str corpus_name: name corpus in CWB registry
+    -- topic matches --
+    :param str topic_name: name of the topic ("node") discourseme
+    :param list topic_items: list of lexical items
+    :param str p_query: p-att layer to query
+    :param str s_query: s-att to use for delimiting queries
+    :param str flags_query: flags to use for querying
+    :param bool escape_query: whether to cqp-escape the query items
+    -- topic context --
+    :param str s_context: s-att to use for delimiting contexts
+    :param int context: context around the nodes used to identify relevant matches
+    -- discoursemes --
+    :param dict additional_discoursemes: {name: items}
+    -- concordance display --
+    :param list p_show: p-attributes to show
+    :param list s_show: s-attributes to show
+    :param int window: mark tokens further away as 'out_of_window'
+    :param str order: concordance order (first / last / random)
+    :param int cut_off: number of lines to retrieve
+    -- corpus settings --
+    :param str lib_path:
+    :param str cqp_bin:
+    :param str registry_path:
+    :param str data_path:
+
+    :return: dict of concordance lines (each one a dict, keys=1:N)
+    :rtype: dict
+    """
+
+    # preprocess parameters
+    s_query = s_context if s_query is None else s_query
+    window = context if window is None else window
+
+    # create constellation
+    const = create_constellation(corpus_name,
+                                 topic_name, topic_items,
+                                 p_query, s_query, flags_query, escape_query,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 lib_path, cqp_bin, registry_path, data_path)
+
+    # retrieve lines
+    lines = const.concordance(window=window,
+                              p_show=p_show, s_show=s_show,
+                              order=order, cut_off=cut_off)
+
+    # convert to dictionary
+    output = dict()
+    c = 0
+    for line in lines:
+        c += 1
+        output[c] = line
+
+    return output
+
+
+# @anycache(ANYCACHE_PATH)
+def get_collocates(corpus_name,
+                   topic_items,
+                   p_query='lemma', s_query=None, flags_query="%cd", escape_items=True,
+                   s_context='s', context=20,
+                   additional_discoursemes={},
+                   windows=[3, 5, 7], p_show=['word', 'lemma'], flags_show="",
+                   min_freq=2,
+                   order='random', cut_off=100,
+                   lib_path=None, cqp_bin='cqp',
+                   registry_path='/usr/local/share/cwb/registry/',
+                   data_path='/tmp/ccc-data/'):
+    """
+    :param str corpus_name: name corpus in CWB registry
+    -- topic --
+    :param list topic_items: list of lexical items
+    :param str p_query: p-att layer to query
+    :param str s_query: s-att to use for delimiting queries
+    :param str flags_query: flags to use for querying
+    :param bool escape_items: whether to cqp-escape the query items
+    -- context --
+    :param str s_context: s-att to use for delimiting contexts
+    :param int context: context around the nodes used to identify relevant matches
+    -- discoursemes --
+    :param dict additional_discoursemes: {name: items}
+    -- display --
+    :param list windows: windows (int) to use for collocation analyses around nodes
+    :param list p_show: p-atts to use for collocation analysis
+    :param str flags_show: post-hoc folding ("%cd") with cwb-ccc-algorithm
+    :param int min_freq: rare item treshold
+    :param str order: collocation order (columns in scored table)
+    :param int cut_off: number of collocates to retrieve
+    -- corpus --
+    :param str lib_path:
+    :param str cqp_bin:
+    :param str registry_path:
+    :param str data_path:
+
+    :return: dict of collocation tables (key=window)
+    :rtype: dict
+    """
+
+    # preprocess parameters
+    s_query = s_context if s_query is None else s_query
+    topic_name = 'topic'
+    frequencies = True
+    ams = None
+
+    # create constellation
+    const = create_constellation(corpus_name,
+                                 topic_name, topic_items,
+                                 p_query, s_query, flags_query, escape_items,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 lib_path, cqp_bin, registry_path, data_path)
+
+    collocates = const.collocates(windows=windows,
+                                  p_show=p_show, flags=flags_show,
+                                  ams=ams, frequencies=frequencies, min_freq=min_freq,
+                                  order=order, cut_off=cut_off)
+
+    for window in collocates.keys():
+        coll_window = collocates[window]
+        # drop superfluous columns and sort
+        coll_window = coll_window[[
+            'log_likelihood',
+            'log_ratio',
+            'f',
+            'f2',
+            'mutual_information',
+            'z_score',
+            't_score'
+        ]]
+
+        # rename AMs
+        am_dict = {
+            'log_likelihood': 'log likelihood',
+            'f': 'co-occurrence freq.',
+            'mutual_information': 'mutual information',
+            'log_ratio': 'log-ratio',
+            'f2': 'marginal freq.',
+            't_score': 't-score',
+            'z_score': 'z-score'
+        }
+        collocates[window] = coll_window.rename(am_dict, axis=1)
+
+    return collocates

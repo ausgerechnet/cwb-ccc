@@ -1,424 +1,197 @@
 from ccc import Corpus
-from ccc.discoursemes import Discourseme, DiscoursemeConstellation
-from collections import defaultdict
+# from ccc.discoursemes import Discourseme, DiscoursemeConstellation
 import pytest
+from ccc.utils import format_cqp_query
+from ccc.discoursemes import Constellation
+from ccc.discoursemes import get_concordance, get_collocates
+
+from .conftest import LOCAL
+
+# set CCC PATHS
+CORPUS_NAME = "GERMAPARL1318"
+LIB_PATH = None
+REGISTRY_PATH = "/usr/local/share/cwb/registry/"
+CQP_BIN = "cqp"
+DATA_PATH = "/tmp/mmda-ccc-data/"
+
+S_QUERY = 's'
+S_CONTEXT = 'p'
+P_QUERY = 'lemma'
+
+TOPIC_ITEMS = ["Atomkraft", "Atomenergie", "Atomkraftwerk",
+               "Nuklearenergie",
+               "Kernkraft", "Kernenergie"]
+
+# DISC1_ITEMS = ["Fukushima", "Störfall", "Tschernobyl", "Unfall"]
+DISC1_ITEMS = ["Deutschland", "deutsch"]
+DISC2_ITEMS = ["Stilllegung", "Stillegung",
+               "Auslaufbetrieb",
+               "Laufzeitverlängerung", "Weiterbetrieb"]
 
 
-from .conftest import DATA_PATH
+CORPUS = Corpus(
+    CORPUS_NAME,
+    lib_path=LIB_PATH,
+    registry_path=REGISTRY_PATH,
+    cqp_bin=CQP_BIN,
+    data_path=DATA_PATH
+)
 
 
-# backend.analysis.ccc methods ####################################
-def get_concordance(corpus_name, topic_items, topic_name, s_context,
-                    window_size, context=20,
-                    additional_discoursemes={}, p_query='lemma',
-                    p_show=['word', 'lemma'], s_show=['text_id'],
-                    s_query=None, order='random', cut_off=100,
-                    form='dataframe'):
-
-    if s_query is None:
-        s_query = s_context
-
-    # init corpus
-    corpus = Corpus(corpus_name)
-
-    # init topic discourseme
-    topic_disc = Discourseme(
-        corpus,
-        items=topic_items,
-        p_query=p_query,
-        s_query=s_query
-    )
-
-    # init discourseme constellation
-    dp = DiscoursemeConstellation(topic_disc)
-
-    # id2name: mapper from ccc cache names to discourseme names
-    id2name = {
-        topic_disc.idx: topic_name
-    }
-
-    # add discoursemes to discourseme constellation
-    for key in additional_discoursemes.keys():
-        idx = dp.add_items(additional_discoursemes[key])
-        id2name[idx] = key
-
-    # extract concordance
-    concordance = dp.concordance(
-        window=window_size,
-        matches=None,
-        p_show=p_show,
-        s_show=s_show,
-        order=order,
-        cut_off=cut_off,
-        form=form
-    )
-
-    if concordance.empty:
-        return None
-
-    # convert each concordance line to dictionary, create roles
-    # TODO: implement as form='json' in cwb-ccc
-    concordance = concordance.reset_index()
-    ret = dict()
-    for idx, df in zip(concordance['match'], concordance['dataframe']):
-
-        # rename columns according to given names for discoursemes
-        df = df.rename(columns=id2name)
-
-        # get roles as dict
-        roles = defaultdict(list)
-        for cpos, row in df.iterrows():
-            for col_name in id2name.values():
-                if row[col_name]:
-                    # TODO: propagate proper info about discourseme names
-                    if col_name == topic_name:
-                        roles[cpos].append('topic')
-                    else:
-                        roles[cpos].append('collocate')
-                else:
-                    roles[cpos].append(None)
-
-        ret[idx] = {
-            'word': list(df['word']),    # list of words
-            p_query: list(df[p_query]),  # secondary p-att
-            'role': list(roles.values())  # roles
-        }
-
-    return ret
-
-
-def get_collocates(corpus_name, topic_items, s_context, window_sizes,
-                   context=20, additional_discoursemes=[],
-                   p_query='lemma', s_query=None, ams=None,
-                   cut_off=200, order='log_likelihood'):
-
-    if s_query is None:
-        s_query = s_context
-
-    corpus = Corpus(corpus_name)
-
-    topic_disc = Discourseme(
-        corpus,
-        items=topic_items,
-        p_query=p_query,
-        s_query=s_query
-    )
-
-    # TODO speed up in backend
-    collocates = dict()
-    for window in window_sizes:
-
-        if not additional_discoursemes:
-            # single discourseme
-            coll_window = topic_disc.collocates(
-                window_sizes=window,
-                order=order,
-                cut_off=cut_off,
-                p_query=p_query,
-                ams=ams,
-                min_freq=2,
-                frequencies=False,
-                flags=None
-            )
-        else:
-            # discursive position
-            dp = DiscoursemeConstellation(topic_disc)
-            for key in additional_discoursemes.keys():
-                dp.add_items(additional_discoursemes[key])
-
-            coll_window = dp.collocates(
-                window=window,
-                order=order,
-                cut_off=cut_off,
-                p_query=p_query,
-                ams=ams,
-                min_freq=2,
-                frequencies=False,
-                flags=None
-            )
-
-        # drop superfluous columns and sort
-        coll_window = coll_window[[
-            'log_likelihood',
-            'log_ratio',
-            'f',
-            'f2',
-            'mutual_information',
-            'z_score',
-            't_score'
-        ]]
-
-        # rename AMs
-        am_dict = {
-            'log_likelihood': 'log-likelihood',
-            'f': 'co-oc. freq.',
-            'mutual_information': 'mutual information',
-            'log_ratio': 'log-ratio',
-            'f2': 'marginal freq.',
-            't_score': 't-score',
-            'z_score': 'z-score'
-        }
-        collocates[window] = coll_window.rename(am_dict, axis=1)
-
-    return collocates
-
-
-def get_corpus(corpus_settings, data_path=DATA_PATH):
-
-    return Corpus(
-        corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
-    )
-
-
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
-def test_init(germaparl):
-    corpus = get_corpus(germaparl)
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma', 's',
-    )
-    assert(len(topic.dump.df) == 1640)
+def test_constellation_init():
+
+    # init constellation
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+
+    topic_dump = CORPUS.query(topic_query, context=None, context_break=S_CONTEXT)
+
+    const = Constellation(topic_dump)
+
+    print(const.df)
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
-def test_concordance(germaparl):
-    corpus = get_corpus(germaparl)
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma', 's'
-    )
-    print(topic.concordance())
-    print(topic.concordance(10))
-    print(topic.concordance(30))
+def test_constellation_add():
+
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+
+    # init constellation
+    topic_dump = CORPUS.query(topic_query,
+                              context=None, context_break=S_CONTEXT)
+
+    const = Constellation(topic_dump)
+
+    # add discourseme
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+
+    disc1_dump = CORPUS.query(disc1_query,
+                              context=None, context_break=S_CONTEXT)
+
+    const.add_discourseme(disc1_dump)
+
+    print(const.df)
+    print(const.discoursemes.keys())
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
-def test_disc_concordance_form(germaparl):
+def test_constellation_add2():
 
-    corpus = get_corpus(germaparl)
-    # init topic disc
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's'
-    )
-    print(topic.concordance(cut_off=None, form='kwic'))
-    print(topic.concordance(matches=[148430], cut_off=None, form='slots'))
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+
+    # init constellation
+    topic_dump = CORPUS.query(topic_query,
+                              context=None, context_break=S_CONTEXT)
+
+    const = Constellation(topic_dump)
+
+    # add discourseme 1
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc1_dump = CORPUS.query(disc1_query,
+                              context=None, context_break=S_CONTEXT)
+
+    const.add_discourseme(disc1_dump, name='disc1')
+
+    # add discourseme 2
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc2_dump = CORPUS.query(disc2_query,
+                              context=None, context_break=S_CONTEXT)
+
+    const.add_discourseme(disc2_dump, name='disc2')
+
+    print(const.df)
+    print(const.discoursemes.keys())
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.discourseme
-def test_disc_collocates(germaparl):
+def test_constellation_conc():
 
-    corpus = get_corpus(germaparl)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
-    # init topic disc
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's'
-    )
-    print(topic.collocates())
+    # init constellation
+    topic_dump = CORPUS.query(topic_query,
+                              context=None, context_break=S_CONTEXT)
 
+    const = Constellation(topic_dump)
 
-# constellations
-@pytest.mark.disccon
-def test_disccon(germaparl):
+    # add discourseme 1
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc1_dump = CORPUS.query(disc1_query,
+                              context=None, context_break=S_CONTEXT)
 
-    corpus = get_corpus(germaparl)
+    const.add_discourseme(disc1_dump, name='disc1')
 
-    # init topic disc
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's'
-    )
+    # add discourseme 2
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc2_dump = CORPUS.query(disc2_query,
+                              context=None, context_break=S_CONTEXT)
 
-    # two floating discoursemes
-    disc1 = Discourseme(
-        corpus,
-        ["sollen", "müssen"],
-        'lemma',
-        's'
-    )
-    disc2 = Discourseme(
-        corpus,
-        ["und"],
-        'lemma',
-        's'
-    )
-    discon = DiscoursemeConstellation(topic, [disc1, disc2])
-    discon.slice_discs(10)
-    print(discon.df_nodes[10])
-    print(discon.df_nodes[10].columns)
-    print(discon.discoursemes)
+    const.add_discourseme(disc2_dump, name='disc2')
+
+    lines = const.concordance(s_show=['text_id'])
+    print(lines)
 
 
-@pytest.mark.disccon
-def test_disccon_2(germaparl):
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.discourseme
+def test_constellation_coll():
 
-    corpus = get_corpus(germaparl)
+    topic_query = format_cqp_query(TOPIC_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
 
-    # init topic disc
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-    )
-    discon = DiscoursemeConstellation(topic)
-    # two floating discoursemes
-    discon.add_items(["sollen", "müssen"])
-    discon.add_items(["und"])
-    discon.slice_discs(10)
-    print(discon.df_nodes[10].keys())
-    print(discon.df_nodes[10])
+    # init constellation
+    topic_dump = CORPUS.query(topic_query,
+                              context=None, context_break=S_CONTEXT)
+    const = Constellation(topic_dump)
 
+    # add discourseme 1
+    disc1_query = format_cqp_query(DISC1_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc1_dump = CORPUS.query(disc1_query,
+                              context=None, context_break=S_CONTEXT)
 
-@pytest.mark.disccon
-def test_disccon_concordance(germaparl):
+    const.add_discourseme(disc1_dump, name='disc1')
 
-    corpus = get_corpus(germaparl)
+    # add discourseme 2
+    disc2_query = format_cqp_query(DISC2_ITEMS,
+                                   p_query=P_QUERY, s_query=S_QUERY,
+                                   flags="%cd", escape=False)
+    disc2_dump = CORPUS.query(disc2_query,
+                              context=None, context_break=S_CONTEXT)
 
-    # three discoursemes
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's'
-    )
-    disc1 = Discourseme(
-        corpus,
-        ["sollen", "müssen"],
-        'lemma',
-        's'
-    )
-    disc2 = Discourseme(
-        corpus,
-        ["und"],
-        'lemma',
-        's'
-    )
+    const.add_discourseme(disc2_dump, name='disc2')
 
-    # init discursive position
-    disccon = DiscoursemeConstellation(topic, [disc1, disc2])
-    # show concordance
-    print(disccon.concordance())
-    print(disccon.concordance(p_show=['word', 'lemma'])['dataframe'].iloc[0])
+    lines = const.collocates(windows=list(range(1, 20)))
+    print(lines)
 
 
-@pytest.mark.disccon
-def test_disccon_collocates(germaparl):
-
-    corpus = get_corpus(germaparl)
-
-    # three discoursemes
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's',
-        's'
-    )
-    disc1 = Discourseme(
-        corpus,
-        ["sollen", "müssen", "machen"],
-        'lemma',
-        's',
-        's'
-    )
-    disc2 = Discourseme(
-        corpus,
-        ["und"],
-        'lemma',
-        's',
-        's'
-    )
-
-    # init discursive position
-    discpos = DiscoursemeConstellation(topic, [disc1, disc2])
-    # show collocates
-    print(discpos.collocates())
-
-
-@pytest.mark.disccon
-def test_disccon_collocates_empty(germaparl):
-
-    corpus = get_corpus(germaparl)
-    # three discoursemes
-    topic = Discourseme(
-        corpus,
-        ["SPD", "CSU", "Grünen"],
-        'lemma',
-        's'
-    )
-    # init discursive position
-    disccon = DiscoursemeConstellation(topic)
-    disccon.add_items(["Verhandlung"])
-    # show collocates
-    assert(disccon.collocates(window=5).empty)
-
-
-@pytest.mark.disccon
-def test_disccon_collocates_nodes(germaparl):
-    corpus = get_corpus(germaparl)
-    topic = Discourseme(
-        corpus,
-        [",", ".", ")", "("],
-        'lemma',
-        's',
-        escape=True
-    )
-    df = topic.collocates(cut_off=None)[5]
-    assert("," not in df.index)
-    assert("(" not in df.index)
-
-    topic2 = DiscoursemeConstellation(topic)
-    df2 = topic2.collocates(cut_off=None)
-    assert(df2.equals(df))
-
-
-@pytest.mark.disccon
-def test_disccon_collocates_range(germaparl):
-
-    corpus = get_corpus(germaparl)
-
-    # three discoursemes
-    topic = Discourseme(
-        corpus,
-        [",", ".", ")", "("],
-        'lemma',
-        's',
-        's',
-        escape=True
-    )
-    disc1 = Discourseme(
-        corpus,
-        ["die", "sie", "und"],
-        'lemma',
-        's',
-        's'
-    )
-    disc2 = Discourseme(
-        corpus,
-        ["sein", "in", "eine", "zu", "haben"],
-        'lemma',
-        's',
-        's'
-    )
-    disccon = DiscoursemeConstellation(topic, [disc1, disc2])
-    df = disccon.collocates(cut_off=None)
-    print(df)
-
-
-# @pytest.mark.mmda
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.mmda
+@pytest.mark.concordance
 def test_get_concordance_simple():
 
     # init corpus
@@ -428,37 +201,36 @@ def test_get_concordance_simple():
     topic_items = ['Atomkraft', 'Nuklearnergie', 'Atomenergie']
     topic_name = "Atomkraft"
     s_context = "s"
-    window_size = 3
-    context = 15
+    window = 3
+    context = 30
     additional_discoursemes = {}
     p_query = 'lemma'
     p_show = ['word', 'lemma']
-    s_show = ['s']
+    s_show = ['text_id']
     s_query = s_context
     order = 'random'
     cut_off = 100
-    form = 'dataframe'
 
     conc = get_concordance(
-        corpus_name,
-        topic_items,
-        topic_name,
-        s_context,
-        window_size,
-        context,
-        additional_discoursemes,
-        p_query,
-        p_show,
-        s_show,
-        s_query,
-        order,
-        cut_off,
-        form
+        corpus_name=corpus_name,
+        topic_name=topic_name,
+        topic_items=topic_items,
+        p_query=p_query,
+        s_query=s_query,
+        s_context=s_context,
+        window=window,
+        context=context,
+        additional_discoursemes=additional_discoursemes,
+        p_show=p_show,
+        s_show=s_show,
+        order=order,
+        cut_off=cut_off
     )
     from pprint import pprint
-    pprint(conc[list(conc.keys())[0]])
+    pprint(conc[list(conc.keys())[1]])
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 @pytest.mark.mmda
 def test_get_collocates_simple():
 
@@ -468,26 +240,196 @@ def test_get_collocates_simple():
     # request parameters
     topic_items = ['Atomkraft', 'Nuklearnergie', 'Atomenergie']
     s_context = "s"
-    window_size = 3
-    context = 15
+    windows = list(range(1, 10))
+    print(windows)
     additional_discoursemes = {}
     p_query = 'lemma'
+    p_show = ['lemma']
     s_query = s_context
     order = 'log_likelihood'
     cut_off = 100
 
     coll = get_collocates(
-        corpus_name,
-        topic_items,
-        s_context,
-        [window_size],
-        context,
-        additional_discoursemes,
-        p_query,
-        s_query,
-        None,
-        cut_off,
-        order
+        corpus_name=corpus_name,
+        topic_items=topic_items,
+        s_context=s_context,
+        windows=windows,
+        additional_discoursemes=additional_discoursemes,
+        p_query=p_query,
+        p_show=p_show,
+        s_query=s_query,
+        cut_off=cut_off,
+        order=order
     )
     from pprint import pprint
     pprint(coll[list(coll.keys())[0]])
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.mmda
+@pytest.mark.concordance
+def test_get_concordance_constellation():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    topic_name = "Atomkraft"
+    s_context = "s"
+    window = 3
+    context = None
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['word', 'lemma']
+    s_show = ['text_id']
+    s_query = s_context
+    order = 'random'
+    cut_off = 100
+
+    conc = get_concordance(
+        corpus_name=corpus_name,
+        topic_name=topic_name,
+        topic_items=topic_items,
+        p_query=p_query,
+        s_query=s_query,
+        s_context=s_context,
+        window=window,
+        context=context,
+        additional_discoursemes=additional_discoursemes,
+        p_show=p_show,
+        s_show=s_show,
+        order=order,
+        cut_off=cut_off
+    )
+    from pprint import pprint
+    pprint(conc[list(conc.keys())[0]])
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.mmda
+def test_get_collocates_constellation():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    s_context = "s"
+    windows = list(range(1, 10))
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['lemma']
+    s_query = s_context
+    order = 'log_likelihood'
+    cut_off = 100
+
+    coll = get_collocates(
+        corpus_name=corpus_name,
+        topic_items=topic_items,
+        s_context=s_context,
+        windows=windows,
+        additional_discoursemes=additional_discoursemes,
+        p_query=p_query,
+        p_show=p_show,
+        s_query=s_query,
+        cut_off=cut_off,
+        order=order
+    )
+    from pprint import pprint
+    pprint(coll[5])
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.mmda
+def test_get_collocates_constellation1():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    s_context = "s"
+    windows = list(range(1, 10))
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['lemma']
+    s_query = s_context
+    order = 'log_likelihood'
+    cut_off = 100
+
+    flags_query = "%cd"
+    flags_show = ""
+    escape = True
+    min_freq = 2
+    context = 20
+
+    get_collocates(
+        corpus_name,
+        topic_items,
+        p_query,
+        s_query,
+        flags_query,
+        escape,
+        s_context,
+        context,
+        additional_discoursemes,
+        windows,
+        p_show,
+        flags_show,
+        min_freq,
+        order,
+        cut_off,
+        LIB_PATH, CQP_BIN, REGISTRY_PATH, DATA_PATH
+    )
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.mmda
+@pytest.mark.concordance
+def test_get_concordance_constellation1():
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    s_context = "s"
+    additional_discoursemes = {'Deutschland': DISC1_ITEMS, 'Stillegung': DISC2_ITEMS}
+    p_query = 'lemma'
+    p_show = ['lemma']
+    s_query = s_context
+    order = 'log_likelihood'
+    cut_off = 100
+
+    flags_query = "%cd"
+    context = 20
+    escape_query = True
+
+    # init corpus
+    corpus_name = "GERMAPARL1318"
+
+    # request parameters
+    topic_items = TOPIC_ITEMS
+    topic_name = "topic"
+    s_context = "s"
+    window = 3
+    context = 20
+    additional_discoursemes = {'temp': ['-Emission']}
+    p_query = 'lemma'
+    p_show = ['word', 'lemma']
+    s_show = []
+    s_query = 's'
+    order = 'random'
+    cut_off = 100
+
+    conc = get_concordance(
+        corpus_name,
+        topic_name, topic_items, p_query, s_query, flags_query, escape_query,
+        s_context, context,
+        additional_discoursemes,
+        p_show, s_show, window, order, cut_off,
+        LIB_PATH, CQP_BIN, REGISTRY_PATH, DATA_PATH
+    )
+    from pprint import pprint
+    pprint(conc[list(conc.keys())[0]])

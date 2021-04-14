@@ -6,6 +6,7 @@ from timeit import default_timer
 from functools import wraps
 # requirements
 import numpy as np
+from pandas import NA
 from unidecode import unidecode
 # logging
 import logging
@@ -98,8 +99,8 @@ def cqp_escape(token):
     }))
 
 
-def formulate_cqp_query(items, p_query='word', s_query=None,
-                        flags="", escape=True):
+def format_cqp_query(items, p_query='word', s_query=None,
+                     flags="", escape=True):
     """ wrapper for easy queries
 
     :return: valid cqp query
@@ -217,6 +218,10 @@ def calculate_offset(row):
     match_x = row['match_x']
     match_y = row['match_y']
 
+    # if match_y is missing, offset is missing
+    if match_y is NA or match_y == -1:
+        return NA
+
     # init matchends if necessary
     if 'matchend_x' in row.keys():
         matchend_x = row['matchend_x']
@@ -232,7 +237,7 @@ def calculate_offset(row):
         offset = matchend_y - match_x
     # x ... y
     elif matchend_x < match_y:
-        offset = matchend_x - match_y
+        offset = match_y - matchend_x
     # overlap
     else:
         offset = 0

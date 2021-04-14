@@ -11,3 +11,6 @@ clean:
 	rm -rf *.egg-info build/
 deploy:
 	python3 -m twine upload dist/*
+clear_cache:
+	rm -rf tests/data-dir
+	/bin/rm -rf /tmp/ccc-anycache/

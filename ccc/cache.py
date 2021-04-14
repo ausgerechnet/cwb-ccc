@@ -21,6 +21,7 @@ class Cache:
     def get(self, identifier):
 
         if self.path is None:
+            logger.info('cache: no path')
             return None
 
         if isinstance(identifier, str):
@@ -38,7 +39,8 @@ class Cache:
     def set(self, identifier, value):
 
         if self.path is None:
-            return None
+            logger.info('cache: no path')
+            return
 
         if isinstance(identifier, str):
             key = identifier

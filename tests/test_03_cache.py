@@ -14,6 +14,16 @@ def test_generate_idx():
     assert(isinstance(s, str))
 
 
+def test_set_get_empty():
+
+    parameters = {'query': "test", 's_break': "test"}
+    cache = Cache()
+    s = cache.generate_idx(parameters)
+    assert(cache.get(s) is None)
+    cache.set(s, parameters)
+    assert(cache.get(s) is None)
+
+
 def test_set_get():
 
     cache = Cache(os.path.join(DATA_PATH, 'test-cache'))
@@ -21,6 +31,7 @@ def test_set_get():
     dump = DataFrame()
     r = cache.get(parameters.values())
     assert(r is None)
+
     cache.set(parameters, dump)
     r = cache.get(parameters)
     assert(r.empty)
