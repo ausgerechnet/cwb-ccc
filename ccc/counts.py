@@ -49,36 +49,14 @@ def cwb_scan_corpus(path, corpus_name, registry_path,
 
 
 class Counts:
-    """all methods return a FreqFrame
+    """All methods return a FreqFrame
+
     == (p_atts) freq ==
+
     where the index is either a BaseIndex or a MultiIndex,
     depending on the number of p-attributes.
 
-    if not split, MWUs are " "-joined
-
-    attributes:
-    .corpus_name
-    .attributes
-
-    methods:
-    ._cpos2patts
-
-    .cpos      (cpos_list, p_atts)
-      - strategy 1: split   |YES; flags  ; combo x
-
-    .dump      (dumpframe, start, end, p_atts, split)
-      - strategy 1: split NO|YES; flags  ; combo x
-      - strategy 2: split   |YES; flags  ; combo
-
-    .matches   (name, p_att, split, flags)
-      - strategy 1: split NO|   ; flags x; combo
-      - strategy 2: split NO|YES; flags x; combo
-      - strategy 3: split   |YES; flags  ; combo x
-
-    .mwus      (queries)
-      - strategy 1: split NO| - ; flags x; combo x; mwu NO
-      - strategy 2: split NO| - ; flags x; combo x; mwu YES
-      - strategy 3: split NO| - ; flags x; combo  ; mwu YES
+    If index is not split, MWUs are " "-joined.
 
     TODO: counting with group?
 
@@ -118,6 +96,8 @@ class Counts:
         """Create a frequency table for the p-attribute values of the
         cpos-list.
 
+        - strategy: split   /YES; flags  ; combo x
+
         :param list cpos_list: corpus positions to fill
         :param list p_atts: p-attribute (combinations) to count
 
@@ -135,6 +115,9 @@ class Counts:
     def dump(self, df_dump, start='match', end='matchend',
              p_atts=['word'], split=False, strategy=2):
         """Count tokens in [start .. end] (columns or index columns in df_dump).
+
+        - strategy 1: split NO/YES; flags  ; combo x
+        - strategy 2: split   /YES; flags  ; combo
 
         :param list df_dump: corpus positions to fill
         :param str start: column name where to start counting
@@ -199,6 +182,10 @@ class Counts:
     def matches(self, cqp, name, p_atts=["word"], split=False, flags=None, strategy=3):
         """Counts tokens in [match .. matchend] of named subcorpus defined in
         running cqp.
+
+        - strategy 1: split NO/   ; flags x; combo
+        - strategy 2: split NO/YES; flags x; combo
+        - strategy 3: split   /YES; flags  ; combo x
 
         :param CQP cqp: running cqp process
         :param list name: name of the subcorpus
@@ -315,7 +302,12 @@ class Counts:
     def mwus(self, cqp, queries, p_atts=None, fill_missing=True, strategy=1):
         """Calculates frequencies for MWU queries in activated subcorpus.
         queries are a list of valid CQP queries, e.g.
+
         '[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"%cd & pos="NE"]?'
+
+        - strategy 1: split NO| - ; flags x; combo x; mwu NO
+        - strategy 2: split NO| - ; flags x; combo x; mwu YES
+        - strategy 3: split NO| - ; flags x; combo  ; mwu YES
 
         caveat: different indices for different strategies
 
@@ -326,21 +318,24 @@ class Counts:
 
         :return: counts (index: queries(strategy 1) or tokens, column: freq)
         :rtype: DataFrame
+
         # TODO FreqFrame
 
-        Strategy 1:
-        for each item
-            (1) run query for item
-            (2) get size of corpus via cqp
+        Strategy 1: for each item
+
+        1. run query
+        2. get size of corpus via CQP
 
         Strategy 2:
-        (1) run query for all items at the same time
-        (2) dump df
-        (3) count_dump()
+
+        1. run query for all items at the same time
+        2. dump df
+        3. count_dump()
 
         Strategy 3:
-        (1) run query for all items at the same time
-        (2) count_matches()
+
+        1. run query for all items at the same time
+        2. count_matches()
 
         """
 

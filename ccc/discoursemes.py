@@ -320,25 +320,25 @@ def get_concordance(corpus_name,
                     data_path='/tmp/ccc-data/'):
     """
     :param str corpus_name: name corpus in CWB registry
-    -- topic matches --
+
     :param str topic_name: name of the topic ("node") discourseme
     :param list topic_items: list of lexical items
     :param str p_query: p-att layer to query
     :param str s_query: s-att to use for delimiting queries
     :param str flags_query: flags to use for querying
     :param bool escape_query: whether to cqp-escape the query items
-    -- topic context --
+
     :param str s_context: s-att to use for delimiting contexts
     :param int context: context around the nodes used to identify relevant matches
-    -- discoursemes --
+
     :param dict additional_discoursemes: {name: items}
-    -- concordance display --
+
     :param list p_show: p-attributes to show
     :param list s_show: s-attributes to show
     :param int window: mark tokens further away as 'out_of_window'
     :param str order: concordance order (first / last / random)
     :param int cut_off: number of lines to retrieve
-    -- corpus settings --
+
     :param str lib_path:
     :param str cqp_bin:
     :param str registry_path:
@@ -346,6 +346,7 @@ def get_concordance(corpus_name,
 
     :return: dict of concordance lines (each one a dict, keys=1:N)
     :rtype: dict
+
     """
 
     # preprocess parameters
@@ -389,25 +390,25 @@ def get_collocates(corpus_name,
                    data_path='/tmp/ccc-data/'):
     """
     :param str corpus_name: name corpus in CWB registry
-    -- topic --
+
     :param list topic_items: list of lexical items
     :param str p_query: p-att layer to query
     :param str s_query: s-att to use for delimiting queries
     :param str flags_query: flags to use for querying
     :param bool escape_items: whether to cqp-escape the query items
-    -- context --
+
     :param str s_context: s-att to use for delimiting contexts
     :param int context: context around the nodes used to identify relevant matches
-    -- discoursemes --
+
     :param dict additional_discoursemes: {name: items}
-    -- display --
+
     :param list windows: windows (int) to use for collocation analyses around nodes
     :param list p_show: p-atts to use for collocation analysis
     :param str flags_show: post-hoc folding ("%cd") with cwb-ccc-algorithm
     :param int min_freq: rare item treshold
     :param str order: collocation order (columns in scored table)
     :param int cut_off: number of collocates to retrieve
-    -- corpus --
+
     :param str lib_path:
     :param str cqp_bin:
     :param str registry_path:
@@ -415,6 +416,7 @@ def get_collocates(corpus_name,
 
     :return: dict of collocation tables (key=window)
     :rtype: dict
+
     """
 
     # preprocess parameters

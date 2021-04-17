@@ -77,7 +77,9 @@ def start_cqp(cqp_bin, registry_path,
 
 
 class Corpora:
-    """Interface to CWB-indexed corpora."""
+    """Interface to CWB-indexed corpora.
+
+    """
 
     def __init__(self, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/'):
@@ -94,8 +96,9 @@ class Corpora:
     def __str__(self):
         """Method for printing.
 
-        :return: available corpora
+        :return: paths, available corpora
         :rtype: str
+
         """
 
         return "\n" + "\n".join([
@@ -146,6 +149,16 @@ class Corpora:
 
     def activate(self, corpus_name,
                  lib_path=None, data_path='/tmp/ccc-data/'):
+        """Activate a corpus.
+
+        :param str corpus_name: name of corpus in CWB registry
+        :param str lib_path: /path/to/macros/and/wordlists/
+        :param str data_path: /path/to/data/and/cache/
+
+        :return: corpus
+        :rtype: Corpus
+
+        """
 
         return Corpus(corpus_name,
                       lib_path=lib_path,
@@ -157,47 +170,15 @@ class Corpora:
 class Corpus:
     """Interface to CWB-indexed corpus.
 
-    After initializing, the corpus class has ...
-
-    ... the following attributes:
-    .data_path
-    .registry_path
-    .cqp_bin
-    .lib_path
-    .corpus_name
-    .subcorpus [None]
-    .attributes_available
-    .corpus_size
-
-    ... the following initialized classes:
-    .attributes
-    .cache
-    .counts
-
-    ... the following methods:
-    .__str__
-    ._attributes_available
-    .start_cqp
-    .copy
-    .cpos2patts                 # p-attributes
-    .marginals                  # p-attributes
-    .cpos2sid                   # s-attributes
-    .show_nqr                   # subcorpora
-    .dump_from_s_att            # creating dumps
-    .dump_from_query            # creating dumps
-    .dump2patt                  # working on dumps
-    .dump2satt                  # working on dumps
-    .dump2context               # working on dumps
-    .query_s_att                # query alias
-    .query                      # query alias
-
     """
 
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
                  data_path='/tmp/ccc-data/'):
         """Establish connection to CQP and corpus attributes, set paths, read
-        library. Raises KeyError if corpus not in registry.
+        library.
+
+        Raises KeyError if corpus not in registry.
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_path: /path/to/macros/and/wordlists/
@@ -248,17 +229,17 @@ class Corpus:
     def __str__(self):
         """Method for printing.
 
-        :return: corpus_name, corpus_size, data_path, subcorpus
+        :return: settings and paths
         :rtype: str
 
         """
 
         return "\n".join([
-            'a ccc.Corpus: "%s"' % self.corpus_name,
-            "size        : %s" % str(self.corpus_size),
-            "data        : %s" % str(self.data_path),
-            "subcorpus   : %s" % str(self.subcorpus),
-            "attributes  :",
+            'ccc.Corpus : "%s"' % self.corpus_name,
+            "size       : %s" % str(self.corpus_size),
+            "data       : %s" % str(self.data_path),
+            "subcorpus  : %s" % str(self.subcorpus),
+            "attributes :",
             self.attributes_available.to_string(),
         ])
 
@@ -329,7 +310,7 @@ class Corpus:
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
-        :param bool ignore: whether to return (None, .*) for -1
+        :param bool ignore: whether to return (None, ..) for -1
 
         :return: p-attribute(s) at cpos
         :rtype: tuple
@@ -457,29 +438,34 @@ class Corpus:
         return df
 
     def activate_subcorpus(self, nqr=None, df_dump=None):
-        """Activate subcorpus.  If no df_dump is given, this sets
-        self.subcorpus and logs an error if subcorpus not defined.  If
-        a df_dump is given, the df_dump will be undumped.
+        """Activate a Named Query Result (NQR).
 
-        :param str subcorpus: subcorpus name defined in CQP
+        - If no df_dump is given, this sets self.subcorpus and logs an
+          error if NQR is not defined.
+        - If a df_dump is given, the df_dump will be undumped and named
+          NQR.
+
+        :param str nqr: NQR defined in CQP
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
                                   with optional columns 'target' and 'keyword'
 
         """
 
-        if df_dump is not None:
-            cqp = self.start_cqp()
-            cqp.nqr_from_dump(df_dump, nqr)
-            cqp.nqr_save(self.corpus_name, nqr)
-            cqp.__kill__()
-
         if nqr is not None:
-            # raise an error if subcorpus not available
+
+            if df_dump is not None:
+                cqp = self.start_cqp()
+                cqp.nqr_from_dump(df_dump, nqr)
+                cqp.nqr_save(self.corpus_name, nqr)
+                cqp.__kill__()
+
             if nqr not in self.show_nqr()['subcorpus'].values:
+                # raise an error if subcorpus not available
                 logger.error('subcorpus "%s" not defined)' % nqr)
                 self.activate_subcorpus()
             else:
                 logger.info('switched to subcorpus "%s"' % nqr)
+
         else:
             logger.info('switched to corpus "%s"' % self.corpus_name)
 
@@ -674,7 +660,7 @@ class Corpus:
     def _dump2patt_row(self, row, p_att, start, end):
         """Retrieve p-attribute annotation from start to end of one row.
 
-        :param Series row: dataframe row that contain start and end keys
+        :param Series row: dataframe row that contains start and end keys
         :param str p_att: p-attribute to retrieve
         :param str start: key of start column (int or str)
         :param str end: key of end column (int or str)
@@ -827,14 +813,15 @@ class Corpus:
         follows; the strategy for _contextend_ (right hand side) is
         analogous (using context_right, matchend and
         context_break_spanend).
-        if context_break_span is None and context_left is None
-            => context = match
-        if context_break_span is None and context_left is not None
-            => context = max(0, match - context_left)
-        if context_break_span is not None and context_left is None
-            => context = context_break_span
-        if context_break_span is not None and context_left is not None
-            => context = max(match - context_left, s_start)
+
+        - if context_break_span is None and context_left is None
+          => context = match
+        - if context_break_span is None and context_left is not None
+          => context = max(0, match - context_left)
+        - if context_break_span is not None and context_left is None
+          => context = context_break_span
+        - if context_break_span is not None and context_left is not None
+          => context = max(match - context_left, s_start)
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param int context_left: maximum context to the left of match

@@ -227,11 +227,12 @@ class Concordance:
               order='first', cut_off=100, matches=None, slots=None):
         """Retrieve concordance lines from self.df_dump.  Central entry point
         for all methods.  Functionality includes:
-        (1) simple / kwic / dict / slots / dataframe format
-        (2) selection of p-attributes and s-attributes
-        (3) selection of matches using cut-off and order or a
-            pre-defined list of matches
-        (4) definition of slots via anchor points (only for form='slot')
+
+        1. simple / kwic / dict / slots / dataframe format
+        2. selection of p-attributes and s-attributes
+        3. selection of matches using cut-off and order or a
+           pre-defined list of matches
+        4. definition of slots via anchor points (only for form='slot')
 
         Return value of all formats is a DataFrame indexed by (match,
         matchend) and requested s-attributes of the match:
