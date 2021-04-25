@@ -4,16 +4,16 @@
 This module is a wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
 
 * [Introduction](#introduction)
-	* [Prerequisites](#prerequisites)
-	* [Installation](#installation)
-	* [Accessing Corpora](#accessing-corpora)
+  * [Prerequisites](#prerequisites)
+  * [Installation](#installation)
+  * [Accessing Corpora](#accessing-corpora)
 * [Usage](#usage)
-	* [Queries and Dumps](#queries-and-dumps)
-	* [Extracting Concordance Lines](#concordancing)
-	* [Dealing with Anchored Queries](#anchored-queries)
-	* [Calculating Collocates](#collocation-analyses)
-	* [Defining Subcorpora](#subcorpora)
-	* [Extracting Keywords](#keyword-analyses)
+  * [Queries and Dumps](#queries-and-dumps)
+  * [Extracting Concordance Lines](#concordancing)
+  * [Dealing with Anchored Queries](#anchored-queries)
+  * [Calculating Collocates](#collocation-analyses)
+  * [Defining Subcorpora](#subcorpora)
+  * [Extracting Keywords](#keyword-analyses)
 * [Testing](#testing)
 * [Acknowledgements](#acknowledgements)
 
@@ -26,11 +26,11 @@ If you want to run queries with more than two anchor points, the module requires
 ### Installation ###
 You can install this module with pip from PyPI:
 
-	pip3 install cwb-ccc
+    pip3 install cwb-ccc
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and use `setup.py`:
 
-	python3 setup.py install
+    python3 setup.py install
 
 ### Accessing Corpora ###
 
@@ -176,7 +176,7 @@ dump.set_context(context_left=5, context_right=10, context_break='s')
 Note that this works "inplace".
 
 You can set CQP's matching strategy ("standard", "longest", "shortest", "traditional") via the `match_strategy` parameter.
-	
+
 By default, the result is cached: the query parameters are used to create an appropriate identifier.  This way, the result can be accessed directly by later queries with the same parameters on the same (sub)corpus, without the need for CQP to run again.
 
 We are set up to analyze the query result. Here's the frequency breakdown:
@@ -289,10 +289,10 @@ lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
 Further `form`s are "slots" (see [below](#anchored-queries)) and "dict": In the latter case, every entry in the "dict" column is a dictionary with the following keys:
 - "match" (int): the cpos of the match (serves as an identifier)
 - "cpos" (list): the cpos of all tokens in the concordance line
-- "offset" (list): the offset to match/matchend of all tokens 
+- "offset" (list): the offset to match/matchend of all tokens
 - "word" (list): the words of all tokens
 - "anchors" (dict): a dictionary of {anchor: cpos} (see [below](#anchored-queries))
-  
+
 This format is especially suitable for serialization purposes.
 
 You can decide which and how many concordance lines you want to retrieve by means of the parameters `order` ("first", "last", or "random") and `cut_off`. You can also provide a list of `matches` to get only specific concordance lines.
@@ -355,14 +355,14 @@ thus returns DataFrames with additional columns for each anchor point:
 <br/>
 
 For an analysis of certain spans of your query matches, you can use anchor points to define "slots", i.e. single anchors or spans between anchors that define sub-parts of your matches.  Use the "slots" format to extract these parts from each match:
-   
+
 ```python
 dump = corpus.query(
     r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
     context=0, context_break='s', match_strategy='longest',
 )
 lines = dump.concordance(
-  form='slots', p_show=['word', 'lemma'], 
+  form='slots', p_show=['word', 'lemma'],
   slots={"name": [1, 2], "party": [3, 4]}
 )
 ```
@@ -384,11 +384,11 @@ lines = dump.concordance(
 <br/>
 
 The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) – note that this works inplace:
-   
+
 ```python
 dump.correct_anchors({3: +1, 4: -1})
 lines = dump.concordance(
-  form='slots', p_show=['word', 'lemma'], 
+  form='slots', p_show=['word', 'lemma'],
   slots={"name": [1, 2], "party": [3, 4]}
 )
 ```
@@ -651,16 +651,17 @@ The corpus is located in this [repository](tests/test-corpora/), but you will ha
 
 You can test the module using pytest. Make sure you install all
 development dependencies:
-	
-	pip install --dev
+
+    pip install pipenv
+    pipenv install --dev
 
 You can then simply
 
-	make test
-	
+    make test
+
 and
 
-	make coverage
+    make coverage
 
 
 ## Acknowledgements ##
