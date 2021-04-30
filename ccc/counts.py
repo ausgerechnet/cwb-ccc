@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile
 # part of module
 from .utils import time_it
 # requirements
-from CWB.CL import Corpus as Crps
+from cwb.cl import Corpus as Crps
 from pandas import DataFrame, MultiIndex, read_csv
 # logging
 import logging
