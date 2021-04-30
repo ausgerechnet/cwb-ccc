@@ -382,7 +382,7 @@ def get_collocates(corpus_name,
                    p_query='lemma', s_query=None, flags_query="%cd", escape_items=True,
                    s_context='s', context=20,
                    additional_discoursemes={},
-                   windows=[3, 5, 7], p_show=['word', 'lemma'], flags_show="",
+                   windows=[3, 5, 7], p_show=['lemma', 'pos'], flags_show="",
                    min_freq=2,
                    order='random', cut_off=100,
                    lib_path=None, cqp_bin='cqp',
@@ -444,22 +444,22 @@ def get_collocates(corpus_name,
         coll_window = coll_window[[
             'log_likelihood',
             'log_ratio',
-            'f',
-            'f2',
             'mutual_information',
             'z_score',
-            't_score'
+            't_score',
+            'f',
+            'f2'
         ]]
 
         # rename AMs
         am_dict = {
             'log_likelihood': 'log likelihood',
-            'f': 'co-occurrence freq.',
+            'log_ratio': 'log ratio',
             'mutual_information': 'mutual information',
-            'log_ratio': 'log-ratio',
-            'f2': 'marginal freq.',
+            'z_score': 'z-score',
             't_score': 't-score',
-            'z_score': 'z-score'
+            'f': 'co-oc. freq.',
+            'f2': 'marginal freq.'
         }
         collocates[window] = coll_window.rename(am_dict, axis=1)
 
