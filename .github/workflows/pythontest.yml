@@ -39,10 +39,10 @@ jobs:
     - name: Build
       run: |
         make build
-    - name: Lint code
-      continue-on-error: true
-      run: |
-        make lint
-    - name: Test with pytest
-      run: |
-        make test
+    # - name: Lint code
+    #   continue-on-error: true
+    #   run: |
+    #     make lint
+    # - name: Test with pytest
+    #   run: |
+    #     make test
