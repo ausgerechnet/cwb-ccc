@@ -1,0 +1,19 @@
+# pylint config
+[MASTER]
+ignore-patterns=^test.*
+[BASIC]
+# variable-naming-style=any
+# argument-naming-style=any
+argument-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
+variable-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
+method-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
+attr-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
+module-rgx=[A-Za-z_][A-Za-z0-9_]{1,30}$
+[MESSAGES CONTROL]
+disable=too-few-public-methods,
+        no-name-in-module,
+        fixme,
+        too-many-arguments,
+        too-many-instance-attributes,
+        logging-not-lazy,
+        line-too-long,

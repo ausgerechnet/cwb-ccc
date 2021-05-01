@@ -1,5 +1,8 @@
 # Collocation and Concordance Computation #
 
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/pythontest.yml/badge.svg)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/pythontest.yml)
+
+
 ## Introduction ##
 This module is a wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
 

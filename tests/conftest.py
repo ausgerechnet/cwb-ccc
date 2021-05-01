@@ -3,9 +3,10 @@ import pytest
 from pandas import read_csv
 
 
-LOCAL = True
+LOCAL = False
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
+# DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
+DATA_PATH = "/tmp/ccc-data"
 
 
 @pytest.fixture
