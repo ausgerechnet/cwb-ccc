@@ -650,10 +650,7 @@ The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with a
 </details>
 <br/>
 
-The corpus is located in this [repository](tests/test-corpora/), but you will have to manually update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl8613)) in order to make the tests, since the CWB requires an absolute path here.
-
-You can test the module using pytest. Make sure you install all
-development dependencies:
+The corpus is located in this [repository](tests/test-corpora/).  Using it, you can test the module with pytest. Make sure you install all development dependencies:
 
     pip install pipenv
     pipenv install --dev
@@ -665,10 +662,12 @@ You can then simply
 and
 
     make coverage
+    
+Note that these make commands update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl8613)) in order to make the tests, since the CWB requires an absolute path here.
 
 
 ## Acknowledgements ##
-The module relies on [cwb-python](https://pypi.org/project/cwb-python/), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** and **Jorg Asmussen** for the implementation.  Special thanks to **Markus Opolka** for the implementation of [association-measures](https://pypi.org/project/association-measures/) and for forcing me to write tests.
+The module relies on [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.  Special thanks to **Markus Opolka** for the implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 
 The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 
