@@ -1,4 +1,4 @@
-name: Test Python Package
+name: build
 
 on:
   push:
@@ -33,13 +33,13 @@ jobs:
         python -m pip install -q pipenv
         pipenv run pip install git+https://github.com/fau-klue/cwb-python
         make install
-    - name: Build
-      run: |
-        make build
-    - name: Lint code
+    - name: Lint
       continue-on-error: true
       run: |
         make lint
-    - name: Test with pytest
+    - name: Build
+      run: |
+        make build
+    - name: Test
       run: |
         make test
