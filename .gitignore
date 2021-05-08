@@ -19,5 +19,3 @@ build/
 .Rproj.user
 .RData
 .Rhistory
-
-Pipfile.lock
