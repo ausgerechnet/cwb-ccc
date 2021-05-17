@@ -638,8 +638,11 @@ class Corpus:
 
             # NA handling
             logger.info("post-processing dataframe")
-            df_dump = df_dump.dropna(axis=1, how='all')
-            df_dump = df_dump.fillna(-1, downcast='integer')
+            # df_dump = df_dump.dropna(axis=1, how='all')
+            # it is more reasonable to yield all requested columns
+            # (even if some are all NA) -- instead of silently
+            # dropping columns
+            df_dump = df_dump.fillna(-1, downcast='infer')
 
         # restrict output to requested anchors
         df_dump = df_dump[anchors]
@@ -669,8 +672,9 @@ class Corpus:
         :rtype: str
         """
 
-        cpos_start = row[start]
-        cpos_end = row[end]
+        # treat missing columns like missing values
+        cpos_start = row.get(start, -1)
+        cpos_end = row.get(end, -1)
 
         # if both are missing, return empty string
         if cpos_start == cpos_end == -1:

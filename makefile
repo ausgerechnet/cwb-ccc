@@ -16,10 +16,9 @@ deploy:
 clean: clean_build clean_cache
 
 clean_build:
-	rm -rf *.egg-info build/ test-dir
+	rm -rf *.egg-info build/
 clean_cache:
 	rm -rf tests/data-dir
-	/bin/rm -rf /tmp/ccc-anycache/
 
 docker:
 	docker build -t cwb-ccc -f Dockerfile .
