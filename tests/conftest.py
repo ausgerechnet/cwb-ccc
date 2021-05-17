@@ -1,9 +1,12 @@
 import os
 import pytest
 from pandas import read_csv
+from pathlib import Path
 
 
-LOCAL = True
+print(str(Path.home()))
+LOCAL = str(Path.home()) == "/home/ausgerechnet"
+print(LOCAL)
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
 # DATA_PATH = "/tmp/ccc-data"
