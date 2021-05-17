@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ main, cwb-python-v0.3.0 ]
+    branches: [ main, v0.9.16 ]
   pull_request:
     branches: [ main ]
 
