@@ -56,8 +56,6 @@ class Concordance:
         - node_$p: match .. matchend
         - right_$p: matchend + 1 .. contextend
 
-        TODO: rename left_$p ./. $p_left, ...
-
         """
 
         df = df.reset_index()
@@ -82,11 +80,12 @@ class Concordance:
 
     def slots(self, df, p_show=['word'], slots=None):
         """Retrieve concordance lines of provided df in 'slot' formatting.
-        Slots are singletons or pairs of self.anchors.  By default,
-        all single anchors are slots.
+        Slots are singletons or pairs of self.anchors.  If no slots
+        are provided, all anchors and match and matchend are slots.
 
-        If slots is a list, it will be translated into a dictionary
-        with keys of the form "$slot[0]..$slot[1]".
+        If slots is a list (of singletons and / or pairs), it will be
+        translated into a dictionary with keys of the form
+        "$slot[0]..$slot[1]".
 
         For each single slot $s and each p-attribute $p in p_show,
         $slot_$p is retrieved.  For pairs, $slot[0]..$slot[1]_$p is
@@ -98,8 +97,10 @@ class Concordance:
 
         """
 
-        # TODO: rename $slot_$p ./. $p_$slot[0]..$slot[1]
+        # init output with simple view
+        df_lines = self.simple(df, p_show)
 
+        # get slots
         if slots is None:
             slots = self.anchors + [('match', 'matchend')]
 
@@ -114,16 +115,19 @@ class Concordance:
                 slots_dict[key] = slot
             slots = slots_dict
 
-        # init output with simple view
-        df_lines = self.simple(df, p_show)
-
         # add slots
         for key in slots.keys():
             # allow definition of slots as singletons
             if isinstance(slots[key], (int, str)):
                 start = end = slots[key]
+            # allow definition via lists of length 1
+            elif isinstance(slots[key], list) and len(slots[key]) == 1:
+                start = end = slots[key][0]
+            # proper definition as pair / list of two
             else:
                 start, end = slots[key]
+
+            # retrieve concordance lines
             df_lines[[str(key) + "_" + p for p in p_show]] = self.simple(
                 df, p_show=p_show, start=start, end=end
             )[p_show]

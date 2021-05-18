@@ -50,9 +50,7 @@ def test_run_from_cqpy(brexit):
     query = cqpy_load(path)
     result = run_query(corpus, query)
 
-    # print(result)
     print(result[["lonely_anchor_lemma", "region_1_lemma", "region_2_lemma"]])
-
     print(result[["region_1_lemma", "region_2_lemma"]])
 
 
@@ -62,6 +60,19 @@ def test_run_from_cqpy2(brexit):
 
     corpus = get_corpus(brexit)
     path = "tests/gold/pattern0_1_says_entity.cqpy"
+    query = cqpy_load(path)
+    result = run_query(corpus, query)
+
+    print(result)
+    print(result.columns)
+
+
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
+@pytest.mark.brexit
+def test_run_from_cqpy3(brexit):
+
+    corpus = get_corpus(brexit)
+    path = "tests/gold/pattern15_0_equals_1.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
 
