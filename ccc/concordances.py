@@ -262,7 +262,7 @@ class Concordance:
         # check parameters
         if len(self.df_dump) == 0:
             logger.error("no concordance lines to show")
-            return
+            return DataFrame()
         if form not in ['simple', 'kwic', 'dict', 'dataframe', 'slots']:
             logger.error('format not implemented, using "simple" format')
             form = 'simple'

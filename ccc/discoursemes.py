@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 # @anycache(ANYCACHE_PATH)
-def constellation_merge(df1, df2, name, drop=True):
+def constellation_merge(df1, df2, name, drop=True, how='left'):
 
     # merge dumps via contextid ###
     df1 = df1.reset_index()
     df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
-    m = df1.merge(df2, on='contextid', how='left')
+    m = df1.merge(df2, on='contextid', how=how)
 
     # calculate offset ###
     m['offset_y'] = 0       # init as overlap
@@ -53,7 +53,8 @@ def constellation_merge(df1, df2, name, drop=True):
     })
 
     # set index ###
-    m = m.set_index(['match', 'matchend']).astype("Int64")
+    if how != 'outer':
+        m = m.set_index(['match', 'matchend']).astype("Int64")
 
     return m
 
@@ -110,7 +111,7 @@ class Constellation:
         self.add_discourseme(dump, name=name)
         self.corpus = dump.corpus
 
-    def add_discourseme(self, dump, name='discourseme', drop=True):
+    def add_discourseme(self, dump, name='discourseme', drop=True, how='left'):
         """
         :param Dump dump: dump.df: == (m, me) ci ==
         :param str name: name of the discourseme
@@ -123,7 +124,7 @@ class Constellation:
             return
         self.discoursemes[name] = dump
 
-        m = constellation_merge(self.df, dump.df, name, drop)
+        m = constellation_merge(self.df, dump.df, name, drop, how=how)
 
         self.df = m
 

@@ -1,3 +1,4 @@
+.PHONY: build
 install:
 	pipenv install --dev
 lint:
