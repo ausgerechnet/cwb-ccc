@@ -64,7 +64,7 @@ class Dump:
         """
         self.df = correct_anchors(self.df, corrections)
 
-    def breakdown(self, max_matches=None):
+    def breakdown(self, p_atts=['word'], max_matches=None):
 
         if self._breakdown is None:
             if max_matches is not None and self.size > max_matches:
@@ -83,7 +83,7 @@ class Dump:
                 breakdown = self.corpus.counts.dump(
                     df_dump=self.df,
                     start='match', end='matchend',
-                    p_atts=['word'], strategy=1
+                    p_atts=p_atts, strategy=1
                 )
                 self._breakdown = breakdown
 
