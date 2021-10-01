@@ -1,5 +1,7 @@
 legacy/
 
+*.so
+
 *.pyc
 __pycache__/
 

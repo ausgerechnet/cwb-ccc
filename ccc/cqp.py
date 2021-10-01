@@ -1,10 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-# Version 2.0 of "PyCQP" by Joerg Asmussen, DSL (Febr. 2008)
-# Some changes by Philipp Heinrich (2020)
-
+# Original Version by Joerg Asmussen (2008)
+# Current version by Philipp Heinrich (2020)
 
 import sys
 import os

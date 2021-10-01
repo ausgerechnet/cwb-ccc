@@ -50,8 +50,10 @@ RUN python3 -m pip install --upgrade pip && \
 WORKDIR /cwb-ccc
 COPY . /cwb-ccc
 
-RUN pipenv run pip install git+https://github.com/fau-klue/cwb-python
+RUN make clean
 RUN make install
+RUN make compile
+RUN make build
 
 ##########
 # TESTING
@@ -59,5 +61,4 @@ RUN make install
 # update registry directory is done in makefile
 # RUN HERE=$(pwd) && \
 #     sed -i "s|HOME .*|HOME $HERE/tests/corpora/data/germaparl1386|g" tests/corpora/registry/germaparl1386
-RUN make clean
 RUN make test

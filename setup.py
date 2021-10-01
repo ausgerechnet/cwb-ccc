@@ -1,4 +1,6 @@
-import setuptools
+from setuptools import find_packages
+from distutils.core import setup, Extension
+from pathlib import Path
 import os
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -13,19 +15,55 @@ with open(os.path.join(here, 'ccc', 'version.py')) as f:
     exec(f.read(), version)
 
 
-setuptools.setup(
+# CL directory for C-extension
+def guess_cl_directory():
+
+    # ... fallback
+    cwb_dirs = ["/usr/local/include/"]
+
+    # ... take from environment variable
+    if 'CWB_DIR' in os.environ:
+        cwb_dirs += os.environ['CWB_DIR']
+
+    # ... guess according to CQP location
+    cqp_location = os.popen('which cqp').read().rstrip()
+    if cqp_location != "":
+        cwb_dirs += os.path.join(Path(cqp_location).parents[1], 'include')
+
+    return cwb_dirs
+
+
+# define (and compile) C-extension
+USE_CYTHON = False              # use cython -2 ccc/cl.pyx instead
+ext = '.pyx' if USE_CYTHON else '.c'
+
+extensions = [
+    Extension(
+        name="ccc.cl",
+        sources=['ccc/cl' + ext],
+        libraries=['cl', 'pcre', 'glib-2.0'],
+        library_dirs=guess_cl_directory()
+    )
+]
+
+if USE_CYTHON:
+    from Cython.Build import cythonize
+    extensions = cythonize(extensions)
+
+
+setup(
     name="cwb-ccc",
     version=version['__version__'],
     author="Philipp Heinrich",
     author_email="philipp.heinrich@fau.de",
     description="CWB wrapper to extract concordances and collocates",
-    packages=setuptools.find_packages(),
+    packages=find_packages(exclude=["tests", "test_*"]),
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ausgerechnet/cwb-ccc",
+    ext_modules=extensions,
     install_requires=[
         "association-measures>=0.1.5",
-        "cwb-python>=0.2.2",
         "pandas>=1.2.0",
         "numexpr>=2.7.1",
         "Bottleneck>=1.3.2",

@@ -12,8 +12,8 @@ from .utils import preprocess_query
 from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
 from .counts import cwb_scan_corpus
+from .cl import Corpus as Attributes
 # requirements
-from cwb.cl import Corpus as Attributes
 from pandas import DataFrame, read_csv
 from pandas.errors import EmptyDataError
 from numpy import minimum, maximum

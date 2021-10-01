@@ -7,8 +7,8 @@ from collections import Counter
 from tempfile import NamedTemporaryFile
 # part of module
 from .utils import time_it
+from .cl import Corpus as Crps
 # requirements
-from cwb.cl import Corpus as Crps
 from pandas import DataFrame, MultiIndex, read_csv
 # logging
 import logging
