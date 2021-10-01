@@ -17,7 +17,7 @@ def germaparl():
     """ settings for small germaparl testing corpus """
 
     registry_path = os.path.join(DIR_PATH, "corpora/registry/")
-    dump_path = os.path.join(DIR_PATH, "gold", "germaparl-seehofer.tsv")
+    dump_path = os.path.join(DIR_PATH, "counts", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
 
     context = 50
@@ -65,7 +65,7 @@ def brexit():
         "brexit/brexit-preref-rant/brexit_v20190522_dedup.tsv.gz"
     )
 
-    query_path = (os.path.join(DIR_PATH, "gold", "as_a_x_i_y_knowledge.json"))
+    query_path = (os.path.join(DIR_PATH, "query-files", "as_a_x_i_y_knowledge.json"))
 
     context = 50
     s_context = 'tweet'

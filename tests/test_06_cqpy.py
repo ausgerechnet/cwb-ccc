@@ -17,26 +17,26 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 def test_read_json():
-    path = "tests/gold/as_a_x_i_y_knowledge.json"
+    path = "tests/query-files/as_a_x_i_y_knowledge.json"
     query = load_query_json(path)
     pprint(query)
 
 
 def test_cqpy_load():
-    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
+    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     print()
     pprint(query)
 
 
 def test_cqpy_dump():
-    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
+    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     print(cqpy_dump(query))
 
 
 def test_convert():
-    path = "tests/gold/as_a_x_i_y_knowledge.json"
+    path = "tests/query-files/as_a_x_i_y_knowledge.json"
     query = load_query_json(path)
     print(cqpy_dump(query))
 
@@ -46,7 +46,7 @@ def test_convert():
 def test_run_from_cqpy(brexit):
 
     corpus = get_corpus(brexit)
-    path = "tests/gold/as_a_x_i_y_knowledge.manual.cqpy"
+    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
 
@@ -59,7 +59,7 @@ def test_run_from_cqpy(brexit):
 def test_run_from_cqpy2(brexit):
 
     corpus = get_corpus(brexit)
-    path = "tests/gold/pattern0_1_says_entity.cqpy"
+    path = "tests/query-files/pattern0_1_says_entity.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
 
@@ -72,7 +72,7 @@ def test_run_from_cqpy2(brexit):
 def test_run_from_cqpy3(brexit):
 
     corpus = get_corpus(brexit)
-    path = "tests/gold/pattern15_0_equals_1.cqpy"
+    path = "tests/query-files/pattern15_0_equals_1.cqpy"
     query = cqpy_load(path)
     result = run_query(corpus, query)
 

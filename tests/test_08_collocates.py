@@ -71,7 +71,7 @@ def compare_counts(lemma, window, min_freq=0):
                           min_freq=min_freq)
 
     # UCS
-    ucs = pd.read_csv("tests/gold/ucs-germaparl1114-" + lemma +
+    ucs = pd.read_csv("tests/counts/ucs-germaparl1114-" + lemma +
                       ".ds.gz", sep="\t", index_col=2, comment="#",
                       quoting=3, na_filter=False)
     ucs.index.name = 'item'
