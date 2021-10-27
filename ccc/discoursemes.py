@@ -74,27 +74,32 @@ def role_formatter(row, names, s_show, window):
     :rtype: dict
 
     """
+
+    # init
     d = row['dict']
     roles = list()
-    # node role
+
+    # 'out_of_window' | None | 'node'
     role = ['out_of_window' if abs(t) > window else None for t in d['offset']]
     for i in range(d['cpos'].index(row.name[0]), d['cpos'].index(row.name[1]) + 1):
         role[i] = 'node'
     roles.append(role)
-    # discourseme roles
+
+    # discourseme names
     for name in names:
         role = [None] * len(d['offset'])
         for t in row[name]:
             for i in range(d['cpos'].index(t[1]), d['cpos'].index(t[2]) + 1):
                 role[i] = name
         roles.append(role)
+
     # combine individual roles into one list of lists
-    roles = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
-    # append to concordance line and line to output
-    d['role'] = roles
+    d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
+
     # append s-attributes
     for s in s_show:
         d[s] = row[s]
+
     return d
 
 
