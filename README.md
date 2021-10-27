@@ -1,6 +1,6 @@
 # Collocation and Concordance Computation #
 
-[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/pythontest.yml/badge.svg)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/pythontest.yml)
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml)
 
 
 ## Introduction ##
@@ -663,7 +663,7 @@ and
 
     make coverage
     
-Note that these make commands update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl8613)) in order to make the tests, since the CWB requires an absolute path here.
+Note that these make commands update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl1386)) in order to make the tests, since the CWB requires an absolute path here.
 
 
 ## Acknowledgements ##

@@ -1,11 +1,13 @@
-name: Build & Test
+name: Build & Test Package
 
 on: [workflow_dispatch, push, pull_request]
 
 jobs:
+
   build:
 
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python-version: [ 3.7, 3.8, 3.9 ]
@@ -39,12 +41,3 @@ jobs:
     - name: Test
       run: |
         make test
-    - name: Dist
-      run: |
-        make dist
-    - name: Archive Dist
-      uses: actions/upload-artifact@v2
-      with:
-        name: dist-${{ matrix.python-version }}
-        path: dist/
-  
