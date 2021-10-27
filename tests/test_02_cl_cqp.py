@@ -106,7 +106,7 @@ def test_nqr_from_dump(germaparl):
 
 def test_cl(germaparl):
     corpus = Corpus(germaparl['corpus_name'],
-                    registry_path=germaparl['registry_path'])
+                    registry_dir=germaparl['registry_path'])
 
     # get sentences, words, pos-tags
     sentences = corpus.attribute('s', 's')
