@@ -1,9 +1,11 @@
 from .collocates import Collocates
+from pandas import DataFrame
 # logging
 import logging
 logger = logging.getLogger(__name__)
 
 
+# TODO: multi-processing
 class UFA:
 
     def __init__(self, corpus, s_dict, s_att='text_id'):
@@ -56,8 +58,10 @@ class UFA:
 
     def collocates(self, cqp_query, window=5, p_query='lemma',
                    order='log_likelihood', cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, subset=None, context_break=None):
+                   frequencies=True, flags=None, subset=None, context_break=None,
+                   reference='local'):
         """
+        :param str reference: 'local' | 'global' | DataFrame
         :return: dictionary of {subcorpus_name: table}
         :rtype: dict
         """
@@ -84,10 +88,21 @@ class UFA:
             i += 1
             logger.info("... table %d of %d" % (i, len(subset)))
             dump = self.dumps[s]
-            # get local marginals (f2)
-            marginals_loc = self.corpus.counts.dump(
-                dump.df, split=True, p_atts=[p_query]
-            )
+            # determine reference frequencies
+            if isinstance(reference, str):
+                if reference == 'local':
+                    # get local marginals (f2)
+                    marginals = self.corpus.counts.dump(
+                        dump.df, split=True, p_atts=[p_query]
+                    )
+                elif reference == 'global':
+                    marginals = 'corpus'
+                else:
+                    raise NotImplementedError
+            elif isinstance(reference, DataFrame):
+                marginals = reference
+            else:
+                raise NotImplementedError
             # create collocates table
             df_loc = df_glob.loc[
                 df_glob[self.s_att].isin(self.s_dict[s])
@@ -96,7 +111,7 @@ class UFA:
             tables[s] = collocates.show(
                 window=window, order=order, cut_off=cut_off,
                 ams=ams, min_freq=min_freq, frequencies=frequencies,
-                flags=flags, marginals=marginals_loc
+                flags=flags, marginals=marginals
             )
 
         return tables
