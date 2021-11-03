@@ -76,8 +76,8 @@ def correct_anchors(df, corrections):
 def cqp_escape(token):
     """ escape CQP meta-characters
     TODO: what about '"'
-    :param str token: string to escape
 
+    :param str token: string to escape
     :return: escaped string
     :rtype: str
 
@@ -166,7 +166,7 @@ def preprocess_query(query):
 #################################
 # working on nodes and contexts #
 #################################
-def node2cooc(row):
+def node2cotext(row):
     """ convert one row of df_node to info for df_cooc """
 
     # take values from row
@@ -293,10 +293,9 @@ def fold_item(item, flags="%cd"):
     if flags is None:
         return item
 
-    isstr = False
-    if isinstance(item, str):
-        isstr = True
-        item = (item, )
+    # is the item a string or a tuple?
+    isstr = isinstance(item, str)
+    item = (item, ) if isstr else item
 
     if "c" in flags:
         # lower-case
