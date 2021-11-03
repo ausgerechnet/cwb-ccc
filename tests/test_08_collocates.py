@@ -27,7 +27,6 @@ def test_collo_single(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, 'lemma')
     c = collocates.show(order='log_likelihood')
-    print(c)
     assert(type(c) == pd.DataFrame)
     assert('Dr.' in c.index)
 
@@ -41,9 +40,7 @@ def test_collo_combo(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, ['lemma', 'pos'])
     c = collocates.show(order='log_likelihood')
-    # print(c)
     assert(type(c) == pd.DataFrame)
-    # assert('Dr.' in c.index)
 
 
 @pytest.mark.fallback
@@ -57,71 +54,6 @@ def test_query_logging(germaparl):
     c = collocates.show(order='log_likelihood', window=15)
     assert(type(c) == pd.DataFrame)
     assert('Dr.' in c.index)
-
-
-def compare_counts(lemma, window, min_freq=0):
-    # TODO: update to reproduceable example
-
-    # CCC
-    corpus = Corpus("GERMAPARL_1114")
-    query = '[lemma="' + lemma + '"]'
-    df_dump = corpus.query(query, context=window, context_break='s').df
-    collocates = Collocates(corpus, df_dump, p_query='lemma')
-    col = collocates.show(window=5, cut_off=None,
-                          min_freq=min_freq)
-
-    # UCS
-    ucs = pd.read_csv("tests/counts/ucs-germaparl1114-" + lemma +
-                      ".ds.gz", sep="\t", index_col=2, comment="#",
-                      quoting=3, na_filter=False)
-    ucs.index.name = 'item'
-    try:
-        O11_ucs_node = ucs.loc[lemma]['f']
-        ucs.drop(lemma, inplace=True)
-    except KeyError:
-        O11_ucs_node = 0
-
-    # identities that should hold between counting strategies
-    # (1) N_ccc + f1_ccc = N_ucs
-    # (2) f1_infl_ccc = f1_infl_ucs - O11_ucs_node
-    nr = {
-        'f1_ccc': int(corpus.marginals([lemma], "lemma")[['freq']].values[0]),
-        'N_ccc': int(col[['N']].values[0]),
-        'f1_infl_ccc': int(col[['f1']].values[0]),
-        'N_ucs': int(ucs[['N']].values[0]),
-        'f1_infl_ucs': int(ucs[['f1']].values[0]),
-        'O11_ucs_node': O11_ucs_node
-    }
-
-    # make dataframes comparable
-    ucs = ucs[['f', 'f2']]
-    ucs.columns = ['O11', 'f2']
-    ucs.sort_values(by=['O11', 'item'], ascending=False, inplace=True)
-
-    assert(nr['N_ccc'] + nr['f1_ccc'] == nr['N_ucs'])
-    assert(nr['f1_infl_ccc'] == nr['f1_infl_ucs'] - nr['O11_ucs_node'])
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.germaparl1114
-@pytest.mark.collocates_gold
-def test_compare_counts():
-    compare_counts('Atomkraft', 5)
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.germaparl1114
-@pytest.mark.collocates_gold
-def test_compare_counts_2():
-    compare_counts('Angela', 5)
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.germaparl1114
-@pytest.mark.collocates_speed
-@pytest.mark.skip(reason='takes too long')
-def test_compare_counts_3():
-    compare_counts('und', 2)
 
 
 @pytest.mark.skipif(not LOCAL, reason='works on my machine')
@@ -186,7 +118,7 @@ def test_collocates_mwu(germaparl):
     assert(type(c) == pd.DataFrame)
     assert(len(c) > 9)
     assert('CSU' in c.index)
-    assert(int(c.loc['CSU']['in_nodes']) > int(c.loc['CSU']['f']))
+    assert(int(c.loc['CSU']['in_nodes']) > int(c.loc['CSU']['O11']))
 
 
 @pytest.mark.fold_items
@@ -239,14 +171,61 @@ def test_collocates_no_mws(germaparl):
 def test_collocates_nodes(germaparl):
 
     corpus = get_corpus(germaparl)
-
     query = (
         '[lemma=","] | [lemma="\\."] | [lemma="\\)"] | [lemma="\\("]'
     )
     # three discoursemes
     dump = corpus.query(query)
-    print(dump.df)
     collocates = Collocates(corpus, dump.df)
     df = collocates.show(cut_off=None)
     assert("," not in df.index)
     assert("(" not in df.index)
+
+
+@pytest.mark.collocates_gold
+def test_compare_counts(germaparl, ucs_counts):
+    # identities that should hold between counting strategies:
+    # O11 = f_ucs
+    # O11 + O21 = f2_ucs
+    # O11 + O12 + O21 + O22 + freq[node] = N_ucs
+    # O11 + O12 = f1_ucs - O11_ucs[node]
+
+    corpus = get_corpus(germaparl)
+
+    # [lemma="Land"]
+    lemma = "Land"
+    context = 10
+    min_freq = 0
+
+    df_dump = corpus.query('[lemma="%s"]' % lemma, context=context, context_break='s').df
+    collocates = Collocates(corpus, df_dump, p_query='lemma')
+    counts = collocates.show(window=context, cut_off=None, min_freq=min_freq)[[
+        'O11', 'O12', 'O21', 'O22', 'in_nodes'
+    ]]
+    counts = counts.join(ucs_counts[lemma])
+    ucs_node_cooc = ucs_counts[lemma].loc[lemma]
+    ccc_node_freq = corpus.marginals([lemma], "lemma")['freq'].values[0]
+
+    assert(counts['O11'].equals(counts['f_ucs']))
+    assert((counts['O11'] + counts['O21']).equals(counts['f2_ucs']))
+    assert((counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs']))
+    assert((counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs']))
+
+    # [lemma="und"]
+    lemma = "und"
+    context = 5
+    min_freq = 2
+
+    df_dump = corpus.query('[lemma="%s"]' % lemma, context=context, context_break='s').df
+    collocates = Collocates(corpus, df_dump, p_query='lemma')
+    counts = collocates.show(window=context, cut_off=None, min_freq=min_freq)[[
+        'O11', 'O12', 'O21', 'O22', 'in_nodes'
+    ]]
+    counts = counts.join(ucs_counts['und'])
+    ucs_node_cooc = ucs_counts['und'].loc['und']
+    ccc_node_freq = corpus.marginals(['und'], "lemma")['freq'].values[0]
+
+    assert(counts['O11'].equals(counts['f_ucs']))
+    assert((counts['O11'] + counts['O21']).equals(counts['f2_ucs']))
+    assert((counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs']))
+    assert((counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs']))

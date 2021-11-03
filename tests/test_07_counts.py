@@ -1,5 +1,5 @@
 from ccc.cwb import Corpus
-from ccc.counts import cwb_scan_corpus
+from ccc.counts import cwb_scan_corpus, read_freq_list, cwb_lexdecode
 from ccc.utils import format_cqp_query
 import pandas as pd
 import pytest
@@ -502,3 +502,15 @@ def test_cwb_counts(germaparl):
                             queries)
     assert(df['freq'][queries[1]] == 55)
     cqp.__kill__()
+
+
+@pytest.mark.cwb_counts
+def test_read_and_lexdecode(germaparl):
+
+    df1, R1 = read_freq_list(germaparl['freq_list'])
+    df2, R2 = cwb_lexdecode(germaparl['corpus_name'],
+                            germaparl['registry_path'],
+                            'lemma')
+
+    assert(R1 == R2)
+    assert(df1.equals(df2))

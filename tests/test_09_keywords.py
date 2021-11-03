@@ -1,5 +1,6 @@
 from ccc import Corpus
 from ccc.keywords import Keywords
+from ccc.counts import read_freq_list, score_counts
 from pandas import read_csv
 import pytest
 
@@ -93,3 +94,12 @@ def test_keywords_combo(germaparl):
     # keywords
     lines = dump.keywords(["lemma", "pos"], order='log_likelihood', min_freq=10)
     assert(lines.index[1] == ("Dame", "NN"))
+
+
+def test_calculate_keywords(germaparl, empirist):
+
+    df1, R1 = read_freq_list(germaparl['freq_list'])
+    df2, R2 = read_freq_list(empirist['freq_list'])
+
+    kw = score_counts(df1, df2, R1, R2, cut_off=None)
+    print(kw[['ipm', 'ipm_reference', 'log_likelihood']])

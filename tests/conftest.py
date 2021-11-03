@@ -4,12 +4,30 @@ from pandas import read_csv
 from pathlib import Path
 
 
-print(str(Path.home()))
 LOCAL = str(Path.home()) == "/home/ausgerechnet"
-print(LOCAL)
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(DIR_PATH, 'data-dir')
-# DATA_PATH = "/tmp/ccc-data"
+
+
+@pytest.fixture
+def ucs_counts():
+    """ UCS counts """
+    land = read_csv("tests/counts/ucs-germaparl1386-Land.ds.gz",
+                    sep="\t", index_col=2, comment="#", quoting=3, na_filter=False)
+    land.index.name = 'lemma'
+    land = land.drop(['id', 'l1'], axis=1).sort_values(by='f', ascending=False)
+    land.columns = [c + "_ucs" for c in land.columns]
+
+    und = read_csv("tests/counts/ucs-germaparl1386-und.ds.gz",
+                   sep="\t", index_col=2, comment="#", quoting=3, na_filter=False)
+    und.index.name = 'lemma'
+    und = und.drop(['id', 'l1'], axis=1).sort_values(by='f', ascending=False)
+    und.columns = [c + "_ucs" for c in und.columns]
+
+    return {
+        'Land': land,
+        'und': und
+    }
 
 
 @pytest.fixture
@@ -19,6 +37,7 @@ def germaparl():
     registry_path = os.path.join(DIR_PATH, "corpora/registry/")
     dump_path = os.path.join(DIR_PATH, "counts", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
+    freq_list = os.path.join(DIR_PATH, "corpora", "germaparl1386-lemma-freq.tsv")
 
     context = 50
     s_context = 'text'
@@ -45,7 +64,8 @@ def germaparl():
         'query_anchor': query_anchor,
         'anchors': anchors,
         'query_full': query_within,
-        'dump': seehofer_dump
+        'dump': seehofer_dump,
+        'freq_list': freq_list
     }
 
 
@@ -119,4 +139,15 @@ def brexit():
         'query_lib': query_wordlist,
         'query_argmin': query_argmin,
         'query_path': query_path
+    }
+
+
+@pytest.fixture
+def empirist():
+    """ settings for empirist corpus """
+
+    freq_list = os.path.join(DIR_PATH, "corpora", "empirist-lemma-freq.tsv")
+
+    return {
+        'freq_list': freq_list
     }

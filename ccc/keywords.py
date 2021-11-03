@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # part of module
-from .collocates import add_ams
+from .counts import score_counts_signature
 # requirements
 from pandas import DataFrame, MultiIndex
 # logging
@@ -88,7 +88,7 @@ class Keywords:
         # get sub-corpus size
         f1 = self.counts['f'].sum()
 
-        keywords = add_ams(
+        keywords = score_counts_signature(
             f, f1, f2, N,
             min_freq, order, cut_off, flags, ams, frequencies
         )

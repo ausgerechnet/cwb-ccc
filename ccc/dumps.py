@@ -132,7 +132,7 @@ class Dump:
             slots=slots
         )
 
-    def collocates(self, p_query='lemma', mws=20, window=5, order='f',
+    def collocates(self, p_query='lemma', mws=20, window=5, order='O11',
                    cut_off=100, ams=None, min_freq=2,
                    frequencies=True, flags=None, marginals='corpus'):
 
@@ -156,7 +156,7 @@ class Dump:
             marginals=marginals
         )
 
-    def keywords(self, p_query='lemma', order='f', cut_off=100,
+    def keywords(self, p_query='lemma', order='O11', cut_off=100,
                  ams=None, min_freq=2, frequencies=True, flags=None):
 
         kw = Keywords(

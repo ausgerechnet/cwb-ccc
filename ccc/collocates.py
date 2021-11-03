@@ -3,11 +3,10 @@
 
 from itertools import chain
 # part of module
-from .utils import node2cooc, fold_df
+from .utils import node2cotext
+from .counts import score_counts_signature
 # requirements
 from pandas import DataFrame, MultiIndex
-from association_measures.measures import calculate_measures
-import association_measures.frequencies as fq
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -72,11 +71,11 @@ class Collocates:
         counts = self.corpus.counts.cpos(
             relevant['cpos'], self.p_query
         )
-        counts.columns = ['f']
+        counts.columns = ['O11']
 
         return counts, f1_inflated
 
-    def show(self, window=5, order='f', cut_off=100, ams=None,
+    def show(self, window=5, order='O11', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
              marginals='corpus'):
 
@@ -126,8 +125,8 @@ class Collocates:
         # get sub-corpus size
         f1 = f1_inflated
 
-        collocates = add_ams(
-            f, f1, f2, N,
+        collocates = score_counts_signature(
+            f, f1, f2[['f2']], N,
             min_freq, order, cut_off, flags, ams, frequencies
         )
 
@@ -136,10 +135,16 @@ class Collocates:
             collocates.index = collocates.index.map(lambda x: x[0])
             collocates.index.name = self.p_query[0]
 
+        # for backwards compatiblity
+        if frequencies:
+            if len(self.p_query) == 1:
+                f2.index = f2.index.map(lambda x: x[0])
+                f2.index.name = self.p_query[0]
+            collocates = collocates.join(f2['in_nodes'], how='left')
+
         return collocates
 
 
-# utilities ####################################################################
 def df_node_to_cooc(df_dump, context=None):
     """ converts df_dump to df_cooc + f1_set
 
@@ -186,7 +191,7 @@ def df_node_to_cooc(df_dump, context=None):
         df['end'] = df[['end', 'contextend']].min(axis=1)
 
     logger.info("(1a) create local contexts")
-    df = DataFrame.from_records(df.apply(node2cooc, axis=1).values)
+    df = DataFrame.from_records(df.apply(node2cotext, axis=1).values)
 
     logger.info("(1b) concatenate local contexts")
     df_infl = DataFrame({
@@ -210,68 +215,3 @@ def df_node_to_cooc(df_dump, context=None):
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
-
-
-def add_ams(f, f1, f2, N,
-            min_freq=2,
-            order='f',
-            cut_off=100,
-            flags=None,
-            ams=None,
-            frequencies=True):
-    """ create a table of co-occurrence counts and association measures.
-    for frequency signature notation see Evert (2004: 36)
-
-    :param DataFrame f: co-occurrence freq. of token and node
-    :param int f1: number of tokens in W(node)
-    :param DataFrame f2: marginal freq. of tokens
-    :param int N: size of corpus
-
-    :param int min_freq: minimum number of co-occurrences for item to be included
-    :param str order: 'f' / 'f2' / assoc-measure
-    :param int cut_off: number of collocates to retrieve
-    :param str flags: '%c' / '%d' / '%cd'
-    :param list ams: assoc-measures to calculate (None=all)
-    :param bool frequencies: add raw frequencies to result?
-
-    :return: table of counts and measures, indexed by item
-    :rtype: DataFrame
-
-    """
-
-    logger.info('creating table of association measures')
-
-    # drop items that occur less than min-freq
-    f = f.loc[~(f['f'] < min_freq)]
-
-    # init contingency table with f and f2
-    contingencies = f.join(f2)
-    # post-processing: fold items
-    contingencies = fold_df(contingencies, flags)
-    # add constant columns
-    contingencies['N'] = N
-    contingencies['f1'] = f1
-
-    # add measures
-    measures = calculate_measures(contingencies, ams)
-    contingencies = contingencies.join(measures)
-
-    # create output
-    if frequencies:
-        contingencies = contingencies.join(
-            fq.observed_frequencies(contingencies)
-        )
-        contingencies = contingencies.join(
-            fq.expected_frequencies(contingencies)
-        )
-
-    # sort dataframe
-    contingencies = contingencies.sort_values(
-        by=[order, 'f'], ascending=False
-    )
-
-    # apply cut-off
-    if cut_off is not None:
-        contingencies = contingencies.head(cut_off)
-
-    return contingencies

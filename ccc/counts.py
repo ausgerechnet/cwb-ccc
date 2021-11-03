@@ -5,14 +5,65 @@ import subprocess
 from io import StringIO
 from collections import Counter
 from tempfile import NamedTemporaryFile
+from association_measures import measures
 # part of module
-from .utils import time_it
+from .utils import time_it, fold_df
 from .cl import Corpus as Crps
 # requirements
 from pandas import DataFrame, MultiIndex, read_csv
 # logging
 import logging
 logger = logging.getLogger(__name__)
+
+
+def read_freq_list(path, min_freq=2, columns=None):
+    """ read frequency list
+    cwb-lexdecode -f -s -P lemma CORPUS_NAME
+
+    """
+
+    # read data
+    logger.info('reading frequency list ...')
+    df = read_csv(path, sep="\t", header=None, quoting=3,
+                  keep_default_na=False)
+    logger.info('reading frequency list ... %d items' % df.shape[0])
+
+    # get corpus size
+    R = df[0].sum()
+
+    # drop hapax legomena
+    logger.info('applying frequency threshold ...')
+    df = df.loc[df[0] >= min_freq]
+    logger.info('applying frequency threshold ... %d items' % df.shape[0])
+
+    # combine relevant columns
+    logger.info('combining relevant columns ...')
+    col = list(df.columns[1:]) if columns is None else columns
+    if len(col) > 1:
+        df['item'] = df[col].agg(' '.join, axis=1)
+    else:
+        df['item'] = df[col]
+    df = df.drop(col, axis=1)
+    df.columns = ['freq', 'item']
+    df = df.sort_values(['freq', 'item'], ascending=False)
+    df = df.set_index('item')
+    logger.info('combining relevant columns ... done')
+
+    return df, R
+
+
+def cwb_lexdecode(corpus_name, registry_path,
+                  p_att='word', cmd='cwb-lexdecode'):
+
+    logger.info("running cwb-lexdecode ...")
+    command = [cmd, '-f', '-P', p_att, '-r', registry_path, corpus_name]
+    lexdecode = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    ret = lexdecode.communicate()[0].decode()
+    df_counts = read_freq_list(StringIO(ret))
+
+    return df_counts
 
 
 def cwb_scan_corpus(path, corpus_name, registry_path,
@@ -390,3 +441,104 @@ class Counts:
         # df = df.loc[df["freq"] != 0]
 
         return df
+
+
+def score_counts(df1, df2, R1=None, R2=None, reference='right',
+                 min_freq=2, order='log_likelihood', cut_off=1000,
+                 flags=None, ams=None, freq=True, digits=2):
+    """calculate association measures for two frequency lists df1, df2
+    with respective sizes R1, R2.
+
+    :param DataFrame df1: counts per item in corpus 1
+    :param DataFrame df2: counts per item in corpus 2
+    :param int R1: number of items in df1
+    :param int R2: number of items in df2
+
+    :param str reference: which dataframe is the reference?
+    :param int min_freq: minimum number of occurrences in df1
+    :param str order: association measure for sorting (in descending order)
+    :param int cut_off: number of items to retrieve
+    :param str flags: '%c' / '%d' / '%cd' (cwb-ccc algorithm)
+    :param list ams: association measures to calculate (None=all)
+    :param bool freq: include absolute and relative frequencies?
+    :param int digits: round dataframe
+
+    :return: table of counts and measures, indexed by item
+    :rtype: DataFrame
+
+    """
+
+    # which one should be treated as reference?
+    if reference == 'left':
+        return score_counts(df2, df1, R2, R1, reference='left',
+                            order=order, cut_off=cut_off,
+                            flags=flags, ams=ams, freq=freq,
+                            digits=digits)
+
+    logger.info('creating table of association measures')
+
+    # preprocess
+    df1.columns = ['O11']
+    df2.columns = ['O21']
+
+    # get corpus sizes if necessary
+    R1 = df1['O11'].sum() if R1 is None else R1
+    R2 = df1['O21'].sum() if R2 is None else R2
+
+    # join dataframes respecting min_freq
+    if min_freq == 0:
+        df = df1.join(df2, how='outer')
+    else:
+        df1 = df1.loc[df1['O11'] >= min_freq]
+        df = df1.join(df2, how='left')
+    df = df.fillna(0, downcast='infer')
+
+    # post-processing: fold items
+    df = fold_df(df, flags)
+
+    # calculate association
+    df["O12"] = R1 - df["O11"]
+    df["O22"] = R2 - df["O21"]
+    df = measures.calculate_measures(df, freq=freq)
+
+    if freq:
+        # add instances per million
+        df['ipm'] = df['O11'] / R1 * 1000000
+        df['ipm_expected'] = df['E11'] / R1 * 1000000
+        df['ipm_reference'] = df['O21'] / R2 * 1000000
+        df['ipm_reference_expected'] = df['E21'] / R2 * 1000000
+
+    # sort
+    df = df.sort_values(by=[order, 'O11', 'O12'], ascending=False)
+
+    # apply cut-off
+    df = df.head(cut_off) if cut_off is not None else df
+
+    # round
+    df = round(df, digits) if digits is not None else df
+
+    return df
+
+
+def score_counts_signature(f, f1, f2, N, min_freq=2,
+                           order='log_likelihood', cut_off=1000,
+                           flags=None, ams=None, freq=True, digits=2):
+    """wrapper of score_counts for input in frequency signature notation.
+
+    :param DataFrame f: co-occurrence freq. of token and node
+    :param int f1: number of tokens in W(node)
+    :param DataFrame f2: marginal freq. of tokens
+    :param int N: size of corpus
+
+    """
+
+    f.columns = ['O11']
+    f2.columns = ['C1']
+    df = f.join(f2, how='outer').fillna(0, downcast='infer')
+    df['O21'] = df['C1'] - df['O11']
+
+    return score_counts(
+        f, df[['O21']], f1, N-f1, reference='right', min_freq=min_freq,
+        order=order, cut_off=cut_off, flags=flags, ams=ams,
+        freq=freq, digits=digits
+    )

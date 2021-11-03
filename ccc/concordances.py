@@ -4,7 +4,7 @@
 from random import sample
 import itertools
 # part of module
-from .utils import node2cooc
+from .utils import node2cotext
 # requirements
 from pandas import DataFrame
 # logging
@@ -149,7 +149,7 @@ class Concordance:
         row['matchend'] = matchend
 
         # create cotext
-        cotext = node2cooc(row)
+        cotext = node2cotext(row)
 
         # lexicalize positions
         attribute_lists = zip(
