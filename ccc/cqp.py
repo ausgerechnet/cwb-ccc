@@ -1,8 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Original Version by Joerg Asmussen (2008)
-# Current version by Philipp Heinrich (2020)
+"""
+cqp.py: access to CQP
+
+Original Version by Joerg Asmussen (2008)
+Current version by Philipp Heinrich (2020)
+"""
 
 import sys
 import os

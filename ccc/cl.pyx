@@ -1,9 +1,12 @@
 # cython: language_level=2
 # -*- coding: utf-8 -*-
 
-# Original version by Yannick Versley (2013)
-# This version by Philipp Heinrich (2021)
+"""
+cl.pyx: low-level access to cwb.cl
 
+Original version by Yannick Versley (2013)
+Current version by Philipp Heinrich (2021)
+"""
 
 import codecs
 from cpython.version cimport PY_MAJOR_VERSION
@@ -17,7 +20,8 @@ encoding_names = {
 
 cdef class Corpus:
 
-    def __cinit__(self, cname, encoding=None, registry_dir="/usr/local/share/cwb/registry/"):
+    def __cinit__(self, cname, encoding=None,
+                  registry_dir="/usr/local/share/cwb/registry/"):
 
         # registry
         if isinstance(registry_dir, unicode):
