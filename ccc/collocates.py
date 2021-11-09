@@ -6,7 +6,7 @@ from itertools import chain
 from .utils import node2cotext
 from .counts import score_counts_signature
 # requirements
-from pandas import DataFrame, MultiIndex
+from pandas import DataFrame
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Collocates:
         self.df_dump = df_dump
         self.size = len(df_dump)
 
-        # maximum window size (=context)
+        # maximum window size (= context)
         self.mws = mws
 
         # determine layer to work on
@@ -47,10 +47,8 @@ class Collocates:
 
         # collect cpos of matches and context
         logger.info('collecting cpos of matches and context')
-        deflated, f1_set = df_node_to_cooc(self.df_dump, self.mws)
-        logger.info('collected %d corpus positions' % len(deflated))
-        self.deflated = deflated
-        self.f1_set = f1_set
+        self.deflated, self.f1_set = df_node_to_cooc(self.df_dump, self.mws)
+        logger.info('collected %d corpus positions' % len(self.deflated))
 
     def count(self, window):
 
@@ -58,22 +56,19 @@ class Collocates:
         mws = window if self.mws is None else self.mws
         if window > mws:
             logger.warning('requested window outside maximum window size')
-            logger.info('using window %d' % mws)
             window = mws
 
-        # slice relevant window
+        # slice window
+        logger.info('slicing window %d' % mws)
         relevant = self.deflated.loc[abs(self.deflated['offset']) <= window]
 
         # number of possible occurrence positions within window
-        f1_inflated = len(relevant)
+        f1 = len(relevant)
 
-        # get frequency counts
-        counts = self.corpus.counts.cpos(
-            relevant['cpos'], self.p_query
-        )
-        counts.columns = ['O11']
+        # frequency counts
+        f = self.corpus.counts.cpos(relevant['cpos'], self.p_query)
 
-        return counts, f1_inflated
+        return f, f1
 
     def show(self, window=5, order='O11', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
@@ -84,63 +79,48 @@ class Collocates:
             logger.error("nothing to show")
             return DataFrame()
 
-        # get frequencies
-        f, f1_inflated = self.count(window)
+        # get context frequencies
+        f, f1 = self.count(window)
+
+        # get node frequencies
+        node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
 
         # determine reference frequency
         if isinstance(marginals, str):
             if marginals == 'corpus':
                 N = self.corpus.corpus_size - len(self.f1_set)
-                # get marginals
                 if len(self.p_query) == 1:
-                    # coerce to multiindex (what was I thinking?)
-                    f2 = self.corpus.marginals(
-                        f.index.get_level_values(self.p_query[0]), self.p_query[0]
-                    )
-                    f2.index = MultiIndex.from_tuples(
-                        f2.index.map(lambda x: (x, )), names=self.p_query
+                    marginals = self.corpus.marginals(
+                        f[self.p_query[0]], self.p_query[0]
                     )
                 else:
-                    f2 = self.corpus.marginals_complex(f.index, self.p_query)
-                f2.columns = ['marginal']
+                    marginals = self.corpus.marginals_complex(
+                        f[self.p_query], self.p_query
+                    )
             else:
                 raise NotImplementedError
-
         elif isinstance(marginals, DataFrame):
-            f2 = marginals
-            f2.columns = ['marginal']
-            N = f2['marginal'].sum()  # - len(self.f1_set)
-
+            # DataFrame must contain a column 'freq'
+            N = marginals['freq'].sum()
         else:
             raise NotImplementedError
 
-        # deduct node frequencies from marginals
-        node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
-        node_freq.columns = ['in_nodes']
-        f2 = f2.join(node_freq)
-        f2 = f2.fillna(0)
-        f2['in_nodes'] = f2['in_nodes'].astype(int)
+        # f2 = marginals - node frequencies
+        f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
+            node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
+        )
+        f2 = f2.fillna(0, downcast='infer')
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
-        # get sub-corpus size
-        f1 = f1_inflated
-
+        # score
         collocates = score_counts_signature(
-            f, f1, f2[['f2']], N,
+            f[['freq']], f1, f2[['f2']], N,
             min_freq, order, cut_off, flags, ams, frequencies
         )
 
-        # deal with index
-        if len(self.p_query) == 1:
-            collocates.index = collocates.index.map(lambda x: x[0])
-            collocates.index.name = self.p_query[0]
-
         # for backwards compatiblity
         if frequencies:
-            if len(self.p_query) == 1:
-                f2.index = f2.index.map(lambda x: x[0])
-                f2.index.name = self.p_query[0]
-            collocates = collocates.join(f2['in_nodes'], how='left')
+            collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
         return collocates
 

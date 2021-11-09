@@ -10,15 +10,52 @@ from association_measures import measures
 from .utils import time_it, fold_df
 from .cl import Corpus as Crps
 # requirements
-from pandas import DataFrame, MultiIndex, read_csv
+from pandas import DataFrame, read_csv, MultiIndex
 # logging
 import logging
 logger = logging.getLogger(__name__)
 
 
+def count_items(items, names, tuples=True):
+    """Get type frequency table of items.
+
+    :param list items: list of values or tuples
+    :param list names: name(s) for the attributes to count
+    :param bool tuples: treat each item as tuples?
+
+    :return: frequency table
+    :rtype: DataFrame
+    """
+
+    logger.info("... counting %d items" % len(items))
+    counts = Counter(items)
+    df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
+
+    # transform index
+    if tuples:
+        df_counts.index = MultiIndex.from_tuples(df_counts.index, names=names)
+        df_counts = df_counts.reset_index()
+        df_counts['item'] = df_counts[names].agg(' '.join, axis=1)
+        df_counts = df_counts.set_index('item')
+        df_counts = df_counts[['freq'] + names]
+    else:
+        df_counts = df_counts.reset_index()
+        df_counts.columns = names + ['freq']
+        df_counts = df_counts.set_index(names[0], drop=False)
+        df_counts.index.name = 'item'
+        df_counts = df_counts[['freq'] + names]
+
+    return df_counts
+
+
 def read_freq_list(path, min_freq=2, columns=None):
-    """ read frequency list
-    cwb-lexdecode -f -s -P lemma CORPUS_NAME
+    """Read frequency list, e.g. output of lexdecode (see below)
+
+    :param str path: path to read from
+    :param int min_freq: drop everything that doesn't appear at least this often
+
+    :return: frequency list (index: item, columns: freq) and original size
+    :rtype: tuple(DataFrame, int)
 
     """
 
@@ -31,29 +68,41 @@ def read_freq_list(path, min_freq=2, columns=None):
     # get corpus size
     R = df[0].sum()
 
-    # drop hapax legomena
+    # apply frequency threshold
     logger.info('applying frequency threshold ...')
     df = df.loc[df[0] >= min_freq]
     logger.info('applying frequency threshold ... %d items' % df.shape[0])
 
-    # combine relevant columns
+    # indexing
     logger.info('combining relevant columns ...')
     col = list(df.columns[1:]) if columns is None else columns
+    df.columns = ['freq'] + col
     if len(col) > 1:
         df['item'] = df[col].agg(' '.join, axis=1)
     else:
         df['item'] = df[col]
-    df = df.drop(col, axis=1)
-    df.columns = ['freq', 'item']
     df = df.sort_values(['freq', 'item'], ascending=False)
     df = df.set_index('item')
-    logger.info('combining relevant columns ... done')
+    logger.info('combining relevant columns ... item="%s"' % " ".join([str(c) for c in col]))
 
     return df, R
 
 
 def cwb_lexdecode(corpus_name, registry_path,
-                  p_att='word', cmd='cwb-lexdecode'):
+                  p_att='word', cmd='cwb-lexdecode', min_freq=2):
+    """Run cwb-lexdecode: create frequency list of p-attribute
+    CLI: cwb-lexdecode -f -s -P lemma CORPUS_NAME
+
+    :param str corpus_name:
+    :param str registry_path:
+    :param str p_att:
+    :param str cmd: path to binary
+    :param int min_freq:
+
+    :return: frequency list of p-attribute values and corpus size
+    :rtype: tuple(DataFrame, int)
+
+    """
 
     logger.info("running cwb-lexdecode ...")
     command = [cmd, '-f', '-P', p_att, '-r', registry_path, corpus_name]
@@ -61,17 +110,27 @@ def cwb_lexdecode(corpus_name, registry_path,
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     ret = lexdecode.communicate()[0].decode()
-    df_counts = read_freq_list(StringIO(ret))
+    df_counts, R = read_freq_list(StringIO(ret), min_freq=min_freq, columns=[p_att])
 
-    return df_counts
+    return df_counts, R
 
 
-def cwb_scan_corpus(path, corpus_name, registry_path,
-                    p_atts=['word'], cmd='cwb-scan-corpus'):
-    """
+def cwb_scan_corpus(corpus_name, registry_path, path=None,
+                    p_atts=['word'], cmd='cwb-scan-corpus', min_freq=2):
+    """Run cwb-lexdecode: create frequency list of p-attribute(s) at corpus positions.
+    CLI: cwb-scan-corpus [-R path] CORPUS_NAME p_atts
 
-    :return: counts of the p_attribute (combinations) of the positions
-    :rtype: FreqFrame
+    :return: counts of the p-attribute values (or their combinations)
+             at the given positions (if any)
+    :param str corpus_name:
+    :param str registry_path:
+    :param str p_att:
+    :param str cmd: path to binary
+    :param int min_freq:
+
+    :return: frequency list of p-attribute values and corpus size
+    :rtype: tuple(DataFrame, int)
+
     """
 
     logger.info("running cwb-scan-corpus ...")
@@ -83,29 +142,17 @@ def cwb_scan_corpus(path, corpus_name, registry_path,
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     ret = scan.communicate()[0].decode()
+    df_counts, R = read_freq_list(StringIO(ret), min_freq=min_freq, columns=p_atts)
 
-    logger.info("... collecting results")
-    df_counts = read_csv(StringIO(ret), sep="\t", header=None,
-                         quoting=3, keep_default_na=False)
-    df_counts.columns = ['freq'] + p_atts
-
-    # indexing
-    if len(p_atts) == 1:
-        # coerce to tuple for MultiIndex
-        df_counts[p_atts] = df_counts[p_atts].apply(lambda x: tuple(x), axis=1)
-    df_counts = df_counts.set_index(p_atts)
-    df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
-
-    return df_counts
+    return df_counts, R
 
 
 class Counts:
     """All methods return a FreqFrame
 
-    == (p_atts) freq ==
+    == (item)* freq, p_atts[0], ...  ==
 
-    where the index is either a BaseIndex or a MultiIndex,
-    depending on the number of p-attributes.
+    where item = " ".join(p_atts)
 
     If index is not split, MWUs are " "-joined.
 
@@ -157,9 +204,7 @@ class Counts:
 
         """
         items = [self._cpos2patts(p, p_atts=p_atts) for p in cpos_list]
-        counts = Counter(items)
-        df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
-        df_counts.index = MultiIndex.from_tuples(df_counts.index, names=p_atts)
+        df_counts = count_items(items, p_atts)
         return df_counts
 
     @time_it
@@ -208,22 +253,14 @@ class Counts:
                     tuple([" ".join(m) for m in zip(*mwu_list)]) for mwu_list in ls
                 ]
 
-            logger.info("... counting")
-            counts = Counter(tokens)
-            df_counts = DataFrame.from_dict(
-                counts, orient='index', columns=['freq']
-            )
-            df_counts.index = MultiIndex.from_tuples(
-                df_counts.index, names=p_atts
-            )
+            df_counts = count_items(tokens, p_atts)
 
         elif strategy == 2:
             df_dump = df_dump.reset_index()
             with NamedTemporaryFile(mode="wt") as f:
                 logger.info("... writing dump temporarily to disk")
                 df_dump[[start, end]].to_csv(f.name, sep="\t", header=None, index=False)
-                df_counts = cwb_scan_corpus(f.name, self.corpus_name,
-                                            self.registry_path, p_atts)
+                df_counts, R = cwb_scan_corpus(self.corpus_name, self.registry_path, f.name, p_atts)
 
         df_counts = df_counts.sort_values(by='freq', ascending=False)
 
@@ -329,12 +366,8 @@ class Counts:
             if split:           # split strings into tokens
                 cqp_return = cqp_return.replace(" ", "\n")
             tokens = cqp_return.split("\n")
-            logger.info("... counting %d tokens" % len(tokens))
-            df_counts = DataFrame.from_dict(
-                Counter(tokens), orient='index', columns=['freq']
-            )
-            df_counts = df_counts[['freq']]
-            df_counts.index.name = p_atts[0]
+
+            df_counts = count_items(tokens, names=[p_atts[0]], tuples=False)
 
         elif strategy == 3:
             # split YES; flags NO; combo YES
@@ -342,8 +375,7 @@ class Counts:
             with NamedTemporaryFile(mode="wt") as f:
                 logger.info("... writing dump temporarily to disk")
                 cqp.Exec('dump %s > "%s";' % (name, f.name))
-                df_counts = cwb_scan_corpus(f.name, self.corpus_name,
-                                            self.registry_path, p_atts)
+                df_counts, R = cwb_scan_corpus(self.corpus_name, self.registry_path, f.name, p_atts)
 
         df_counts = df_counts.sort_values(by='freq', ascending=False)
 
@@ -418,7 +450,7 @@ class Counts:
                 freq = cqp.Exec('size %s;' % name)
                 freqs.append(freq)
             df = DataFrame(data=freqs, index=queries, columns=['freq'])
-            df.index.name = 'query'
+            df.index.name = 'item'
 
         elif strategy == 2:
             query = "|".join(queries)
@@ -426,9 +458,6 @@ class Counts:
             df_dump = cqp.Dump(name)
             df = self.dump(df_dump, start='match', end='matchend',
                            p_atts=p_atts, split=False, strategy=1)
-            if len(p_atts) == 1:
-                df.index = [item[0] for item in df.index]
-                df.index.name = p_atts[0]
 
         elif strategy == 3:
             query = "|".join(queries)

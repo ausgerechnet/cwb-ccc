@@ -39,12 +39,9 @@ class Keywords:
 
         # collect context and save result
         logger.info('collecting token counts of subcorpus')
-        counts = corpus.counts.dump(
+        self.counts = corpus.counts.dump(
             df_dump, start='match', end='matchend', p_atts=self.p_query, split=True
         )
-        counts.columns = ['f']
-
-        self.counts = counts
 
     def show(self, order='f', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
@@ -56,46 +53,35 @@ class Keywords:
             return DataFrame()
 
         # get frequencies
-        f = self.counts.loc[self.counts['f'] >= min_freq]
+        f = self.counts.loc[self.counts['freq'] >= min_freq]
 
         # determine reference frequency
         if isinstance(marginals, str):
-            N = self.corpus.corpus_size
-            # get marginals
             if marginals == 'corpus':
+                N = self.corpus.corpus_size
                 if len(self.p_query) == 1:
-                    # coerce to multiindex (what was I thinking?)
-                    f2 = self.corpus.marginals(
-                        f.index.get_level_values(self.p_query[0]), self.p_query[0]
-                    )
-                    f2.index = MultiIndex.from_tuples(
-                        f2.index.map(lambda x: (x, )), names=self.p_query
+                    marginals = self.corpus.marginals(
+                        f[self.p_query[0]], self.p_query[0]
                     )
                 else:
-                    f2 = self.corpus.marginals_complex(f.index, self.p_query)
-                f2.columns = ['f2']
+                    marginals = self.corpus.marginals_complex(
+                        f[self.p_query], self.p_query
+                    )
             else:
                 raise NotImplementedError
-
         elif isinstance(marginals, DataFrame):
-            f2 = marginals
-            f2.columns = ['f2']
-            N = f2['f2'].sum()
-
+            # DataFrame must contain a column 'freq'
+            N = marginals['freq'].sum()
         else:
             raise NotImplementedError
 
         # get sub-corpus size
-        f1 = self.counts['f'].sum()
+        f1 = self.counts['freq'].sum()
 
+        # score
         keywords = score_counts_signature(
-            f, f1, f2, N,
+            f[['freq']], f1, marginals[['freq']], N,
             min_freq, order, cut_off, flags, ams, frequencies
         )
-
-        # deal with index
-        if len(self.p_query) == 1:
-            keywords.index = keywords.index.map(lambda x: x[0])
-            keywords.index.name = self.p_query[0]
 
         return keywords

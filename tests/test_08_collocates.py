@@ -21,9 +21,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 @pytest.mark.default
 def test_collo_single(germaparl):
     corpus = get_corpus(germaparl)
-    query = (
-        '[word="\\("] [lemma=".*"]+ [word="\\)"]'
-    )
+    query = ('[word="\\("] [lemma=".*"]+ [word="\\)"]')
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, 'lemma')
     c = collocates.show(order='log_likelihood')

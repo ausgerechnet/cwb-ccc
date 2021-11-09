@@ -359,13 +359,14 @@ class Corpus:
 
         # create dataframe
         df = DataFrame({'freq': counts, p_att: items})
-        df = df.set_index(p_att)
+        df = df.set_index(p_att, drop=False)
+        df.index.name = 'item'
 
         return df
 
     def marginals_complex(self, items, p_atts=['word']):
         """Extract marginal frequencies for p-attribute combinations,
-        e.g. ["word", "lemma"].  0 if not in corpus.  Marginals are
+        e.g. ["lemma", "pos"].  0 if not in corpus.  Marginals are
         retrieved using cwb-scan-corpus, result is cached.
 
         :param list items: list of tuples
@@ -383,12 +384,12 @@ class Corpus:
             logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
         else:
             # calculate all marginals for p-att combination
-            df = cwb_scan_corpus(None, self.corpus_name, self.registry_path, p_atts)
+            df, R = cwb_scan_corpus(self.corpus_name, self.registry_path, p_atts=p_atts)
             self.cache.set(identifier, df)
 
         # select relevant rows
-        df = df.reindex(items)
-        df = df.fillna(0, downcast='infer')
+        # df = df.reindex(items)
+        # df = df.fillna(0, downcast='infer')
         return df
 
     ################
