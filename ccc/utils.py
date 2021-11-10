@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import pkgutil
 from timeit import default_timer
 from functools import wraps
 # requirements
@@ -323,7 +324,6 @@ def fold_df(df, flags="%cd"):
 
 
 def filter_df(df, path):
-    import pkgutil
     data = pkgutil.get_data(__name__, path)
     items = set(data.decode().split("\n"))
     return df.loc[~df.index.isin(items)]

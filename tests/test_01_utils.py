@@ -3,7 +3,6 @@ from ccc.utils import fold_item
 from ccc.utils import merge_intervals
 from ccc.utils import filter_df
 from ccc import Corpus
-import pytest
 
 
 def test_preprocess_anchor_query():
