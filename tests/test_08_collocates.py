@@ -2,7 +2,7 @@ from ccc import Corpus
 from ccc.collocates import Collocates
 from ccc.keywords import Keywords
 
-from .conftest import LOCAL, DATA_PATH
+from .conftest import DATA_PATH
 
 import pandas as pd
 import pytest
@@ -54,15 +54,14 @@ def test_query_logging(germaparl):
     assert('Dr.' in c.index)
 
 
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.germaparl1114
 @pytest.mark.collocates_speed
-def test_collocates_speed_many():
-    corpus = Corpus("GERMAPARL_1114")
-    query = '[lemma="sagen"]'
-    df_dump = corpus.query(query, context=2, context_break='s').df
-    collocates = Collocates(corpus, df_dump, p_query='lemma')
-    c2 = collocates.show(window=2, cut_off=50)
+def test_collocates_speed_many(germaparl):
+    corpus = get_corpus(germaparl)
+    query = '[lemma="die"]'
+    df_dump = corpus.query(query, context_break='text').df
+    collocates = Collocates(corpus, df_dump, p_query='lemma', mws=100)
+    c2 = collocates.show(window=50, cut_off=50)
+    print(c2)
     assert(type(c2) == pd.DataFrame)
 
 
