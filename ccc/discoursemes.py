@@ -1,24 +1,18 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# from anycache import anycache
 # part of module
-from .collocates import df_node_to_cooc, add_ams
+from .collocates import df_node_to_cooc, score_counts_signature
 from .concordances import Concordance
 from .utils import format_cqp_query
 from . import Corpus
 # requirements
-from pandas import NA, MultiIndex
+from pandas import NA
 # logging
 import logging
 logger = logging.getLogger(__name__)
 
 
-# TODO how to make this path configurable?
-# ANYCACHE_PATH = '/tmp/ccc-anycache/'
-
-
-# @anycache(ANYCACHE_PATH)
 def constellation_merge(df1, df2, name, drop=True, how='left'):
 
     # merge dumps via contextid ###
@@ -209,7 +203,6 @@ class Constellation:
         # count once
         N = self.corpus.corpus_size - len(f1_set)
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
-        node_freq.columns = ['in_nodes']
 
         # count for each window
         output = dict()
@@ -222,7 +215,6 @@ class Constellation:
         return output
 
 
-# @anycache(ANYCACHE_PATH)
 def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
                          N, min_freq, order, cut_off, flags, ams, frequencies):
 
@@ -230,46 +222,36 @@ def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
     relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
 
     # number of possible occurrence positions within window
-    f1_inflated = len(relevant)
+    f1 = len(relevant)
 
     # get frequency counts
     f = corpus.counts.cpos(relevant['cpos'], p_show)
-    f.columns = ['f']
 
     # get marginals
     if len(p_show) == 1:
-        # coerce to multiindex (what was I thinking?)
-        f2 = corpus.marginals(
-            f.index.get_level_values(p_show[0]), p_show[0]
-        )
-        f2.index = MultiIndex.from_tuples(
-            f2.index.map(lambda x: (x, )), names=p_show
-        )
+        marginals = corpus.marginals(f[p_show[0]], p_show[0])
     else:
-        f2 = corpus.marginals_complex(f.index, p_show)
-    f2.columns = ['marginal']
+        marginals = corpus.marginals_complex(f.index, p_show)
 
-    # deduct node frequencies from marginals
-    f2 = f2.join(node_freq)
+    # f2 = marginals - node frequencies
+    f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
+        node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
+    )
     f2 = f2.fillna(0, downcast='infer')
     f2['f2'] = f2['marginal'] - f2['in_nodes']
 
-    # get sub-corpus size
-    f1 = f1_inflated
-
     # score
-    collocates = add_ams(
-        f, f1, f2, N,
+    collocates = score_counts_signature(
+        f[['freq']], f1, f2[['f2']], N,
         min_freq, order, cut_off, flags, ams, frequencies
     )
 
     # throw away anti-collocates by default
     collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
 
-    # deal with index
-    if len(p_show) == 1:
-        collocates.index = collocates.index.map(lambda x: x[0])
-        collocates.index.name = p_show[0]
+    # for backwards compatiblity
+    if frequencies:
+        collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
     return collocates
 
@@ -280,9 +262,10 @@ def create_constellation(corpus_name,
                          s_context, context,
                          additional_discoursemes,
                          lib_path, cqp_bin, registry_path, data_path,
-                         match_strategy='longest'):
+                         match_strategy='longest',
+                         dataframe=False):
     """
-    simple constellation creator, cached
+    simple constellation creator
     """
 
     # init corpus
@@ -306,7 +289,7 @@ def create_constellation(corpus_name,
                                  match_strategy=match_strategy)
         const.add_discourseme(disc_dump, disc_name)
 
-    # put into cache
-    # cache.set(identifier, const)
-
-    return const
+    if dataframe:
+        return const.df
+    else:
+        return const
