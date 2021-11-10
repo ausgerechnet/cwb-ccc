@@ -4,7 +4,7 @@
 # part of module
 from .counts import score_counts_signature
 # requirements
-from pandas import DataFrame, MultiIndex
+from pandas import DataFrame
 # logging
 import logging
 logger = logging.getLogger(__name__)
