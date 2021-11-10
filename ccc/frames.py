@@ -6,6 +6,7 @@
 ### DumpFrame ###
 
 === CREATION ===
+
     dump_from_query
     === (match, matchend), 0*, .., 9* ===
     index <int, int> match, matchend: cpos
@@ -45,11 +46,71 @@
     column <int> $s_spanend: cpos (missing = -1)
 
 === QUERY ===
+
     query
     === (match, matchend), 0*, ..., 9*, contextid*, context*, contextend* ===
+    index <int, int> match, matchend: cpos
+    columns <int> 0*, .., 9*: anchor points (optional; missing = -1)
+    column <int> contextid: of id (optional)
+    column <int> context: cpos (optional)
+    column <int> contextend: cpos (optional)
 
     query_s_att
     === (match, matchend), $s_cwbid, $s* ===
+    index <int, int> match, matchend: cpos
+    column <int> $s_cwbid: id
+    column <str> $s: annotation (optional)
+    no missing values
+
+
+### ConcFrame ###
+
+    __init__ enforces context, contextend columns (optional = match, matchend)
+
+    === (match, matchend) context contextend ===
+
+    simple
+    === (match, matchend) $p ===
+
+    kwic
+    === (match, matchend) $p_left, $p_node, $p_right ===
+
+    slots
+    === (match, matchend) $p_$slot[0]..$slot[1] ===
+
+    dict
+    === (match, matchend) dict ===
+
+    dataframe
+    === (match, matchend) dataframe ===
+
+### FreqFrame ###
+
+    returned by
+    - Counts.cpos()
+    - Counts.dump()
+      + 1 counts._cpos2patts + counts.count_items
+      + 2 write dump to tempfile + counts.cwb_scan_corpus
+    - Counts.matches()
+      + 1 cqp.count
+      + 2 cqp.tabulate + counts.count_items
+      + 3 cqp.dump + counts.cwb_scan_corpus
+    - Counts.mwus()
+      + 1 for each query: cqp.size
+      + 2 for "|".joined-query: counts.dump
+      + 3 for "|".joined-query: counts.matches
+    - Corpus.marginals()
+    - Corpus.marginals_complex()
+
+    == (item) freq, p_atts[0]*, p_atts[1]*, ... ==
+
+
+### ScoreFrame ###
+
+    returned by score_counts() and score_counts_signature()
+
+    == (item) freq, O11*..O22*, E11*..E22*, AM1, AM2, ... ==
+
 
 
 ### DumpsFrame ###
@@ -93,64 +154,11 @@
         (5,  6) 0 10  1  2   2 -3 7 7 +2 0 0 -5
         (5,  6) 0 10  1  8   8  +2 7 7 +2 0 0 -5
 
-### ConcFrame ###
-
-    __init__ enforces context, contextend columns (optional = match, matchend)
-
-    === (match, matchend) context contextend ===
-
-    simple
-    === (match, matchend) $p ===
-
-    kwic
-    === (match, matchend) $p_left, $p_node, $p_right ===
-
-    slots
-    === (match, matchend) $p_$slot[0]..$slot[1] ===
-
-    dict
-    === (match, matchend) dict ===
-
-    dataframe
-    === (match, matchend) dataframe ===
-
-
-
-
 
 ### CoocFrame ###
-### FreqFrame ###
-### CollFrame ###
+
+
+
 
 
 """
-
-import pandas as pd
-
-
-@pd.api.extensions.register_dataframe_accessor("freq")
-class FreqFrame:
-    """A DataFrame for Frequencies:
-    == (p_atts) freq ==
-    MultiIndex, even if single p-att
-
-    examples:
-    == (word, ) freq ==
-    == (lemma, pos) freq ==
-    == (query, ) freq ==
-
-    for MWUs, each p-att-layer is " ".joined
-    """
-
-    def __init__(self, pandas_obj):
-        self._validate(pandas_obj)
-        self._obj = pandas_obj
-
-    @staticmethod
-    def _validate(obj):
-        # verify there is a column "freq" and a named MultiIndex
-        if "freq" not in obj.columns or not isinstance(obj.index, pd.MultiIndex):
-            raise AttributeError("wrong format")
-
-    def test(self):
-        print(self)

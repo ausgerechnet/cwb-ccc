@@ -361,6 +361,7 @@ class Corpus:
         df = DataFrame({'freq': counts, p_att: items})
         df = df.set_index(p_att, drop=False)
         df.index.name = 'item'
+        df = df.sort_values(['freq', 'item'], ascending=False)
 
         return df
 

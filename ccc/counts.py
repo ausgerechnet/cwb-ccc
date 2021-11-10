@@ -21,10 +21,10 @@ def count_items(items, names, tuples=True):
 
     :param list items: list of values or tuples
     :param list names: name(s) for the attributes to count
-    :param bool tuples: treat each item as tuples?
+    :param bool tuples: treat each item as a tuple?
 
-    :return: frequency table
-    :rtype: DataFrame
+    :return: frequency counts of items
+    :rtype: FreqFrame
     """
 
     logger.info("... counting %d items" % len(items))
@@ -37,13 +37,15 @@ def count_items(items, names, tuples=True):
         df_counts = df_counts.reset_index()
         df_counts['item'] = df_counts[names].agg(' '.join, axis=1)
         df_counts = df_counts.set_index('item')
-        df_counts = df_counts[['freq'] + names]
     else:
         df_counts = df_counts.reset_index()
         df_counts.columns = names + ['freq']
         df_counts = df_counts.set_index(names[0], drop=False)
         df_counts.index.name = 'item'
-        df_counts = df_counts[['freq'] + names]
+
+    df_counts = df_counts[['freq'] + names]
+
+    df_counts = df_counts.sort_values(by=['freq', 'item'], ascending=False)
 
     return df_counts
 
@@ -81,9 +83,12 @@ def read_freq_list(path, min_freq=2, columns=None):
         df['item'] = df[col].agg(' '.join, axis=1)
     else:
         df['item'] = df[col]
-    df = df.sort_values(['freq', 'item'], ascending=False)
     df = df.set_index('item')
-    logger.info('combining relevant columns ... item="%s"' % " ".join([str(c) for c in col]))
+    logger.info(
+        'combining relevant columns ... item="%s"' % " ".join([str(c) for c in col])
+    )
+
+    df = df.sort_values(['freq', 'item'], ascending=False)
 
     return df, R
 
@@ -213,7 +218,7 @@ class Counts:
         """Count tokens in [start .. end] (columns or index columns in df_dump).
 
         - strategy 1: split NO/YES; flags  ; combo x
-        - strategy 2: split   /YES; flags  ; combo
+        - strategy 2: split   /YES; flags  ; combo x
 
         :param list df_dump: corpus positions to fill
         :param str start: column name where to start counting
@@ -223,7 +228,7 @@ class Counts:
         :param int strategy: strategy 2 (cwb-scan-corpus) is faster,
                              does not support MWU counts though
 
-        :return: counts of the p_attribute (combinations) of the positions
+        :return: counts of the p_att (combin.) in the spans of two columns of the dump
         :rtype: FreqFrame
 
         """
@@ -234,7 +239,8 @@ class Counts:
             strategy = 1
         logger.info("dump: strategy %d" % strategy)
 
-        df_dump = df_dump.reset_index()  # for working with match, matchend
+        # for working with match, matchend
+        df_dump = df_dump.reset_index()
 
         if strategy == 1:
 
@@ -260,9 +266,11 @@ class Counts:
             with NamedTemporaryFile(mode="wt") as f:
                 logger.info("... writing dump temporarily to disk")
                 df_dump[[start, end]].to_csv(f.name, sep="\t", header=None, index=False)
-                df_counts, R = cwb_scan_corpus(self.corpus_name, self.registry_path, f.name, p_atts)
+                df_counts, R = cwb_scan_corpus(
+                    self.corpus_name, self.registry_path, f.name, p_atts
+                )
 
-        df_counts = df_counts.sort_values(by='freq', ascending=False)
+        df_counts = df_counts.sort_values(by=['freq', 'item'], ascending=False)
 
         return df_counts
 
@@ -281,7 +289,7 @@ class Counts:
         :param bool split: token-based count? (default: MWU)
         :param str flags: %c, %d, %cd
 
-        :return: counts of the p_attribute (combinations) of the positions
+        :return: counts of the p_attribute (combinations) of the matches
         :rtype: FreqFrame
 
         """
@@ -349,11 +357,11 @@ class Counts:
             )
             df_counts = read_csv(
                 StringIO(cqp_return), sep="\t", header=None,
-                names=["freq", "unknown", "item"]
+                names=["freq", "unknown", p_atts[0]]
             )
-            df_counts = df_counts.set_index('item')
-            df_counts = df_counts[['freq']]
-            df_counts.index.name = p_atts[0]
+            df_counts = df_counts.set_index(p_atts[0], drop=False)
+            df_counts.index.name = 'item'
+            df_counts = df_counts.sort_values(['freq', 'item'], ascending=False)
 
         elif strategy == 2:
             # split NO/YES; flags NO/YES; combo NO
@@ -366,7 +374,6 @@ class Counts:
             if split:           # split strings into tokens
                 cqp_return = cqp_return.replace(" ", "\n")
             tokens = cqp_return.split("\n")
-
             df_counts = count_items(tokens, names=[p_atts[0]], tuples=False)
 
         elif strategy == 3:
@@ -375,9 +382,9 @@ class Counts:
             with NamedTemporaryFile(mode="wt") as f:
                 logger.info("... writing dump temporarily to disk")
                 cqp.Exec('dump %s > "%s";' % (name, f.name))
-                df_counts, R = cwb_scan_corpus(self.corpus_name, self.registry_path, f.name, p_atts)
-
-        df_counts = df_counts.sort_values(by='freq', ascending=False)
+                df_counts, R = cwb_scan_corpus(
+                    self.corpus_name, self.registry_path, f.name, p_atts
+                )
 
         return df_counts
 
@@ -392,38 +399,35 @@ class Counts:
         - strategy 2: split NO| - ; flags x; combo x; mwu YES
         - strategy 3: split NO| - ; flags x; combo  ; mwu YES
 
-        caveat: different indices for different strategies
+        caveat: strategy 1 does not yield breakdown in attributes
+        this implies also different indexing
+
+        Strategies:
+        - Strategy 1: for each item
+          1. run query
+          2. get size of NQR via CQP
+        - Strategy 2:
+          1. run query for all items at the same time
+          2. dump df
+          3. count_dump()
+        - Strategy 3:
+          1. run query for all items at the same time
+          2. count_matches()
 
         :param CQP cqp: running cqp process
         :param set queries: set of query strings to get frequency breakdown for
         :param bool fill_missing: count 0 for missing items?
         :param int strategy: strategy to use (see below)
 
-        :return: counts (index: queries(strategy 1) or tokens, column: freq)
-        :rtype: DataFrame
-
-        # TODO FreqFrame
-
-        Strategy 1: for each item
-
-        1. run query
-        2. get size of corpus via CQP
-
-        Strategy 2:
-
-        1. run query for all items at the same time
-        2. dump df
-        3. count_dump()
-
-        Strategy 3:
-
-        1. run query for all items at the same time
-        2. count_matches()
+        :return: counts of the queries (strategy 1) or the items in the queries
+        :rtype: FreqFrame
 
         """
 
-        name = 'Tmp'            # subcorpus name to use
+        # subcorpus name to use
+        name = 'Tmp'
 
+        # choose strategy
         if strategy == 1:
             if p_atts:
                 logger.warning(
@@ -431,17 +435,17 @@ class Counts:
                 )
                 strategy = 2
 
-        if not p_atts:
-            p_atts = ['word']   # necessary for strategies 2 & 3
+        # necessary for strategies 2 & 3:
+        p_atts = ['word'] if not p_atts else p_atts
 
         if strategy == 3 and len(p_atts) > 1:
             logger.warning(
                 "mwus: cannot combine query when looking at several p-attributes"
             )
             strategy = 2
-
         logger.info("mwus: strategy %s" % strategy)
 
+        # count
         if strategy == 1:
             logger.info("... running each query")
             freqs = list()
@@ -451,6 +455,8 @@ class Counts:
                 freqs.append(freq)
             df = DataFrame(data=freqs, index=queries, columns=['freq'])
             df.index.name = 'item'
+            df['freq'] = df['freq'].astype(int)
+            df = df.sort_values(by=['freq', 'item'], ascending=False)
 
         elif strategy == 2:
             query = "|".join(queries)
@@ -492,8 +498,8 @@ def score_counts(df1, df2, R1=None, R2=None, reference='right',
     :param bool freq: include absolute and relative frequencies?
     :param int digits: round dataframe
 
-    :return: table of counts and measures, indexed by item
-    :rtype: DataFrame
+    :return: scored counts
+    :rtype: ScoreFrame
 
     """
 
@@ -558,6 +564,9 @@ def score_counts_signature(f, f1, f2, N, min_freq=2,
     :param int f1: number of tokens in W(node)
     :param DataFrame f2: marginal freq. of tokens
     :param int N: size of corpus
+
+    :return: scored counts
+    :rtype: ScoreFrame
 
     """
 
