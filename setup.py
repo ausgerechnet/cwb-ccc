@@ -63,7 +63,7 @@ setup(
     url="https://github.com/ausgerechnet/cwb-ccc",
     ext_modules=extensions,
     install_requires=[
-        "association-measures>=0.1.5",
+        "association-measures>=0.1.7",
         "pandas>=1.2.0",
         "numexpr>=2.7.1",
         "Bottleneck>=1.3.2",
@@ -71,10 +71,15 @@ setup(
         "pyyaml>=5.4.1"
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "Development Status :: 3 - Alpha",
         "Operating System :: Unix",
+        "Programming Language :: Python :: 3",
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Cython',
     ],
-    python_requires='>=3.7.1',
+    python_requires='>=3.6.1',
 )
