@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from tempfile import NamedTemporaryFile
 
-from .conftest import LOCAL, DATA_PATH
+from .conftest import DATA_PATH
 
 
 def get_corpus(corpus_settings, data_path=DATA_PATH):
@@ -19,10 +19,13 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 @pytest.mark.cwb_counts
-def test_read_and_lexdecode(germaparl):
+def test_lexdecode_and_read(germaparl):
 
-    df1, R1 = read_freq_list(germaparl['freq_list'], columns=['lemma'])
-    df2, R2 = cwb_lexdecode(germaparl['corpus_name'], germaparl['registry_path'], 'lemma')
+    df1, R1 = read_freq_list(germaparl['freq_list'],
+                             columns=['lemma'])
+    df2, R2 = cwb_lexdecode(germaparl['corpus_name'],
+                            germaparl['registry_path'],
+                            'lemma')
 
     assert(R1 == R2)
     assert(df1.equals(df2))
@@ -110,7 +113,6 @@ def test_marginals_patterns(germaparl):
 def test_count_cpos(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
-    print(freqframe)
     assert(isinstance(freqframe, pd.DataFrame))
 
 
@@ -122,6 +124,8 @@ def test_count_cpos_combo(germaparl):
     assert(list(freqframe.columns) == ['freq'] + ['lemma', 'pos'])
 
 
+@pytest.mark.marginals
+@pytest.mark.mwus
 @pytest.mark.cwb_counts
 def test_count_items(germaparl):
 
@@ -136,7 +140,6 @@ def test_count_items(germaparl):
     # whole corpus
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
-    print(counts1, counts2)
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
     # subcorpus
@@ -195,7 +198,7 @@ def test_count_mwus_strategies(germaparl):
         strategy=1,
         fill_missing=False
     )
-    assert('([word="CSU"])' in counts1.index)
+    assert(queries[0] in counts1.index)
 
     counts2 = corpus.counts.mwus(
         cqp,
@@ -254,7 +257,7 @@ def test_count_items_subcorpora(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_dump_1_split(germaparl):
+def test_counts_dump_mwu_1_split(germaparl):
     strategy = 1
 
     corpus = get_corpus(germaparl)
@@ -268,7 +271,7 @@ def test_counts_dump_1_split(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_dump_1_no_split(germaparl):
+def test_counts_dump_mwu_1_no_split(germaparl):
     strategy = 1
 
     corpus = get_corpus(germaparl)
@@ -283,7 +286,7 @@ def test_counts_dump_1_no_split(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_dump_2(germaparl):
+def test_counts_dump_mwu_2(germaparl):
     strategy = 2
 
     corpus = get_corpus(germaparl)
@@ -305,7 +308,8 @@ def test_counts_dump_2(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_matches_1(germaparl):
+@pytest.mark.count_matches
+def test_counts_matches_mwu_1(germaparl):
     strategy = 1
 
     corpus = get_corpus(germaparl)
@@ -332,7 +336,8 @@ def test_counts_matches_1(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_matches_2(germaparl):
+@pytest.mark.count_matches
+def test_counts_matches_mwu_2(germaparl):
     strategy = 2
 
     corpus = get_corpus(germaparl)
@@ -359,7 +364,8 @@ def test_counts_matches_2(germaparl):
 
 
 @pytest.mark.cwb_counts
-def test_counts_matches_3(germaparl):
+@pytest.mark.count_matches
+def test_counts_matches_mwu_3(germaparl):
     strategy = 3
 
     corpus = get_corpus(germaparl)
@@ -384,10 +390,11 @@ def test_counts_mwus(germaparl):
     corpus = get_corpus(germaparl)
     cqp = corpus.start_cqp()
     queries = ['[lemma="Helmut"%cd & pos="NE"] [lemma="Kohl"]', '[lemma="Horst"]']
+
     df = corpus.counts.mwus(cqp,
                             queries,
                             strategy=1)
-    assert(df['freq'][queries[0]] == 6)
+    assert(df['freq'][queries[1]] == 55)
 
     df = corpus.counts.mwus(cqp,
                             queries,
@@ -401,6 +408,7 @@ def test_counts_mwus(germaparl):
                             p_atts=['lemma'])
 
     assert(df['freq']['Horst'] == 55)
+
     cqp.__kill__()
 
 
@@ -411,5 +419,6 @@ def test_cwb_counts(germaparl):
     queries = ['[lemma="Helmut"%cd & pos="NE"] [lemma="Kohl"]', '[lemma="Horst"]']
     df = corpus.counts.mwus(cqp,
                             queries)
+
     assert(df['freq'][queries[1]] == 55)
     cqp.__kill__()
