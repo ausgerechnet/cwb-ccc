@@ -72,16 +72,19 @@ def germaparl():
 @pytest.fixture
 def discoursemes():
     """ discourseme settings """
-    items_topic = ["CDU", "CSU"]
-    items_1 = ["und", "oder"]
-    items_2 = ["Bundesregierung"]
+
     return {
-        'items_topic': items_topic,
-        'items_1': items_1,
-        'items_2': items_2,
-        'p_query': 'lemma',
-        's_query': 's',
-        's_context': 'p'
+        'items_topic': ["CDU", "CSU"],
+        'items_1': ["und"],
+        'items_2': ["Bundesregierung"],
+        'parameters': {
+            'flags_query': '%cd',
+            'escape_query': False,
+            'p_query': 'lemma',
+            's_query': 's',
+            's_context': 'p',
+            'context': 20,
+        }
     }
 
 
