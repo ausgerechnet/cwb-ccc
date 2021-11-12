@@ -101,12 +101,20 @@ class Corpora:
 
         """
 
-        return "\n" + "\n".join([
-            'registry-path: "%s"' % self.registry_path,
-            'cqp-bin      : "%s"' % self.cqp_bin,
-            "corpora:",
-            self.show().to_string(),
+        corpora = self.show()
+
+        return '\n' + '\n'.join([
+            'registry path: "%s"' % self.registry_path,
+            'cqp binary   : "%s"' % self.cqp_bin,
+            'found %d corpora:' % len(corpora),
+            corpora.to_string(),
         ])
+
+    def __repr__(self):
+        """Info string
+
+        """
+        return self.__str__()
 
     def show(self):
         """Show all corpora defined in registry and available via CQP
@@ -234,14 +242,20 @@ class Corpus:
 
         """
 
-        return "\n".join([
-            'ccc.Corpus : "%s"' % self.corpus_name,
-            "size       : %s" % str(self.corpus_size),
-            "data       : %s" % str(self.data_path),
-            "subcorpus  : %s" % str(self.subcorpus),
-            "attributes :",
+        return '\n' + '\n'.join([
+            'ccc.Corpus: "%s"' % self.corpus_name,
+            'size      : %s' % str(self.corpus_size),
+            'data      : %s' % str(self.data_path),
+            'subcorpus : %s' % str(self.subcorpus),
+            'available positional and structural attributes:',
             self.attributes_available.to_string(),
         ])
+
+    def __repr__(self):
+        """Info string.
+
+        """
+        return self.__str__()
 
     def _attributes_available(self):
         """Get indexed p- and s-attributes. Will be run once when initializing
