@@ -127,9 +127,9 @@ def test_collocates_pp(germaparl):
     result = corpus.query(query)
     collocates = Collocates(corpus, result.df, p_query='word')
     c = collocates.show(order='log_likelihood', cut_off=None)
-    assert(int(c.loc['Die']['O11']) < int(c.loc['die']['O11']))
+    assert(int(c.loc['Bündnis']['O11']) < int(c.loc['BÜNDNIS']['O11']))
     c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
-    assert('die' in c.index and 'Die' not in c.index)
+    assert('bundnis' in c.index and 'Bündnis' not in c.index)
 
 
 @pytest.mark.fail

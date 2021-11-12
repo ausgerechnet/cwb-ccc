@@ -30,7 +30,7 @@ def test_keywords(brexit):
     # keywords
     corpus = get_corpus(brexit)
     ufa = UFA(corpus, ids, s_att='tweet_id')
-    tables = ufa.keywords()
+    tables = ufa.keywords(order='log_likelihood')
     print(tables)
 
 
@@ -45,8 +45,11 @@ def test_collocates(brexit):
     for s in s_values:
         ids[s] = set(meta.loc[meta['ymd'] == s]['id'])
 
-    # keywords
+    # collocates
     corpus = get_corpus(brexit)
     ufa = UFA(corpus, ids, s_att='tweet_id')
-    tables = ufa.collocates(cqp_query='[lemma="johnson"]', order='log_likelihood')
+    tables = ufa.collocates(cqp_query='[lemma="i"]',
+                            order='log_likelihood',
+                            context_break='tweet_id',
+                            window=20)
     print(tables)
