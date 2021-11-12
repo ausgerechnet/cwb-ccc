@@ -34,7 +34,12 @@ def guess_cl_directory():
 
 
 # define (and compile) C-extension
+# try:
+#     from Cython.Build import cythonize
+#     USE_CYTHON = True
+# except ImportError:
 USE_CYTHON = False              # use cython -2 ccc/cl.pyx instead
+
 ext = '.pyx' if USE_CYTHON else '.c'
 
 extensions = [
@@ -56,7 +61,7 @@ setup(
     version=version['__version__'],
     author="Philipp Heinrich",
     author_email="philipp.heinrich@fau.de",
-    description="CWB wrapper to extract concordances and collocates",
+    description="CWB wrapper to extract concordances and score frequency lists",
     packages=find_packages(exclude=["tests", "test_*"]),
     long_description=long_description,
     long_description_content_type="text/markdown",
