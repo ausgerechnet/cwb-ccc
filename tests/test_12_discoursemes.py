@@ -240,7 +240,9 @@ def test_create_constellation(germaparl, discoursemes):
     const = create_constellation(corpus_name, topic_name, topic_items,
                                  p_query, s_query, flags, escape,
                                  s_context, context,
-                                 additional_discoursemes)
+                                 additional_discoursemes,
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH)
 
     print(const)
 
@@ -249,7 +251,9 @@ def test_create_constellation(germaparl, discoursemes):
                               p_query, s_query, flags, escape,
                               s_context, context,
                               additional_discoursemes,
-                              dataframe=True)
+                              dataframe=True,
+                              registry_path=germaparl['registry_path'],
+                              data_path=DATA_PATH)
 
     print(df)
 
@@ -258,6 +262,8 @@ def test_create_constellation(germaparl, discoursemes):
                               p_query, s_query, flags, escape,
                               s_context, context,
                               additional_discoursemes,
+                              registry_path=germaparl['registry_path'],
+                              data_path=DATA_PATH,
                               dataframe=True, drop=False)
 
     print(df)
