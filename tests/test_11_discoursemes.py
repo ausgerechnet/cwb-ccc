@@ -391,7 +391,7 @@ def test_constellation_coll(germaparl, discoursemes):
         name='disc2'
     )
 
-    lines = const.collocates(windows=list(range(1, 20)))
+    lines = const.collocates(windows=list(range(1, 21)))
     print(lines)
 
 

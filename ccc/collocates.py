@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 class Collocates:
     """ collocation analysis """
 
-    def __init__(self, corpus, df_dump, p_query=['lemma'], mws=10):
+    def __init__(self, corpus, df_dump, p_query=['lemma'], mws=10,
+                 df_cooc=None, f1_set=None, node_freq=None):
 
         # consistency check
-        if len(df_dump) == 0:
+        if df_dump is not None and len(df_dump) == 0:
             self.f1_set = set()
             logger.warning('empty dump')
             return
@@ -26,9 +27,9 @@ class Collocates:
         # init corpus
         self.corpus = corpus.copy()
 
-        # what's in the dump?
-        self.df_dump = df_dump
-        self.size = len(df_dump)
+        # # what's in the dump?
+        # self.df_dump = df_dump
+        # self.size = len(df_dump)
 
         # maximum window size (= context)
         self.mws = mws
@@ -46,9 +47,18 @@ class Collocates:
             self.p_query = ['word']
 
         # collect cpos of matches and context
-        logger.info('collecting cpos of matches and context')
-        self.deflated, self.f1_set = df_node_to_cooc(self.df_dump, self.mws)
-        logger.info('collected %d corpus positions' % len(self.deflated))
+        if df_dump is not None:
+            logger.info('collecting cpos of matches and context')
+            self.df_cooc, self.f1_set = dump2cooc(df_dump, self.mws)
+            self.node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
+            logger.info('collected %d corpus positions' % len(self.df_cooc))
+        else:
+            if df_cooc is None or f1_set is None or node_freq is None:
+                logger.error('if no dump is given, you have to provide all frequencies')
+                return
+            self.df_cooc = df_cooc
+            self.f1_set = f1_set
+            self.node_freq = node_freq
 
     def count(self, window):
 
@@ -59,8 +69,8 @@ class Collocates:
             window = mws
 
         # slice window
-        logger.info('slicing window %d' % mws)
-        relevant = self.deflated.loc[abs(self.deflated['offset']) <= window]
+        logger.info('slicing window %d' % window)
+        relevant = self.df_cooc.loc[abs(self.df_cooc['offset']) <= window]
 
         # number of possible occurrence positions within window
         f1 = len(relevant)
@@ -79,16 +89,21 @@ class Collocates:
             logger.error("nothing to show")
             return DataFrame()
 
-        # get context frequencies
+        # get subcorpus frequencies
         f, f1 = self.count(window)
 
-        # get node frequencies
-        node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
-
-        # determine corpus size
+        # get reference frequencies
         if isinstance(marginals, str):
             if marginals == 'corpus':
                 N = self.corpus.corpus_size - len(self.f1_set)
+                if len(self.p_query) == 1:
+                    marginals = self.corpus.marginals(
+                        f[self.p_query[0]], self.p_query[0]
+                    )
+                else:
+                    marginals = self.corpus.marginals_complex(
+                        f[self.p_query], self.p_query
+                    )
             else:
                 raise NotImplementedError
         elif isinstance(marginals, DataFrame):
@@ -97,15 +112,29 @@ class Collocates:
         else:
             raise NotImplementedError
 
-        collocates = calculate_collocates(
-            self.corpus, self.deflated, node_freq, window, self.p_query,
-            N, min_freq, order, cut_off, flags, ams, frequencies
+        # f2 = marginals - node frequencies
+        f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
+            self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
         )
+        f2 = f2.fillna(0, downcast='infer')
+        f2['f2'] = f2['marginal'] - f2['in_nodes']
+
+        # score
+        collocates = score_counts_signature(
+            f[['freq']], f1, f2[['f2']], N,
+            min_freq, order, cut_off, flags, ams, frequencies
+        )
+
+        if frequencies:
+            # throw away anti-collocates by default
+            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+            # add node and marginal frequencies
+            collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
         return collocates
 
 
-def df_node_to_cooc(df_dump, context=None):
+def dump2cooc(df_dump, context=None):
     """ converts df_dump to df_cooc + f1_set
 
     strategy:
@@ -115,8 +144,6 @@ def df_node_to_cooc(df_dump, context=None):
     (2b) deduplicate by cpos, keep first occurrences (=smallest offset)
     (3a) f1_set = (cpos where offset == 0)
     (3b) remove rows where cpos in f1_set
-
-    NB: equivalent to UCS when switching steps 3a and 3b
 
     :param DataFrame df_dump: [match, matchend] + [context_id, context, contextend]
     :param int context: confine context?
@@ -175,44 +202,3 @@ def df_node_to_cooc(df_dump, context=None):
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
-
-
-def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
-                         N, min_freq, order, cut_off, flags,
-                         ams=None, frequencies=True):
-
-    # move to requested window
-    relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
-
-    # number of possible occurrence positions within window
-    f1 = len(relevant)
-
-    # get frequency counts
-    f = corpus.counts.cpos(relevant['cpos'], p_show)
-
-    # get marginals
-    if len(p_show) == 1:
-        marginals = corpus.marginals(f[p_show[0]], p_show[0])
-    else:
-        marginals = corpus.marginals_complex(f.index, p_show)
-
-    # f2 = marginals - node frequencies
-    f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
-        node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
-    )
-    f2 = f2.fillna(0, downcast='infer')
-    f2['f2'] = f2['marginal'] - f2['in_nodes']
-
-    # score
-    collocates = score_counts_signature(
-        f[['freq']], f1, f2[['f2']], N,
-        min_freq, order, cut_off, flags, ams, frequencies
-    )
-
-    # for backwards compatiblity
-    if frequencies:
-        # throw away anti-collocates by default
-        collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
-        collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
-
-    return collocates

@@ -61,8 +61,8 @@ def test_collocates_speed_many(germaparl):
     df_dump = corpus.query(query, context_break='text').df
     collocates = Collocates(corpus, df_dump, p_query='lemma', mws=100)
     c2 = collocates.show(window=50, cut_off=50)
-    print(c2)
-    assert(type(c2) == pd.DataFrame)
+    assert c2.index[0] == ','
+    assert type(c2) == pd.DataFrame
 
 
 @pytest.mark.persistence

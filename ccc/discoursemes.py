@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # part of module
-from .collocates import df_node_to_cooc, calculate_collocates
+from .collocates import dump2cooc
 from .concordances import Concordance
+from .collocates import Collocates
 from .utils import format_cqp_query
 from . import Corpus
 # requirements
@@ -292,14 +293,16 @@ class Constellation:
                 row, self.discoursemes.keys(), s_show, window
             ), axis=1
         ))
-        # return
+
         return output
 
     def collocates(self, windows=[3, 5, 7],
                    p_show=['lemma'], flags=None,
                    ams=None, frequencies=True,
-                   min_freq=2, order='log_likelihood', cut_off=None):
-        """Retrieve collocates
+                   min_freq=2, order='log_likelihood', cut_off=None,
+                   marginals='corpus'):
+        """Retrieve collocates for constellation.
+
         :param int window: window around node for pre-selected matches
 
         :return: collocates
@@ -307,8 +310,8 @@ class Constellation:
         """
 
         # get relevant contexts
-        df = self.df.drop_duplicates(subset=['context', 'contextend'])
-        df_cooc, f1_set = df_node_to_cooc(df)
+        df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
+        df_cooc, f1_set = dump2cooc(df_dump)
 
         logging.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
@@ -318,15 +321,19 @@ class Constellation:
         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
         # count once
-        N = self.corpus.corpus_size - len(f1_set)
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
 
-        # count for each window
+        collocates = Collocates(
+            corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
+            df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
+        )
+
         output = dict()
         for window in windows:
-            output[window] = calculate_collocates(
-                self.corpus, df_cooc, node_freq, window, p_show,
-                N, min_freq, order, cut_off, flags, ams, frequencies
+            output[window] = collocates.show(
+                window=window, order=order, cut_off=cut_off, ams=ams,
+                min_freq=min_freq, frequencies=frequencies, flags=flags,
+                marginals=marginals
             )
 
         return output
