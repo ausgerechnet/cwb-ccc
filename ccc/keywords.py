@@ -52,10 +52,11 @@ class Keywords:
             logger.warning("nothing to show")
             return DataFrame()
 
-        # get frequencies
+        # get subcorpus frequencies
         f = self.counts.loc[self.counts['freq'] >= min_freq]
+        f1 = self.counts['freq'].sum()
 
-        # determine reference frequency
+        # get reference frequency
         if isinstance(marginals, str):
             if marginals == 'corpus':
                 N = self.corpus.corpus_size
@@ -74,9 +75,6 @@ class Keywords:
             N = marginals['freq'].sum()
         else:
             raise NotImplementedError
-
-        # get sub-corpus size
-        f1 = self.counts['freq'].sum()
 
         # score
         keywords = score_counts_signature(
