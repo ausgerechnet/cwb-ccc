@@ -399,7 +399,9 @@ class Corpus:
             logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
         else:
             # calculate all marginals for p-att combination
-            df, R = cwb_scan_corpus(self.corpus_name, self.registry_path, p_atts=p_atts)
+            df, R = cwb_scan_corpus(
+                self.corpus_name, self.registry_path, p_atts=p_atts, min_freq=0
+            )
             self.cache.set(identifier, df)
 
         # select relevant rows
@@ -943,7 +945,7 @@ class Corpus:
             cqp.__kill__()
 
         # return proper Dump
-        return Dump(self.copy(), df_spans, name_cqp=None)
+        return Dump(self.copy(), df_spans, name_cqp=name)
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
