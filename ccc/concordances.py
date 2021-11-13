@@ -281,7 +281,7 @@ class Concordance:
             cut_off = len(matches)
         # order
         if order == 'random':
-            matches = sample(matches, cut_off)
+            matches = sample(list(matches), cut_off)
         elif order == 'first':
             matches = sorted(list(matches))[:cut_off]
         elif order == 'last':
