@@ -1,4 +1,5 @@
 from ccc.cwb import Corpus
+from ccc.dumps import Dumps
 import pytest
 
 from .conftest import LOCAL, DATA_PATH
@@ -161,3 +162,73 @@ def test_argmin_query(brexit):
     )
 
     print(conc)
+
+
+def test_dumps_keywords(germaparl):
+
+    # subcorpora via s-attribute values
+    parties = {
+        'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        'purple': {'PDS'}
+    }
+
+    # keywords
+    corpus = get_corpus(germaparl)
+    dumps = Dumps(corpus, parties, s_att='text_party')
+    tables = dumps.keywords(order='log_ratio')
+    assert tables['green'].index[0] == "Oppositionsfraktion"
+    assert tables['red'].index[0] == "Grenzgrundstück"
+    assert tables['black'].index[0] == "Universität"
+    assert tables['yellow'].index[0] == "Stimmenthaltung"
+    assert tables['purple'].index[0] == "ÖPNV-Gesetz"
+
+
+def test_dumps_collocates(germaparl):
+
+    # subcorpora via s-attribute values
+    parties = {
+        'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        'purple': {'PDS'}
+    }
+
+    # collocates
+    corpus = get_corpus(germaparl)
+    dumps = Dumps(corpus, parties, s_att='text_party')
+    tables = dumps.collocates(
+        cqp_query='"Wirtschaft"',
+        order='log_ratio',
+        context_break='s',
+        window=20
+    )
+    print(tables)
+
+
+@pytest.mark.now
+def test_dumps_collocates_global(germaparl):
+
+    # subcorpora via s-attribute values
+    parties = {
+        'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        'purple': {'PDS'}
+    }
+
+    # collocates
+    corpus = get_corpus(germaparl)
+    dumps = Dumps(corpus, parties, s_att='text_party')
+    tables = dumps.collocates(
+        cqp_query='"Wirtschaft"',
+        order='log_ratio',
+        context_break='s',
+        window=20,
+        reference='global'
+    )
+    print(tables)
