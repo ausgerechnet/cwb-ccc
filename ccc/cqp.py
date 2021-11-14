@@ -413,8 +413,12 @@ class CQP:
         :rtype: DataFrame
 
         """
+        name = 'Last' if name is None else name
         logger.info('defining NQR "%s" from query' % name)
         self.Query('%s=%s;' % (name, query))
+        size = int(self.Exec("size %s" % name))
+        if size == 0:
+            return DataFrame()
         if return_dump:
             logger.info('dumping result')
             df_dump = self.Dump(name)
