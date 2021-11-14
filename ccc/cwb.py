@@ -343,14 +343,7 @@ class Corpus:
 
         """
 
-        if cpos == -1 and ignore:
-            token = [None] * len(p_atts)
-        else:
-            token = [
-                self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts
-            ]
-
-        return tuple(token)
+        return self.counts._cpos2patts(cpos, p_atts, ignore)
 
     def marginals(self, items, p_att='word', flags=0, pattern=False):
         """Extract marginal frequencies for given unigrams or unigram patterns
