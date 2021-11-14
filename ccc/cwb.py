@@ -257,6 +257,18 @@ class Corpus:
         """
         return self.__str__()
 
+    def _macros_available(self):
+        """Get available macros (either system-defined or via library).
+
+        :return: defined macros
+        :rtype: list
+
+        """
+        cqp = self.start_cqp()
+        defined_macros = cqp.Exec("show macro;").split("\n")
+        cqp.__kill__()
+        return defined_macros
+
     def _attributes_available(self):
         """Get indexed p- and s-attributes. Will be run once when initializing
         the corpus.
@@ -405,8 +417,10 @@ class Corpus:
             self.cache.set(identifier, df)
 
         # select relevant rows
-        # df = df.reindex(items)
-        # df = df.fillna(0, downcast='infer')
+        df = df.reindex([" ".join(i) for i in items])
+        df = df.fillna(0, downcast='infer')
+        df.sort_values(by='freq')
+
         return df
 
     ################
@@ -620,8 +634,11 @@ class Corpus:
             match_strategy=match_strategy,
             return_dump=True
         )
-        df_dump.columns = [0, 1]
+        if len(df_dump) == 0:
+            return df_dump
+
         logger.info("found %d matches" % len(df_dump))
+        df_dump.columns = [0, 1]
 
         # if there's nothing to return ...
         if df_dump.empty:
