@@ -34,10 +34,11 @@ def ucs_counts():
 def germaparl():
     """ settings for small germaparl testing corpus """
 
-    registry_path = os.path.join(DIR_PATH, "corpora/registry/")
-    dump_path = os.path.join(DIR_PATH, "counts", "germaparl-seehofer.tsv")
     corpus_name = 'GERMAPARL1386'
+    registry_path = os.path.join(DIR_PATH, "corpora/registry/")
+    lib_path = os.path.join(DIR_PATH, "corpora", "library")
     freq_list = os.path.join(DIR_PATH, "corpora", "germaparl1386-lemma-freq.tsv")
+    dump_path = os.path.join(DIR_PATH, "counts", "germaparl-seehofer.tsv")
 
     context = 50
     s_context = 'text'
@@ -53,6 +54,8 @@ def germaparl():
     seehofer_dump = read_csv(dump_path, sep="\t", header=None, dtype=int,
                              index_col=[0, 1], names=['match', 'matchend'])
 
+    query_lib = '/np[] [lemma="zeigen"]'
+
     return {
         'registry_path': registry_path,
         'corpus_name': corpus_name,
@@ -65,7 +68,9 @@ def germaparl():
         'anchors': anchors,
         'query_full': query_within,
         'dump': seehofer_dump,
-        'freq_list': freq_list
+        'freq_list': freq_list,
+        'lib_path': lib_path,
+        'query_lib': query_lib
     }
 
 
