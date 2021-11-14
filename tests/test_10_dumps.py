@@ -1,9 +1,8 @@
 from ccc.cwb import Corpus
 from ccc.dumps import Dumps
 from pandas import DataFrame
-import pytest
 
-from .conftest import LOCAL, DATA_PATH
+from .conftest import DATA_PATH
 
 
 def get_corpus(corpus_settings, data_path=DATA_PATH):
