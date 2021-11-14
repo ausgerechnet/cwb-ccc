@@ -367,6 +367,13 @@ class Corpus:
 
         """
 
+        # allow lazy evocation
+        if isinstance(p_att, list):
+            if len(p_att) == 1:
+                p_att = p_att[0]
+            else:
+                return self.marginals_complex(items, p_att)
+
         pattern = True if flags > 0 else pattern
 
         tokens_all = self.attributes.attribute(p_att, 'p')
@@ -404,6 +411,8 @@ class Corpus:
 
         """
 
+        items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
+
         # retrieve all marginals for p-att combination from cache if possible
         identifier = "_".join(p_atts) + "_marginals"
         df = self.cache.get(identifier)
@@ -417,7 +426,7 @@ class Corpus:
             self.cache.set(identifier, df)
 
         # select relevant rows
-        df = df.reindex([" ".join(i) for i in items])
+        df = df.reindex(items)
         df = df.fillna(0, downcast='infer')
         df.sort_values(by='freq')
 

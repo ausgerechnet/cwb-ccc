@@ -60,14 +60,7 @@ class Keywords:
         if isinstance(marginals, str):
             if marginals == 'corpus':
                 N = self.corpus.corpus_size
-                if len(self.p_query) == 1:
-                    marginals = self.corpus.marginals(
-                        f[self.p_query[0]], self.p_query[0]
-                    )
-                else:
-                    marginals = self.corpus.marginals_complex(
-                        f[self.p_query], self.p_query
-                    )
+                marginals = self.corpus.marginals(f.index, self.p_query)
             else:
                 raise NotImplementedError
         elif isinstance(marginals, DataFrame):

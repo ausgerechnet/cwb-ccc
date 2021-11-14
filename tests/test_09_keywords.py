@@ -86,7 +86,7 @@ def test_keywords_combo(germaparl):
 
     # keywords
     lines = dump.keywords(["lemma", "pos"], order='log_likelihood', min_freq=10)
-    assert lines.index[1] == "die ART"
+    assert lines.index[0] == "und KON"
 
 
 def test_score_counts(germaparl, empirist):
