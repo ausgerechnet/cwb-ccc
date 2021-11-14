@@ -973,7 +973,7 @@ class Corpus:
 
         # preprocess input
         save = False if name is None else True  # save NQR from CQP to disk?
-        name = 'Last' if name is None else name  # name in CQP
+        # name = 'Last' if name is None else name  # name in CQP
         query, s_query, anchors = preprocess_query(cqp_query)
         s_query = context_break if s_query is None else s_query
         context_left = context if context_left is None else context_left
@@ -990,8 +990,10 @@ class Corpus:
         )
 
         # if dump has been retrieved from cache, NQR might not exist
-        if self.show_nqr().empty or \
-           name not in self.show_nqr()['subcorpus'].values:
+        if name is not None and (
+            self.show_nqr().empty or
+            name not in self.show_nqr()['subcorpus'].values
+        ):
             # undump the dump and save to disk
             cqp = self.start_cqp()
             cqp.nqr_from_dump(df_dump, name)
