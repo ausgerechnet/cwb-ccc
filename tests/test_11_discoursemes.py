@@ -116,6 +116,7 @@ def test_constellation_add(germaparl, discoursemes):
 
 
 @pytest.mark.discourseme
+@pytest.mark.now
 def test_constellation_add_nodrop(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -134,6 +135,7 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
         context_break=discoursemes['parameters']['s_context']
     )
     const = Constellation(topic_dump)
+    print(const.df)
 
     # add discourseme
     disc1_query = format_cqp_query(
@@ -267,6 +269,52 @@ def test_create_constellation(germaparl, discoursemes):
                               dataframe=True, drop=False)
 
     print(df)
+
+
+def test_mmda_1():
+
+    corpus_name = "GERMAPARL1318"
+    topic_name = 'topic'
+    topic_items = ['Atomkraft', 'Atomenergie', 'Kernkraft']
+    p_query = 'lemma'
+    s_query = None
+    flags_query = '%cd'
+    flags_show = ''
+    min_freq = 2
+    s_context = 's'
+    context = 20
+    additional_discoursemes = {}
+    data_path = '/tmp/mmda-ccc/'
+    windows = [3, 5, 7]
+    cqp_bin = 'cqp'
+    lib_path = None
+    p_show = ['lemma']
+    ams = None
+    cut_off = 200
+    min_freq = 2
+    order = 'log_likelihood'
+    escape = True
+    frequencies = True
+    registry_path = '/usr/local/share/cwb/registry/'
+
+    # preprocess parameters
+    s_query = s_context if s_query is None else s_query
+    topic_name = 'topic'
+
+    # create constellation
+    const = create_constellation(corpus_name,
+                                 topic_name, topic_items,
+                                 p_query, s_query, flags_query, escape,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 lib_path, cqp_bin, registry_path, data_path)
+
+    collocates = const.collocates(windows=windows,
+                                  p_show=p_show, flags=flags_show,
+                                  ams=ams, frequencies=frequencies, min_freq=min_freq,
+                                  order=order, cut_off=cut_off)
+
+    print(collocates)
 
 
 ###############

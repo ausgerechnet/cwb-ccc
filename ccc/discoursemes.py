@@ -117,7 +117,7 @@ def constellation_left_join(df1, df2, name, drop=True):
     # merge dumps via contextid ###
     df1 = df1.reset_index()
     df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
-    m = df1.merge(df2, on='contextid')
+    m = df1.merge(df2, on='contextid', how='left')
 
     # calculate offset ###
     m['offset_y'] = 0       # init as overlap
