@@ -226,9 +226,22 @@ class Constellation:
         self.df = dump.df[['contextid', 'context', 'contextend']].astype("Int64")
         # init added discoursemes
         self.discoursemes = {}
-
         # the topic is treated as common discourseme
         self.add_discourseme(dump, name=name)
+
+    def __str__(self):
+        return (
+            "\n" + "a constellation with %d match indices" % len(self.df) + "\n" +
+            "%d registered discourseme(s) " % len(self.discoursemes) + "\n" +
+            "\n".join(["- '%s' with %d matches" % (d, len(self.discoursemes[d].df))
+                       for d in self.discoursemes])
+        )
+
+    def __repr__(self):
+        """Info string
+
+        """
+        return self.__str__()
 
     def add_discourseme(self, dump, name='discourseme', drop=True):
         """
