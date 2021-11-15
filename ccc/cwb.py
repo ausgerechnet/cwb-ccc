@@ -247,7 +247,7 @@ class Corpus:
             'size      : %s' % str(self.corpus_size),
             'data      : %s' % str(self.data_path),
             'subcorpus : %s' % str(self.subcorpus),
-            'available positional and structural attributes:',
+            '\navailable positional and structural attributes:',
             self.attributes_available.to_string(),
         ])
 

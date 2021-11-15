@@ -42,6 +42,12 @@ class Dump:
         desc.append('- columns: %s' % str(list(self.df.columns)))
         return "\n".join(desc)
 
+    def __repr__(self):
+        """Info string.
+
+        """
+        return self.__str__()
+
     def set_context(self, context=None, context_break=None,
                     context_left=None, context_right=None):
         """Set context in the dump.
