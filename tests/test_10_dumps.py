@@ -42,6 +42,17 @@ def test_breakdown(germaparl):
     assert breakdown.loc['SPD']['freq'] == 632
 
 
+def test_breakdown_p_att(germaparl):
+    corpus = get_corpus(germaparl)
+    dump = corpus.query('[lemma="gehen"]')
+    breakdown = dump.breakdown()
+    assert isinstance(breakdown, DataFrame)
+    assert breakdown.loc['geht']['freq'] == 150
+    breakdown = dump.breakdown(p_atts=['lemma'])
+    assert isinstance(breakdown, DataFrame)
+    assert breakdown.loc['gehen']['freq'] == 224
+
+
 def test_matches(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')

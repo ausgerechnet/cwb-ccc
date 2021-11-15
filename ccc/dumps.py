@@ -23,7 +23,6 @@ class Dump:
         self.name_cqp = name_cqp
         self.size = len(self.df)
 
-        self._breakdown = None
         self._matches = None
         self._context = None
 
@@ -70,33 +69,17 @@ class Dump:
         """
         self.df = correct_anchors(self.df, corrections)
 
-    def breakdown(self, p_atts=['word'], max_matches=None):
+    def breakdown(self, p_atts=['word']):
         """Frequency breakdown of match..matchend.
 
         """
 
-        if self._breakdown is None:
-            if max_matches is not None and self.size > max_matches:
-                logger.warning(
-                    'no frequency breakdown (%d matches)' % self.size
-                )
-                breakdown = DataFrame(
-                    index=['NODE'],
-                    data=[self.size],
-                    columns=['freq']
-                )
-                breakdown.index.name = 'item'
-                return breakdown
-            else:
-                logger.info('creating frequency breakdown')
-                breakdown = self.corpus.counts.dump(
-                    df_dump=self.df,
-                    start='match', end='matchend',
-                    p_atts=p_atts, strategy=1
-                )
-                self._breakdown = breakdown
-
-        return self._breakdown
+        logger.info('creating frequency breakdown')
+        return self.corpus.counts.dump(
+            df_dump=self.df,
+            start='match', end='matchend',
+            p_atts=p_atts, strategy=1
+        )
 
     def matches(self):
         """
