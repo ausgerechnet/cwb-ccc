@@ -1,0 +1,8 @@
+[tool.cibuildwheel.linux]
+before-all = [
+  "make clean",
+  "yum install flex gcc subversion",
+  "svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk cwb",
+  "sed -i 's/SITE=beta-install/SITE=standard/' cwb/config.mk",
+  "./cwb/install-scripts/install-linux"
+]

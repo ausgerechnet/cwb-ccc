@@ -14,6 +14,10 @@ compile:
 	pipenv run cython -2 ccc/cl.pyx
 build:
 	pipenv run python3 setup.py build_ext --inplace
+
+build_wheels:
+	pipenv run cibuildwheel --platform linux
+
 dist:
 	pip3 install --upgrade setuptools wheel
 	python3 setup.py sdist bdist_wheel
