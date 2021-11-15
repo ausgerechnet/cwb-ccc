@@ -2,7 +2,8 @@ from ccc import Corpus
 from ccc.utils import format_cqp_query
 from ccc.discoursemes import Constellation, create_constellation
 from ccc.discoursemes import TextConstellation
-from .conftest import DATA_PATH
+from .conftest import DATA_PATH, LOCAL
+from pandas import DataFrame
 
 import pytest
 
@@ -73,7 +74,8 @@ def test_constellation_init(germaparl, discoursemes):
     )
     const = Constellation(topic_dump)
 
-    print(const.df)
+    assert isinstance(const.df, DataFrame)
+    assert len(const.df) == 2777
 
 
 @pytest.mark.discourseme
@@ -111,12 +113,12 @@ def test_constellation_add(germaparl, discoursemes):
     )
     const.add_discourseme(disc1_dump)
 
-    print(const.df)
-    print(const.discoursemes.keys())
+    assert len(const.df) == 1599
+    assert 'topic' in const.discoursemes
+    assert len(const.discoursemes) == 2
 
 
 @pytest.mark.discourseme
-@pytest.mark.now
 def test_constellation_add_nodrop(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -135,7 +137,7 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
         context_break=discoursemes['parameters']['s_context']
     )
     const = Constellation(topic_dump)
-    print(const.df)
+    assert len(const.df) == 2777
 
     # add discourseme
     disc1_query = format_cqp_query(
@@ -154,9 +156,7 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
         disc1_dump,
         drop=False
     )
-
-    print(const.df)
-    print(const.discoursemes.keys())
+    assert len(const.df) == 3060
 
 
 @pytest.mark.discourseme
@@ -215,8 +215,7 @@ def test_constellation_add2(germaparl, discoursemes):
         name='disc2'
     )
 
-    print(const.df)
-    print(const.discoursemes.keys())
+    assert len(const.df) == 13
 
 
 def test_create_constellation(germaparl, discoursemes):
@@ -238,7 +237,6 @@ def test_create_constellation(germaparl, discoursemes):
     topic_items = discoursemes.pop(topic_name)
     additional_discoursemes = discoursemes
 
-    print("return constellation" + "-" * 120)
     const = create_constellation(corpus_name, topic_name, topic_items,
                                  p_query, s_query, flags, escape,
                                  s_context, context,
@@ -246,9 +244,8 @@ def test_create_constellation(germaparl, discoursemes):
                                  registry_path=germaparl['registry_path'],
                                  data_path=DATA_PATH)
 
-    print(const)
+    assert len(const.df) == 10
 
-    print("return dataframe" + "-" * 120)
     df = create_constellation(corpus_name, topic_name, topic_items,
                               p_query, s_query, flags, escape,
                               s_context, context,
@@ -257,9 +254,8 @@ def test_create_constellation(germaparl, discoursemes):
                               registry_path=germaparl['registry_path'],
                               data_path=DATA_PATH)
 
-    print(df)
+    assert len(df) == 10
 
-    print("return dataframe without drop" + "-" * 120)
     df = create_constellation(corpus_name, topic_name, topic_items,
                               p_query, s_query, flags, escape,
                               s_context, context,
@@ -268,9 +264,10 @@ def test_create_constellation(germaparl, discoursemes):
                               data_path=DATA_PATH,
                               dataframe=True, drop=False)
 
-    print(df)
+    assert len(df) == 2990
 
 
+@pytest.mark.skipif(not LOCAL, reason='works on my machine')
 def test_mmda_1():
 
     corpus_name = "GERMAPARL1318"
@@ -314,7 +311,7 @@ def test_mmda_1():
                                   ams=ams, frequencies=frequencies, min_freq=min_freq,
                                   order=order, cut_off=cut_off)
 
-    print(collocates)
+    assert len(collocates) == 3
 
 
 ###############
@@ -377,7 +374,11 @@ def test_constellation_conc(germaparl, discoursemes):
     )
 
     lines = const.concordance(s_show=['text_id'])
-    print(lines)
+
+    assert len(lines) == 5
+    assert isinstance(lines[0], dict)
+    assert 'word' in lines[0]
+    assert isinstance(lines[0]['word'], list)
 
 
 ###############
@@ -439,14 +440,15 @@ def test_constellation_coll(germaparl, discoursemes):
         name='disc2'
     )
 
-    lines = const.collocates(windows=list(range(1, 21)))
-    print(lines)
+    dfs = const.collocates(windows=list(range(1, 21)))
+    assert len(dfs) == 20
+    assert len(dfs[1]) == 2
+    assert len(dfs[20]) == 5
 
 
 ##########################
 # TEXTUAL CONSTELLATIONS #
 ##########################
-
 def test_textual_constellation(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -468,7 +470,8 @@ def test_textual_constellation(germaparl, discoursemes):
         topic_dump,
         s_context=discoursemes['parameters']['s_context']
     )
-    print(const.df)
+    assert len(const.df) == 624
+    assert 'topic' in const.df.columns
 
 
 def test_textual_constellation_add(germaparl, discoursemes):
@@ -510,7 +513,8 @@ def test_textual_constellation_add(germaparl, discoursemes):
         disc1_dump
     )
 
-    print(const.df)
+    assert len(const.df) == 2156
+    assert 'discourseme' in const.df.columns
 
 
 def test_textual_constellation_association(germaparl, discoursemes):
@@ -570,4 +574,6 @@ def test_textual_constellation_association(germaparl, discoursemes):
         name='disc2'
     )
 
-    print(const.associations())
+    assoc = const.associations()
+    assert len(assoc) == 6
+    assert 'candidate' in assoc.columns
