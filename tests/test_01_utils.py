@@ -58,5 +58,6 @@ def test_filter_df(germaparl):
     c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
     dump = c.query(germaparl['query'])
     coll = dump.collocates()
-    print(coll)
-    print(filter_df(coll, 'resources/stopwords-de.txt'))
+    assert ',' in coll.index
+    coll_filtered = filter_df(coll, 'resources/stopwords-de.txt')
+    assert ',' not in coll_filtered.index
