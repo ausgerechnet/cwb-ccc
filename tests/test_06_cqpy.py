@@ -29,15 +29,9 @@ def test_cqpy_dump(query_files):
     assert query_load == query_reload
 
 
-@pytest.mark.now
 def test_run_from_cqpy(germaparl, query_files):
 
     corpus = get_corpus(germaparl)
     query = cqpy_load(query_files['jemand_sagt'])
     lines = run_query(corpus, query)
-    print(lines[['word', 'entity_lemma', 'vp_lemma']])
-    # print(lines.columns)
-    # print(lines['entity_word'])
-    # print(lines['vp_word'])
-    # print(lines['drei_word'])
-    # print(lines['proposition_word'])
+    assert all([v in lines.columns for v in ['word', 'entity_lemma', 'vp_lemma']])

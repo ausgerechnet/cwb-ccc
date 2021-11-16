@@ -47,8 +47,10 @@ def apply_correction(row, correction):
     """
     value, lower_bound, upper_bound = row
     value += correction
-    if value < lower_bound or value > upper_bound:
-        value = -1
+    if value < lower_bound:
+        value = lower_bound
+    if value > upper_bound:
+        value = upper_bound
     return value
 
 

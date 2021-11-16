@@ -445,7 +445,7 @@ def test_query_lib(germaparl):
     corpus = get_corpus(germaparl)
 
     nps = corpus.query('/np[]', context=0, match_strategy='longest')
-    print(nps.concordance())
+
     assert len(nps.df) == 34432
     parties = corpus.query('$parties', context=0)
     assert len(parties.df) == 2140
@@ -457,3 +457,14 @@ def test_query_lib(germaparl):
     )
     assert isinstance(dump.df, pd.DataFrame)
     assert len(dump.df) == 16
+
+
+def test_query_anchor(germaparl):
+
+    corpus = get_corpus(germaparl)
+    query = r'@1[pos="V.*"] @2"\." </s>'
+    d = corpus.query(
+        query, context_left=3, context_right=None, context_break='s',
+        corrections={2: 1}
+    )
+    assert (d.df[2] == d.df['contextend']).all()
