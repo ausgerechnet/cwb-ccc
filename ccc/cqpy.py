@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_query_json(query_path):
-    """ support for query.json files pre 2020-08-29 """
+    """ DEPRECATED: support for query.json files pre 2020-08-29 """
 
     # read file
     with open(query_path, "rt") as f:
@@ -106,7 +106,13 @@ def cqpy_load(path):
     load cqpy query file from path, return dictionary
     """
 
-    doc = open(path, 'rt').read()
+    return cqpy_loads(open(path, 'rt').read())
+
+
+def cqpy_loads(doc):
+    """
+    load cqpy query file from string, return dictionary
+    """
 
     try:
         # commented YAML header
@@ -115,7 +121,7 @@ def cqpy_load(path):
         # uncommented YAML header
         header, cqp = doc.split("---\n")
     except yaml.scanner.ScannerError:
-        logger.error("could not parse CQPY file")
+        logger.error("not a valid CQPY file")
         return dict()
 
     # read header
@@ -128,13 +134,13 @@ def cqpy_load(path):
     return query
 
 
-def cqpy_dump(query, comment=True):
+def cqpy_dumps(query, comment=True):
     """
-    serialize query as cqpy-string
+    serialize query as CQPY string
     """
 
     # get actual query
-    cqp = query.pop('cqp')
+    cqp = query.copy().pop('cqp')
 
     # header
     out = "--- # CQPY query file\n"
@@ -149,43 +155,81 @@ def cqpy_dump(query, comment=True):
     return out
 
 
-def run_query(corpus, query, match_strategy='longest',
-              cut_off=None, form='slots'):
-    """
-    query needs following sections:
-    - cqp
-    - query > context
-    - query > s_context
-    - anchors > corrections
-    - anchors > slots
-    - display > p_show
-    - display > s_show
+def run_query(corpus, query,
+              context=None, context_break=None, match_strategy='longest',
+              corrections={}, slots={},
+              p_show=['word', 'lemma'], s_show=[], cut_off=None, form='slots'):
+    """Execute a query in a corpus. Return concordance lines as dataframe
+    in 'slots' format. Parameters that are not set in the query-dict
+    will be overwritten by method arguments.
+
+    :param Corpus corpus: ccc.Corpus
+    :param dict query: query with the following parts:
+                       - cqp
+                       - query > context        None
+                       - query > context_break  None
+                       - query > match_strategy "longest"
+                       - anchors > corrections  {}
+                       - anchors > slots        {}
+                       - display > p_show       ['word', 'lemma']
+                       - display > s_show       []
+                       - display > cut_off      None
+                       - display > form         'slots'
+
+    :return: concordances lines
+    :rtype: DataFrame
+
     """
 
-    # ensure backwards compatability
-    if 'p_slots' in query['display']:
-        logger.warning("use of 'p_slots' is deprecated")
-        if query['display']['p_slots'] not in query['display']['p_show']:
-            query['display']['p_show'] += [query['display']['p_slots']]
-    if 'p_text' in query['display']:
-        logger.warning("use of 'p_text' is deprecated")
-        if query['display']['p_text'] not in query['display']['p_show']:
-            query['display']['p_show'] += [query['display']['p_text']]
+    # the actual CQP query
+    cqp = query['cqp']
+
+    # determine query parameters
+    if 'query' in query:
+
+        # backwards compatability
+        if 's_context' in query['query']:
+            logger.warning("use of 's_context' is deprecated")
+            query['query']['context_break'] = query['query'].pop('s_context')
+
+        context = query['query'].get('context', context)
+        context_break = query['query'].get('context_break', context_break)
+        match_strategy = query['query'].get('match_strategy', match_strategy)
+
+    # determine anchor parameters
+    if 'anchors' in query:
+        corrections = query['anchors'].get('corrections', corrections)
+        slots = query['anchors'].get('slots', slots)
+
+    # determine display parameters
+    if 'display' in query:
+
+        p_show = query['display'].get('p_show', p_show)
+        s_show = query['display'].get('s_show', s_show)
+        cut_off = query['display'].get('cut_off', cut_off)
+        form = query['display'].get('form', form)
+
+        # backwards compatability
+        for p in ['p_slots', 'p_text']:
+            if p in query['display']:
+                logger.warning("use of '%s' is deprecated" % p)
+                if query['display'][p] not in p_show:
+                    p_show += [query['display'][p]]
 
     # query the corpus
     dump = corpus.query(
-        cqp_query=query['cqp'],
-        context=query['query']['context'],
-        context_break=query['query']['s_context'],
-        corrections=query['anchors']['corrections'],
+        cqp_query=cqp,
+        context=context,
+        context_break=context_break,
+        corrections=corrections,
         match_strategy=match_strategy,
     )
 
-    # create appropriately formatted concordance lines
+    # retrieve concordance lines
     lines = dump.concordance(
-        p_show=query['display']['p_show'],
-        s_show=query['display']['s_show'],
-        slots=query['anchors']['slots'],
+        p_show=p_show,
+        s_show=s_show,
+        slots=slots,
         cut_off=cut_off,
         form=form
     )
