@@ -21,7 +21,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 def test_query(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
-    assert dump.name_cqp is None
+    assert dump.name_cqp == 'Last'
     assert dump.size == 632
     assert (dump.df.columns == ['context', 'contextend']).all()
 

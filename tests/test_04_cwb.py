@@ -444,8 +444,9 @@ def test_query_lib(germaparl):
 
     corpus = get_corpus(germaparl)
 
-    nps = corpus.query('/np[]', context=0)
-    assert len(nps.df) == 46323
+    nps = corpus.query('/np[]', context=0, match_strategy='longest')
+    print(nps.concordance())
+    assert len(nps.df) == 34432
     parties = corpus.query('$parties', context=0)
     assert len(parties.df) == 2140
 

@@ -2,13 +2,10 @@ from ccc import Corpus
 from ccc.utils import format_cqp_query
 from ccc.discoursemes import Constellation, create_constellation
 from ccc.discoursemes import TextConstellation
-from .conftest import DATA_PATH, LOCAL
+from .conftest import DATA_PATH
+
 from pandas import DataFrame
-
 import pytest
-
-# from pandas import set_option
-# set_option('display.max_rows', 10000)
 
 #######################
 # ccc.discoursemes ####
@@ -267,12 +264,11 @@ def test_create_constellation(germaparl, discoursemes):
     assert len(df) == 2990
 
 
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-def test_mmda_1():
+@pytest.mark.mmda
+def test_mmda(germaparl):
 
-    corpus_name = "GERMAPARL1318"
     topic_name = 'topic'
-    topic_items = ['Atomkraft', 'Atomenergie', 'Kernkraft']
+    topic_items = ['CDU', 'CSU']
     p_query = 'lemma'
     s_query = None
     flags_query = '%cd'
@@ -292,19 +288,20 @@ def test_mmda_1():
     order = 'log_likelihood'
     escape = True
     frequencies = True
-    registry_path = '/usr/local/share/cwb/registry/'
 
     # preprocess parameters
     s_query = s_context if s_query is None else s_query
     topic_name = 'topic'
 
     # create constellation
-    const = create_constellation(corpus_name,
+    const = create_constellation(germaparl['corpus_name'],
                                  topic_name, topic_items,
                                  p_query, s_query, flags_query, escape,
                                  s_context, context,
                                  additional_discoursemes,
-                                 lib_path, cqp_bin, registry_path, data_path)
+                                 lib_path, cqp_bin,
+                                 germaparl['registry_path'],
+                                 data_path)
 
     collocates = const.collocates(windows=windows,
                                   p_show=p_show, flags=flags_show,

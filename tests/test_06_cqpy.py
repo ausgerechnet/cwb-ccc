@@ -1,9 +1,8 @@
-from ccc.cqpy import cqpy_load, cqpy_dump, load_query_json, run_query
-from pprint import pprint
+from ccc.cqpy import cqpy_load, cqpy_loads, cqpy_dumps, run_query
 from ccc import Corpus
 import pytest
 
-from .conftest import LOCAL, DATA_PATH
+from .conftest import DATA_PATH
 
 
 def get_corpus(corpus_settings, data_path=DATA_PATH):
@@ -16,65 +15,29 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
     )
 
 
-def test_read_json():
-    path = "tests/query-files/as_a_x_i_y_knowledge.json"
-    query = load_query_json(path)
-    pprint(query)
+def test_cqpy_load(query_files):
+    query = cqpy_load(query_files['as_a_x_i_y_knowledge'])
+    assert 'meta' in query
+    assert 'cqp' in query
+    assert query['anchors']['corrections'][1] == -1
+    assert query['query']['context'] is None
 
 
-def test_cqpy_load():
-    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
-    query = cqpy_load(path)
-    print()
-    pprint(query)
+def test_cqpy_dump(query_files):
+    query_load = cqpy_load(query_files['as_a_x_i_y_knowledge'])
+    query_reload = cqpy_loads(cqpy_dumps(query_load))
+    assert query_load == query_reload
 
 
-def test_cqpy_dump():
-    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
-    query = cqpy_load(path)
-    print(cqpy_dump(query))
+@pytest.mark.now
+def test_run_from_cqpy(germaparl, query_files):
 
-
-def test_convert():
-    path = "tests/query-files/as_a_x_i_y_knowledge.json"
-    query = load_query_json(path)
-    print(cqpy_dump(query))
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.brexit
-def test_run_from_cqpy(brexit):
-
-    corpus = get_corpus(brexit)
-    path = "tests/query-files/as_a_x_i_y_knowledge.manual.cqpy"
-    query = cqpy_load(path)
-    result = run_query(corpus, query)
-
-    print(result[["lonely_anchor_lemma", "region_1_lemma", "region_2_lemma"]])
-    print(result[["region_1_lemma", "region_2_lemma"]])
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.brexit
-def test_run_from_cqpy2(brexit):
-
-    corpus = get_corpus(brexit)
-    path = "tests/query-files/pattern0_1_says_entity.cqpy"
-    query = cqpy_load(path)
-    result = run_query(corpus, query)
-
-    print(result)
-    print(result.columns)
-
-
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.brexit
-def test_run_from_cqpy3(brexit):
-
-    corpus = get_corpus(brexit)
-    path = "tests/query-files/pattern15_0_equals_1.cqpy"
-    query = cqpy_load(path)
-    result = run_query(corpus, query)
-
-    print(result)
-    print(result.columns)
+    corpus = get_corpus(germaparl)
+    query = cqpy_load(query_files['jemand_sagt'])
+    lines = run_query(corpus, query)
+    print(lines[['word', 'entity_lemma', 'vp_lemma']])
+    # print(lines.columns)
+    # print(lines['entity_word'])
+    # print(lines['vp_word'])
+    # print(lines['drei_word'])
+    # print(lines['proposition_word'])

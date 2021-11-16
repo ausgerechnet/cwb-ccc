@@ -95,4 +95,4 @@ def test_score_counts(germaparl, empirist):
     df2, R2 = read_freq_list(empirist['freq_list'])
 
     kw = score_counts(df1[['freq']], df2[['freq']], R1, R2, cut_off=None)
-    assert kw['log_likelihood']['die'] == 4087.28
+    assert kw['log_likelihood']['die'] == 4087.276827

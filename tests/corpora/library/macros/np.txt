@@ -11,65 +11,63 @@ MACRO ap($0=Adj)
 )
 ;
 
-
 ## determiner phrase
 MACRO dp(0)
 (
-[pos = "ART"]?
-(
-  /ap[]
-)*
-[pos = "N.*"]+ # noun or proper name
+  [pos = "ART"]?
+  (
+    /ap[]
+  )*
+  [pos = "N.*"]+  # noun or proper name
 )
 ;
 
 MACRO dp($0=MarkNoun)
 (
-[pos = "ART"]?
-(
-  /ap[]
-)*
-$0[pos = "N.*"]+ # noun or proper name
+  [pos = "ART"]?
+  (
+    /ap[]
+  )*
+  $0[pos = "N.*"]+  # noun or proper name
 )
 ;
 
+## pronoun
+MACRO pron(0)
+(
+  [pos ="PPER"]
+)
+;
 
+MACRO pron($0=MarkPron)
+(
+  $0[pos="PPER"]
+)
+;
+
+## basic NP
 MACRO np_base(0)
 (
-  /dp[]
-| /pron[]
+  /dp[] | /pron[]
 )
 ;
 
 MACRO np_base($0=MarkEl)
 (
-  /dp["$0"]
-| /pron["$0"]
+  /dp["$0"] | /pron["$0"]
 )
 ;
 
-# pronoun
-MACRO pron(0)
-(
-[pos ="PPER"]
-)
-;
-MACRO pron($0=MarkPron)
-(
-$0[pos="PPER"]
-)
-;
-
+## full NP: possibly coordinated
 MACRO np(0)
 (
-  /np_base[]
-
-| /np_base[] "und" /np_base[]
-| "sowohl" /np_base[] "als" "auch" /np_base[]
+  /np_base[] |
+  /np_base[] ([pos="KON"] | "als" "auch") /np_base[]
 )
 ;
 
 MACRO np($0=MarkNoun)
-(/np_base["$0"]
+(
+  /np_base["$0"]
 )
 ;
