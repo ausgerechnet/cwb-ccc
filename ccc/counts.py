@@ -480,7 +480,7 @@ class Counts:
 
 def score_counts(df1, df2, R1=None, R2=None, reference='right',
                  min_freq=2, order='log_likelihood', cut_off=1000,
-                 flags=None, ams=None, freq=True, digits=2):
+                 flags=None, ams=None, freq=True, digits=6):
     """calculate association measures for two frequency lists df1, df2
     with respective sizes R1, R2.
 
@@ -557,7 +557,7 @@ def score_counts(df1, df2, R1=None, R2=None, reference='right',
 
 def score_counts_signature(f, f1, f2, N, min_freq=2,
                            order='log_likelihood', cut_off=1000,
-                           flags=None, ams=None, freq=True, digits=2):
+                           flags=None, ams=None, freq=True, digits=6):
     """wrapper of score_counts for input in frequency signature notation.
 
     :param DataFrame f: co-occurrence freq. of token and node
