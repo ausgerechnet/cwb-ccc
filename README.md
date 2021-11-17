@@ -4,7 +4,7 @@
 
 
 ## Introduction ##
-This module is a wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
+This module is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
 
 * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
@@ -34,6 +34,7 @@ You can install this module with pip from PyPI:
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and use `setup.py`:
 
     python3 setup.py install
+
 
 ### Accessing Corpora ###
 
@@ -425,14 +426,14 @@ dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 <summary><code>dump.collocates()</code></summary>
 <p>
 
-| *lemma*   |   f |   marginal |   in\_nodes |    f2 |      N |   f1 |   z\_score |   t\_score |      dice |   log\_likelihood |   mutual\_information |   log\_ratio |   O11 |   O12 |   O21 |    O22 |      E11 |     E12 |       E21 |    E22 |
-|:----------|----:|-----------:|------------:|------:|-------:|-----:|-----------:|-----------:|----------:|------------------:|----------------------:|-------------:|------:|------:|------:|-------:|---------:|--------:|----------:|-------:|
-| die       | 813 |      13765 |           0 | 13765 | 149168 | 5186 |    15.2882 |    11.7295 | 0.0858002 |           226.513 |              0.230157 |     0.870887 |   813 |  4373 | 12952 | 131030 | 478.556  | 4707.44 | 13286.4   | 130696 |
-| bei       | 366 |       1357 |           0 |  1357 | 149168 | 5186 |    46.4174 |    16.6651 | 0.111875  |           967.728 |              0.889744 |     3.04807  |   366 |  4820 |   991 | 142991 |  47.1777 | 5138.82 |  1309.82  | 142672 |
-| (         | 314 |       1758 |           0 |  1758 | 149168 | 5186 |    32.3466 |    14.2709 | 0.0904378 |           574.854 |              0.710754 |     2.43408  |   314 |  4872 |  1444 | 142538 |  61.1189 | 5124.88 |  1696.88  | 142285 |
-| [         | 221 |        698 |           0 |   698 | 149168 | 5186 |    39.9366 |    13.2337 | 0.075119  |           654.834 |              0.95938  |     3.24305  |   221 |  4965 |   477 | 143505 |  24.2668 | 5161.73 |   673.733 | 143308 |
-| )         | 207 |       1827 |           0 |  1827 | 149168 | 5186 |    18.0032 |     9.9727 | 0.0590332 |           218.341 |              0.513075 |     1.74539  |   207 |  4979 |  1620 | 142362 |  63.5178 | 5122.48 |  1763.48  | 142219 |
-|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
+| *item*   |   O11 |   O12 |   O21 |    O22 |      E11 |     E12 |       E21 |    E22 |   z\_score |   t\_score |   log\_likelihood |   simple\_ll |     dice |   log\_ratio |   mutual\_information |   local\_mutual\_information |   conservative\_log\_ratio |      ipm |   ipm\_expected |   ipm\_reference |   ipm\_reference\_expected |   in\_nodes |   marginal |
+|:---------|------:|------:|------:|-------:|---------:|--------:|----------:|-------:|-----------:|-----------:|------------------:|-------------:|---------:|-------------:|----------------------:|-----------------------------:|---------------------------:|---------:|----------------:|-----------------:|---------------------------:|------------:|-----------:|
+| die      |   813 |  4373 | 12952 | 131030 | 478.556  | 4707.44 | 13286.4   | 130696 |    15.2882 |    11.7295 |           226.513 |      192.823 | 0.0858   |     0.801347 |              0.230157 |                      187.118 |                   0.605981 | 156768   |        92278.5  |         89955.7  |                   92278.5  |           0 |      13765 |
+| bei      |   366 |  4820 |   991 | 142991 |  47.1777 | 5138.82 |  1309.82  | 142672 |    46.4174 |    16.6651 |           967.728 |      862.013 | 0.111875 |     3.35808  |              0.889744 |                      325.646 |                   3.00871  |  70574.6 |         9097.13 |          6882.8  |                    9097.13 |           0 |       1357 |
+| (        |   314 |  4872 |  1444 | 142538 |  61.1189 | 5124.88 |  1696.88  | 142285 |    32.3466 |    14.2709 |           574.854 |      522.005 | 0.090438 |     2.59389  |              0.710754 |                      223.177 |                   2.23788  |  60547.6 |        11785.4  |         10029    |                   11785.4  |           0 |       1758 |
+| [        |   221 |  4965 |   477 | 143505 |  24.2668 | 5161.73 |   673.733 | 143308 |    39.9366 |    13.2337 |           654.834 |      582.935 | 0.075119 |     3.68518  |              0.95938  |                      212.023 |                   3.21474  |  42614.7 |         4679.29 |          3312.91 |                    4679.29 |           0 |        698 |
+| )        |   207 |  4979 |  1620 | 142362 |  63.5178 | 5122.48 |  1763.48  | 142219 |    18.0032 |     9.9727 |           218.341 |      202.135 | 0.059033 |     1.82683  |              0.513075 |                      106.207 |                   1.40153  |  39915.2 |        12247.9  |         11251.4  |                   12247.9  |           0 |       1827 |
+|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
 
 </p>
 </details>
@@ -445,14 +446,14 @@ By default, collocates are calculated on the "lemma"-layer, assuming that this i
 <summary><code>dump.collocates(['lemma', 'pos'], order='log_likelihood')</code></summary>
 <p>
 
-| *lemma* | *pos* |   f | marginal | in\_nodes |   f2 |      N |   f1 | z\_score | t\_score |      dice | log\_likelihood | mutual\_information | log\_ratio | O11 |  O12 |  O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
-|:--------|:------|----:|---------:|----------:|-----:|-------:|-----:|---------:|---------:|----------:|----------------:|--------------------:|-----------:|----:|-----:|-----:|-------:|--------:|--------:|--------:|-------:|
-| bei     | APPR  | 360 |     1229 |         0 | 1229 | 149168 | 5186 |  48.5376 |  16.7217 |  0.112237 |         1014.28 |            0.925594 |    3.16661 | 360 | 4826 |  869 | 143113 | 42.7276 | 5143.27 | 1186.27 | 142796 |
-| (       | $(    | 314 |     1758 |         0 | 1758 | 149168 | 5186 |  32.3466 |  14.2709 | 0.0904378 |         574.854 |            0.710754 |    2.43408 | 314 | 4872 | 1444 | 142538 | 61.1189 | 5124.88 | 1696.88 | 142285 |
-| Beifall | NN    | 199 |      670 |         0 |  670 | 149168 | 5186 |   36.406 |  12.4555 | 0.0679645 |         561.382 |            0.931621 |    3.14473 | 199 | 4987 |  471 | 143511 | 23.2933 | 5162.71 | 646.707 | 143335 |
-| [       | $(    | 161 |      420 |         0 |  420 | 149168 | 5186 |  38.3118 |  11.5378 | 0.0574385 |         545.131 |             1.04242 |    3.50427 | 161 | 5025 |  259 | 143723 | 14.6018 |  5171.4 | 405.398 | 143577 |
-| ]:      | $(    | 139 |      479 |         0 |  479 | 149168 | 5186 |  29.9811 |  10.3773 | 0.0490733 |         383.895 |            0.921522 |    3.09579 | 139 | 5047 |  340 | 143642 |  16.653 | 5169.35 | 462.347 | 143520 |
-| ...     | ...   | ... |      ... |       ... |  ... |    ... |  ... |      ... |      ... |       ... |             ... |                 ... |        ... | ... |  ... |  ... |    ... |     ... |     ... |     ... |    ... |
+| *item*     | O11 |  O12 |  O21 |    O22 |     E11 |     E12 |     E21 |    E22 | z\_score | t\_score | log\_likelihood | simple\_ll |     dice | log\_ratio | mutual\_information | local\_mutual\_information | conservative\_log\_ratio |     ipm | ipm\_expected | ipm\_reference | ipm\_reference\_expected | in\_nodes | marginal |
+|:-----------|----:|-----:|-----:|-------:|--------:|--------:|--------:|-------:|---------:|---------:|----------------:|-----------:|---------:|-----------:|--------------------:|---------------------------:|-------------------------:|--------:|--------------:|---------------:|-------------------------:|----------:|---------:|
+| bei APPR   | 360 | 4826 |  869 | 143113 | 42.7276 | 5143.27 | 1186.27 | 142796 |  48.5376 |  16.7217 |         1014.28 |    899.961 | 0.112237 |    3.52376 |            0.925594 |                    333.214 |                  3.16388 | 69417.7 |       8239.03 |        6035.48 |                  8239.03 |         0 |     1229 |
+| ( $(       | 314 | 4872 | 1444 | 142538 | 61.1189 | 5124.88 | 1696.88 | 142285 |  32.3466 |  14.2709 |         574.854 |    522.005 | 0.090438 |    2.59389 |            0.710754 |                    223.177 |                  2.23649 | 60547.6 |       11785.4 |          10029 |                  11785.4 |         0 |     1758 |
+| Beifall NN | 199 | 4987 |  471 | 143511 | 23.2933 | 5162.71 | 646.707 | 143335 |   36.406 |  12.4555 |         561.382 |    502.351 | 0.067964 |    3.55216 |            0.931621 |                    185.393 |                  3.06089 | 38372.5 |       4491.58 |        3271.24 |                  4491.58 |         0 |      670 |
+| [ $(       | 161 | 5025 |  259 | 143723 | 14.6018 |  5171.4 | 405.398 | 143577 |  38.3118 |  11.5378 |         545.131 |    480.087 | 0.057438 |    4.10923 |             1.04242 |                     167.83 |                  3.52364 | 31045.1 |       2815.62 |        1798.84 |                  2815.62 |         0 |      420 |
+| ]: $(      | 139 | 5047 |  340 | 143642 |  16.653 | 5169.35 | 462.347 | 143520 |  29.9811 |  10.3773 |         383.895 |     345.19 | 0.049073 |    3.50467 |            0.921522 |                    128.092 |                  2.91721 | 26802.9 |       3211.14 |        2361.41 |                  3211.14 |         0 |      479 |
+| ...        | ... |  ... |  ... |    ... |     ... |     ... |     ... |    ... |      ... |      ... |             ... |        ... |      ... |        ... |                 ... |                        ... |                      ... |     ... |           ... |            ... |                      ... |       ... |      ... |
 
 </p>
 </details>
@@ -460,13 +461,19 @@ By default, collocates are calculated on the "lemma"-layer, assuming that this i
 
 For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
 
-By default, the dataframe is annotated with "z\_score", "t\_score", "dice", "log\_likelihood", and "mutual\_information" (parameter `ams`).  For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).  Availability of association measures depends on their implementation in the [pandas-association-measures](https://pypi.org/project/association-measures/) package.
+By default, the dataframe contains the counts, namely
+- observed and expected absolute frequencies (columns O11, ..., E22),
+- observed and expected relative frequencies (instances per million, IPM), 
+- marginal frequencies, and 
+- instances within nodes.
+
+You can drop the counts by specifying `freq=False`. By default, the dataframe is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
 
 The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
 
 ### Subcorpora ###
 
-In **cwb-ccc terms**, every instance of a `Dump` is a subcorpus.  There are two possibilities to get a `dump`: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain the word "SPD":
+In **cwb-ccc terms**, every instance of a `Dump` is a subcorpus.  There are two possibilities to get a `dump`: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain "SPD":
 
 ```python
 dump = corpus.query('"SPD" expand to s')
@@ -492,7 +499,7 @@ Note also that the CWB does not allow complex queries on s-attributes.  It is th
 
 In **CWB terms**, subcorpora are _named query results_ (NQRs), which consist of the corpus positions of match and matchend (and optional anchor points called _anchor_ and _keyword_).  If you give a `name` when using `corpus.query()` or `corpus.query_s_att()`, the respective matches of the dump will also be available as NQRs in CQP.
 
-This way you can run queries on NQRs in CQP.  Compare e.g. the frequency breakdown for a query on the whole corpus
+This way you can run queries on NQRs in CQP (a.k.a. *subqueries*).  Compare e.g. the frequency breakdown for a query on the whole corpus
 
 <details>
 <summary><code>corpus.query('[lemma="sagen"]').breakdown()</code></summary>
@@ -573,14 +580,14 @@ you can use its `keywords()` method for retrieving keywords:
 <summary><code>dump.keywords()</code></summary>
 <p>
 
-| *lemma*    |   f |   f2 |      N |    f1 | z\_score | t\_score |       dice | log\_likelihood | mutual\_information | log\_ratio | O11 |   O12 |  O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
-|:-----------|----:|-----:|-------:|------:|---------:|---------:|-----------:|----------------:|--------------------:|-----------:|----:|------:|-----:|-------:|--------:|--------:|--------:|-------:|
-| deswegen   |  55 |   92 | 149800 | 44023 |  5.37785 |  3.77055 | 0.00249348 |         36.4851 |            0.308407 |    1.02542 |  55 | 43968 |   37 | 105740 | 27.0368 |   43996 | 64.9632 | 105712 |
-| CSU        | 255 |  635 | 149800 | 44023 |  5.00615 |  4.28257 |  0.0114201 |         33.6179 |            0.135599 |   0.452701 | 255 | 43768 |  380 | 105397 | 186.613 | 43836.4 | 448.387 | 105329 |
-| in         | 867 | 2498 | 149800 | 44023 |  4.90475 |  4.51323 |  0.0372735 |         33.5751 |           0.0722588 |   0.244474 | 867 | 43156 | 1631 | 104146 | 734.109 | 43288.9 | 1763.89 | 104013 |
-| CDU        | 260 |  650 | 149800 | 44023 |  4.99087 |  4.27789 |  0.0116401 |         33.4398 |            0.133892 |   0.447052 | 260 | 43763 |  390 | 105387 | 191.021 |   43832 | 458.979 | 105318 |
-| Wirtschaft |  39 |   64 | 149800 | 44023 |  4.65587 |  3.23327 | 0.00176923 |          27.294 |            0.316717 |    1.05277 |  39 | 43984 |   25 | 105752 | 18.8082 | 44004.2 | 45.1918 | 105732 |
-| ...        | ... |  ... |    ... |   ... |      ... |      ... |        ... |             ... |                 ... |        ... | ... |   ... |  ... |    ... |     ... |     ... |     ... |    ... |
+| *item*   |   O11 |   O12 |   O21 |    O22 |       E11 |     E12 |       E21 |    E22 |   z\_score |   t\_score |   log\_likelihood |   simple\_ll |     dice |   log\_ratio |   mutual\_information |   local\_mutual\_information |   conservative\_log\_ratio |      ipm |   ipm\_expected |   ipm\_reference |   ipm\_reference\_expected |
+|:---------|------:|------:|------:|-------:|----------:|--------:|----------:|-------:|-----------:|-----------:|------------------:|-------------:|---------:|-------------:|----------------------:|-----------------------------:|---------------------------:|---------:|----------------:|-----------------:|---------------------------:|
+| ,        |  2499 | 38852 |  5371 | 103078 | 2172.45   | 39178.6 | 5697.55   | 102751 |    7.00617 |    6.53239 |           69.6474 |      46.7967 | 0.101542 |     0.287183 |              0.060817 |                     151.982  |                   0.131751 | 60433.8  |       52536.7   |        49525.6   |                  52536.7   |
+| in       |   867 | 40484 |  1631 | 106818 |  689.551  | 40661.4 | 1808.45   | 106641 |    6.75755 |    6.02647 |           61.2663 |      42.1849 | 0.039545 |     0.47937  |              0.099452 |                      86.2253 |                   0.204192 | 20966.8  |       16675.6   |        15039.3   |                  16675.6   |
+| CSU      |   255 | 41096 |   380 | 108069 |  175.286  | 41175.7 |  459.714  | 107989 |    6.02087 |    4.99187 |           46.6543 |      31.7425 | 0.012147 |     0.81552  |              0.162792 |                      41.512  |                   0.281799 |  6166.72 |        4238.99  |         3503.95  |                   4238.99  |
+| CDU      |   260 | 41091 |   390 | 108059 |  179.427  | 41171.6 |  470.573  | 107978 |    6.01515 |    4.99693 |           46.6055 |      31.7289 | 0.012381 |     0.80606  |              0.161086 |                      41.8823 |                   0.27822  |  6287.64 |        4339.12  |         3596.16  |                   4339.12  |
+| deswegen |    55 | 41296 |    37 | 108412 |   25.3958 | 41325.6 |   66.6042 | 108382 |    5.87452 |    3.99183 |           41.5308 |      25.794  | 0.002654 |     1.96293  |              0.335601 |                      18.458  |                   0.558012 |  1330.08 |         614.152 |          341.174 |                    614.152 |
+|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
 
 </p>
 </details>
@@ -594,14 +601,14 @@ Just as with collocates, the result is a `DataFrame` with lexical items (`p_quer
 <summary><code>dump.keywords(["lemma", "pos"], order="log_likelihood")</code></summary>
 <p>
 
-| *lemma*    | *pos* |   f |  f2 |      N |    f1 | z\_score | t\_score |       dice | log\_likelihood | mutual\_information | log\_ratio | O11 |   O12 | O21 |    O22 |     E11 |     E12 |     E21 |    E22 |
-|:-----------|:------|----:|----:|-------:|------:|---------:|---------:|-----------:|----------------:|--------------------:|-----------:|----:|------:|----:|-------:|--------:|--------:|--------:|-------:|
-| F.         | NN    | 161 | 353 | 149800 | 44023 |  5.62195 |  4.51279 | 0.00725617 |          41.407 |            0.190883 |   0.635983 | 161 | 43862 | 192 | 105585 | 103.739 | 43919.3 | 249.261 | 105528 |
-| deswegen   | PROAV |  55 |  92 | 149800 | 44023 |  5.37785 |  3.77055 | 0.00249348 |         36.4851 |            0.308407 |    1.02542 |  55 | 43968 |  37 | 105740 | 27.0368 |   43996 | 64.9632 | 105712 |
-| CSU        | NE    | 255 | 635 | 149800 | 44023 |  5.00615 |  4.28257 |  0.0114201 |         33.6179 |            0.135599 |   0.452701 | 255 | 43768 | 380 | 105397 | 186.613 | 43836.4 | 448.387 | 105329 |
-| CDU        | NE    | 260 | 650 | 149800 | 44023 |  4.99087 |  4.27789 |  0.0116401 |         33.4398 |            0.133892 |   0.447052 | 260 | 43763 | 390 | 105387 | 191.021 |   43832 | 458.979 | 105318 |
-| Wirtschaft | NN    |  39 |  64 | 149800 | 44023 |  4.65587 |  3.23327 | 0.00176923 |          27.294 |            0.316717 |    1.05277 |  39 | 43984 |  25 | 105752 | 18.8082 | 44004.2 | 45.1918 | 105732 |
-| ...        | ...   | ... | ... |    ... |   ... |      ... |      ... |        ... |             ... |                 ... |        ... | ... |   ... | ... |    ... |     ... |     ... |     ... |    ... |
+| *item*   |   O11 |   O12 |   O21 |    O22 |       E11 |     E12 |      E21 |    E22 |   z\_score |   t\_score |   log\_likelihood |   simple\_ll |     dice |   log\_ratio |   mutual\_information |   local\_mutual\_information |   conservative\_log\_ratio |      ipm |   ipm\_expected |   ipm\_reference |   ipm\_reference\_expected |
+|:---------|------:|------:|------:|-------:|----------:|--------:|---------:|-------:|-----------:|-----------:|------------------:|-------------:|---------:|-------------:|----------------------:|-----------------------------:|---------------------------:|---------:|----------------:|-----------------:|---------------------------:|
+| , $,     |  2499 | 38288 |  5371 | 103642 | 2142.82   | 38644.2 | 5727.18  | 103286 |    7.69455 |    7.12512 |           83.3197 |      56.1738 | 0.102719 |     0.314479 |              0.066782 |                     166.887  |                   0.158575 | 61269.5  |        52536.7  |         49269.4  |                   52536.7  |
+| F. NN    |   161 | 40626 |   192 | 108821 |   96.1136 | 40690.9 |  256.886 | 108756 |    6.61853 |    5.11377 |           54.4564 |      36.3385 | 0.007827 |     1.16427  |              0.224041 |                      36.0706 |                   0.456631 |  3947.34 |         2356.48 |          1761.26 |                    2356.48 |
+| CSU NE   |   255 | 40532 |   380 | 108633 |  172.895  | 40614.1 |  462.105 | 108551 |    6.24418 |    5.14158 |           49.731  |      33.9649 | 0.012312 |     0.842817 |              0.168757 |                      43.0329 |                   0.307344 |  6251.99 |         4238.99 |          3485.82 |                    4238.99 |
+| CDU NE   |   260 | 40527 |   390 | 108623 |  176.98   | 40610   |  473.02  | 108540 |    6.24055 |    5.1487  |           49.7162 |      33.9757 | 0.012549 |     0.833356 |              0.16705  |                      43.433  |                   0.303785 |  6374.58 |         4339.12 |          3577.55 |                    4339.12 |
+| die ART  |  3443 | 37344 |  8026 | 100987 | 3122.74   | 37664.3 | 8346.26  | 100667 |    5.7311  |    5.45805 |           47.9751 |      31.7769 | 0.131774 |     0.197304 |              0.042402 |                     145.988  |                   0.067797 | 84414.2  |        76562.1  |         73624.2  |                   76562.1  |
+|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
 
 </p>
 </details>
@@ -650,7 +657,7 @@ The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with a
 </details>
 <br/>
 
-The corpus is located in this [repository](tests/test-corpora/).  Using it, you can test the module with pytest. Make sure you install all development dependencies:
+The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus as a reference.  Make sure you install all development dependencies:
 
     pip install pipenv
     pipenv install --dev
@@ -662,12 +669,14 @@ You can then simply
 and
 
     make coverage
-    
-Note that these make commands update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl1386)) in order to make the tests, since the CWB requires an absolute path here.
+
+which uses [pytest](https://pytest.org/) to check that all methods work reliably.
+
+Note that the make commands above update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl1386)) in order to make the tests, since the CWB requires an absolute path here.
 
 
 ## Acknowledgements ##
-The module relies on [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.  Special thanks to **Markus Opolka** for the implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
+The module includes a slight adaptation of [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.  Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 
 The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 
