@@ -1,6 +1,7 @@
 from ccc import Corpus, Corpora
 import pandas as pd
 import pytest
+from glob import glob
 
 from .conftest import DATA_PATH
 
@@ -55,6 +56,13 @@ def test_corpus_lib(germaparl):
     assert '/np(0)' not in corpus._macros_available()
     corpus = get_corpus(germaparl, lib=True)
     assert '/np(0)' in corpus._macros_available()
+
+
+@pytest.mark.init
+def test_data_dir(germaparl):
+    get_corpus(germaparl, lib=False, data_path=None)
+    paths = glob("/tmp/cache-ccc*")
+    assert len(paths) >= 1
 
 
 #####################################################

@@ -4,9 +4,28 @@
 import shelve
 import os
 from hashlib import sha256
+from glob import glob
 # logging
 import logging
 logger = logging.getLogger(__name__)
+
+
+def generate_idx(identifiers, prefix='', length=10):
+
+    string = ''.join([str(idx) for idx in identifiers])
+    identifier = sha256(str(string).encode()).hexdigest()
+    return prefix + identifier[:length]
+
+
+def generate_library_idx(lib_path, prefix='', length=10):
+
+    wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
+    macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
+    paths = macros + wordlists
+    identifiers = [
+        generate_idx(open(p, 'rt')) for p in sorted(paths)
+    ]
+    return generate_idx(identifiers, prefix, length)
 
 
 class Cache:
@@ -19,11 +38,6 @@ class Cache:
             directory = os.path.dirname(path)
             os.makedirs(directory, exist_ok=True)
 
-    def generate_idx(self, identifiers, prefix='', length=10):
-        string = ''.join([str(idx) for idx in identifiers])
-        h = sha256(str(string).encode()).hexdigest()
-        return prefix + h[:length]
-
     def get(self, identifier):
 
         if self.path is None:
@@ -33,7 +47,7 @@ class Cache:
         if isinstance(identifier, str):
             key = identifier
         else:
-            key = self.generate_idx(identifier)
+            key = generate_idx(identifier)
 
         with shelve.open(self.path) as db:
             if key in db.keys():
@@ -51,7 +65,7 @@ class Cache:
         if isinstance(identifier, str):
             key = identifier
         else:
-            key = self.generate_idx(identifier)
+            key = generate_idx(identifier)
 
         with shelve.open(self.path) as db:
             logger.info('cache: saving object "%s"' % key)

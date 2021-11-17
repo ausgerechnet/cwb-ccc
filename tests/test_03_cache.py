@@ -1,24 +1,16 @@
 from ccc.cache import Cache
+from ccc.cache import generate_idx, generate_library_idx
 from pandas import DataFrame
 from random import randint
 import os
-
 from .conftest import DATA_PATH
-
-
-def test_generate_idx():
-
-    parameters = {'query': "test", 's_break': "test"}
-    cache = Cache()
-    s = cache.generate_idx(parameters)
-    assert(isinstance(s, str))
 
 
 def test_set_get_empty():
 
     parameters = {'query': "test", 's_break': "test"}
     cache = Cache()
-    s = cache.generate_idx(parameters)
+    s = generate_idx(parameters)
     assert(cache.get(s) is None)
     cache.set(s, parameters)
     assert(cache.get(s) is None)
@@ -39,3 +31,7 @@ def test_set_get():
     cache.set('testtest', dump)
     r = cache.get('testtest')
     assert(r.empty)
+
+
+def test_generate_library_idx(germaparl):
+    assert isinstance(generate_library_idx(germaparl['lib_path']), str)

@@ -6,13 +6,14 @@ from io import StringIO
 from glob import glob
 # part of module
 from .cqp import CQP
-from .cache import Cache
+from .cache import Cache, generate_idx, generate_library_idx
 from .counts import Counts
 from .utils import preprocess_query
 from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
 from .counts import cwb_scan_corpus
 from .cl import Corpus as Attributes
+from .version import __version__
 # requirements
 from pandas import DataFrame, read_csv
 from pandas.errors import EmptyDataError
@@ -55,7 +56,7 @@ def start_cqp(cqp_bin, registry_path,
     if lib_path is not None:
 
         # wordlists
-        wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
+        wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
@@ -63,7 +64,7 @@ def start_cqp(cqp_bin, registry_path,
             cqp.Exec(cqp_exec)
 
         # macros
-        macros = glob(os.path.join(lib_path, 'macros', '*'))
+        macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
@@ -156,8 +157,8 @@ class Corpora:
         return corpora
 
     def activate(self, corpus_name,
-                 lib_path=None, data_path='/tmp/ccc-data/'):
-        """Activate a corpus.
+                 lib_path=None, data_path=None):
+        """Activate a corpus.  If no data_path is given it
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_path: /path/to/macros/and/wordlists/
@@ -175,6 +176,37 @@ class Corpora:
                       data_path=data_path)
 
 
+def init_data_path(data_path, corpus_name, lib_path):
+    """ get a data directory / ensure that the given one complies with schema
+
+    """
+
+    if data_path is None:
+        data_path = os.path.join("/tmp", "cache-ccc-" + str(__version__))
+    if not isinstance(data_path, str):
+        raise ValueError("parameter data_path must be str")
+
+    # TODO: check read / write
+    os.makedirs(data_path, exist_ok=True)
+
+    # generate library idx to invalidate cache when updated
+    if lib_path is not None:
+        # TODO: read library, generate idx
+        lib_idx = generate_library_idx(lib_path, 'lib-', 7)
+    else:
+        lib_idx = "lib-vanilla"
+
+    # each corpus has its separate directory for each library
+    subdir = corpus_name + "-" + lib_idx
+    if not data_path.endswith(subdir):
+        data_path = os.path.join(data_path, subdir)
+
+    # TODO: check read / write here or above?
+    os.makedirs(data_path, exist_ok=True)
+
+    return data_path
+
+
 class Corpus:
     """Interface to CWB-indexed corpus.
 
@@ -182,11 +214,17 @@ class Corpus:
 
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
-                 data_path='/tmp/ccc-data/'):
+                 data_path=None):
         """Establish connection to CQP and corpus attributes, set paths, read
         library.
 
         Raises KeyError if corpus not in registry.
+
+        data directory contains subdirectories for each corpus and
+        each library (/<data-path>/<corpus>-<lib-idx>/CACHE)
+        - marginals_complex
+        - dump_from_s_att
+        - dump_from_query
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_path: /path/to/macros/and/wordlists/
@@ -196,23 +234,13 @@ class Corpus:
 
         """
 
-        # process data path
-        if data_path is not None:
-            if not data_path.endswith(corpus_name):
-                data_path = os.path.join(data_path, corpus_name)
-            self.data_path = data_path
-            if not os.path.isdir(self.data_path):
-                os.makedirs(self.data_path)
-            cache_path = os.path.join(self.data_path, "CACHE")
-        else:
-            self.data_path = None
-            cache_path = None
+        # preprocess data path
+        data_path = init_data_path(data_path, corpus_name, lib_path)
 
-        # set registry path and cqp_bin
+        # save paths
+        self.data_path = data_path
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
-
-        # macros and wordlists
         self.lib_path = lib_path
 
         # init (sub-)corpus information
@@ -229,7 +257,7 @@ class Corpus:
         self.attributes_available = self._attributes_available()
 
         # init cache
-        self.cache = Cache(cache_path)
+        self.cache = Cache(os.path.join(self.data_path, "CACHE"))
 
         # init counts
         self.counts = Counts(self.corpus_name, self.registry_path)
@@ -603,7 +631,7 @@ class Corpus:
             cqp.__kill__()
         else:
             sbcrpssize = None
-        identifier = self.cache.generate_idx([
+        identifier = generate_idx([
              query, s_query, anchors, match_strategy, self.subcorpus, sbcrpssize
         ], prefix="df_dump:")
 
