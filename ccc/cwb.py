@@ -158,7 +158,7 @@ class Corpora:
 
     def activate(self, corpus_name,
                  lib_path=None, data_path=None):
-        """Activate a corpus.  If no data_path is given it
+        """Activate a corpus.
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_path: /path/to/macros/and/wordlists/
@@ -1020,7 +1020,10 @@ class Corpus:
         # preprocess input
         save = False if name is None else True  # save NQR from CQP to disk?
         name = 'Last' if name is None else name  # name in CQP
-        query, s_query, anchors = preprocess_query(cqp_query)
+        query_dict = preprocess_query(cqp_query)
+        query = query_dict['query']
+        s_query = query_dict['s_query']
+        anchors = query_dict['anchors']
         s_query = context_break if s_query is None else s_query
         context_left = context if context_left is None else context_left
         context_right = context if context_right is None else context_right

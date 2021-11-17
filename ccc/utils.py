@@ -144,8 +144,24 @@ def format_cqp_query(items, p_query='word', s_query=None,
     return query
 
 
+def find_all(pattern, string):
+    p = re.compile(pattern)
+    matches = dict()
+    for m in p.finditer(string):
+        matches[m.group()] = [m.start(), m.end()]
+    return matches
+
+
 def preprocess_query(query):
-    """ parse anchors and 'within' statement from query """
+    """
+    - get s_query and strip 'within' statement
+    - get anchors
+    - get macros
+    - get wordlists
+
+    :return: raw query, s_query, anchors, macros, wordlists
+    :rtype: dict
+    """
 
     # get s_query and strip 'within' statement
     s_query = None
@@ -156,14 +172,18 @@ def preprocess_query(query):
             query = " ".join(tokens[:-2])
             s_query = tokens[-1]
 
-    # get anchors
-    p = re.compile(r"@\d")
-    anchors = dict()
-    for m in p.finditer(query):
-        anchors[m.group()] = [m.start(), m.end()]
-    anchors = [int(a[1]) for a in anchors.keys()]
+    # find anchors, macros, wordlists
+    anchors = [int(a[1]) for a in find_all(r"@\d", query).keys()]
+    macros = list(find_all(r"/[A-Za-z_]+\[\d*\]", query).keys())
+    wordlists = list(find_all(r"\$[A-Za-z_]+", query).keys())
 
-    return query, s_query, anchors
+    return {
+        'query': query,
+        's_query': s_query,
+        'anchors': anchors,
+        'macros': macros,
+        'wordlists': wordlists
+    }
 
 
 #################################

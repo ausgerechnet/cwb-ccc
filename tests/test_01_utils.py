@@ -5,36 +5,62 @@ from ccc.utils import filter_df
 from ccc import Corpus
 
 
+def test_preprocess_query():
+    query = (
+        "/nobody[] <vp>[]*@0:[lemma = $verbs_cog_positive] "
+        "[]* @1:[]</vp> <np>@2:[::][]* [lemma = $adj_cog_negative]* "
+        "[lemma = $nouns_person_negative][]* @3:[]</np> "
+        "within tweet;"
+    )
+    query = preprocess_query(query)
+    assert query['anchors'] == [0, 1, 2, 3]
+    assert query['s_query'] == 'tweet'
+    assert query['wordlists'] == ["$verbs_cog_positive", "$adj_cog_negative",
+                                  "$nouns_person_negative"]
+    assert query['macros'] == ['/nobody[]']
+
+    query = (
+        "<vp>[]*@0:[lemma = $verbs_cog_positive] "
+        "[]* @1:[]</vp> <np>@2:[::][]* [lemma = $adj_cog_negative]* "
+        "[lemma = $nouns_person_negative][]* @3:[]</np>;"
+    )
+    query = preprocess_query(query)
+    assert query['s_query'] is None
+    assert query['macros'] == []
+
+
 def test_preprocess_anchor_query():
     query = (
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] @2[lemma="CDU"] [word="\\)"]'
     )
-    query_1, s_query_1, anchors_1 = preprocess_query(query)
+    query_1 = preprocess_query(query)
 
     query = (
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] @2[lemma="CDU"] [word="\\)"];'
     )
-    query_2, s_query_2, anchors_2 = preprocess_query(query)
+    query_2 = preprocess_query(query)
 
     query = (
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] @2[lemma="CDU"] [word="\\)"] within tweet;'
     )
-    query_3, s_query_3, anchors_3 = preprocess_query(query)
+    query_3 = preprocess_query(query)
 
     query = (
         '@0[lemma="Angela"]? @1[lemma="Merkel"] '
         '[word="\\("] @2[lemma="CDU"] [word="\\)"] within s'
     )
-    query_4, s_query_4, anchors_4 = preprocess_query(query)
+    query_4 = preprocess_query(query)
 
-    assert(s_query_1 == s_query_2 is None)
-    assert(s_query_3 == 'tweet')
-    assert(s_query_4 == 's')
-    assert(query_1 == query_2 == query_3 == query_4)
-    assert(anchors_1 == anchors_2 == anchors_3 == anchors_4)
+    assert(query_1['s_query'] == query_2['s_query'] is None)
+    assert(query_3['s_query'] == 'tweet')
+    assert(query_4['s_query'] == 's')
+    assert(query_1['query'] == query_2['query'] ==
+           query_3['query'] == query_4['query'])
+    assert(query_1['anchors'] == query_2['anchors'] ==
+           query_3['anchors'] == query_4['anchors'])
 
 
 def test_fold_items():
