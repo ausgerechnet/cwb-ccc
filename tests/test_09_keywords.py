@@ -96,3 +96,16 @@ def test_score_counts(germaparl, empirist):
 
     kw = score_counts(df1[['freq']], df2[['freq']], R1, R2, cut_off=None)
     assert kw['log_likelihood']['die'] == 4087.276827
+
+
+@pytest.mark.now
+def test_keywords(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    left = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
+    right = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
+    kw = score_counts(left, right)
+
+    assert kw.iloc[0]['O11'] == 11469
+    assert kw.iloc[0]['conservative_log_ratio'] == 0

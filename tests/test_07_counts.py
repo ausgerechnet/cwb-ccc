@@ -97,6 +97,15 @@ def test_marginals(germaparl):
 
 @pytest.mark.marginals
 @pytest.mark.cwb_counts
+def test_marginals_all(germaparl):
+    corpus = get_corpus(germaparl)
+    freqframe = corpus.marginals(p_atts=['lemma', 'pos'])
+    assert isinstance(freqframe, pd.DataFrame)
+    assert freqframe.loc['die ART']['freq'] == 11469
+
+
+@pytest.mark.marginals
+@pytest.mark.cwb_counts
 def test_marginals_patterns(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.marginals(["H.*", "Kohl", "CDU"])

@@ -373,7 +373,19 @@ class Corpus:
 
         return self.counts._cpos2patts(cpos, p_atts, ignore)
 
-    def marginals(self, items, p_att='word', flags=0, pattern=False):
+    def marginals(self, items=None, p_atts=['word'], flags=0, pattern=False):
+
+        # allow lazy evocation
+        p_atts = [p_atts] if isinstance(p_atts, str) else p_atts
+
+        # simple
+        if len(p_atts) == 1 and items is not None:
+            return self.marginals_simple(items, p_atts[0], flags, pattern)
+
+        else:
+            return self.marginals_complex(items, p_atts)
+
+    def marginals_simple(self, items, p_att='word', flags=0, pattern=False):
         """Extract marginal frequencies for given unigrams or unigram patterns
         of a single p-attribute.  0 if not in corpus.  For
         combinations of p-attributes, see marginals_complex.
@@ -387,19 +399,12 @@ class Corpus:
         :rtype: FreqFrame
 
         """
-
-        # allow lazy evocation
-        if isinstance(p_att, list):
-            if len(p_att) == 1:
-                p_att = p_att[0]
-            else:
-                return self.marginals_complex(items, p_att)
-
         pattern = True if flags > 0 else pattern
 
         tokens_all = self.attributes.attribute(p_att, 'p')
 
         # loop through items and collect frequencies
+        # TODO: list apply
         counts = list()
         for item in items:
             if not pattern:
@@ -432,12 +437,11 @@ class Corpus:
 
         """
 
-        items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
-
-        # retrieve all marginals for p-att combination from cache if possible
+        # get all marginals for p-att combination
         identifier = "_".join(p_atts) + "_marginals"
         df = self.cache.get(identifier)
         if df is not None:
+            # get from cache if possible
             logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
         else:
             # calculate all marginals for p-att combination
@@ -446,9 +450,15 @@ class Corpus:
             )
             self.cache.set(identifier, df)
 
-        # select relevant rows
-        df = df.reindex(items)
-        df = df.fillna(0, downcast='infer')
+        if items is not None:
+            # preprocess tuples
+            items = [" ".join(i) for i in items] if isinstance(items[0], tuple) \
+                else items
+            # select relevant rows
+            df = df.reindex(items)
+            df = df.fillna(0, downcast='infer')
+
+        # sort by frequency
         df.sort_values(by='freq')
 
         return df

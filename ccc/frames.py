@@ -100,7 +100,6 @@
       + 2 for "|".joined-query: counts.dump
       + 3 for "|".joined-query: counts.matches
     - Corpus.marginals()
-    - Corpus.marginals_complex()
 
     == (item) freq, p_atts[0]*, p_atts[1]*, ... ==
 

@@ -99,7 +99,7 @@ def test_marginals_word(germaparl):
 @pytest.mark.marginals
 def test_marginals_lemma(germaparl):
     corpus = get_corpus(germaparl)
-    df = corpus.marginals(["Merkel", "Seehofer", "gehen"], p_att='lemma')
+    df = corpus.marginals(["Merkel", "Seehofer", "gehen"], p_atts=['lemma'])
     assert df['freq']['gehen'] == 224
     assert len(df) == 3
 
