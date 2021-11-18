@@ -518,7 +518,7 @@ def score_counts(df1, df2, R1=None, R2=None, reference='right',
 
     # get corpus sizes if necessary
     R1 = df1['O11'].sum() if R1 is None else R1
-    R2 = df1['O21'].sum() if R2 is None else R2
+    R2 = df2['O21'].sum() if R2 is None else R2
 
     # join dataframes respecting min_freq
     if min_freq == 0:
