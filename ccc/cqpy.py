@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def load_query_json(query_path):
+def cqpy_load_json(query_path):
     """ DEPRECATED: support for query.json files pre 2020-08-29 """
 
     # read file
@@ -134,13 +134,22 @@ def cqpy_loads(doc):
     return query
 
 
+def cqpy_dump(query, path, comment=True, mode='wt'):
+    """
+    write query in CQPY format to path
+    """
+
+    open(path, mode=mode).write(cqpy_dumps(query, comment))
+
+
 def cqpy_dumps(query, comment=True):
     """
     serialize query as CQPY string
     """
 
     # get actual query
-    cqp = query.copy().pop('cqp')
+    query = query.copy()
+    cqp = query.pop('cqp')
 
     # header
     out = "--- # CQPY query file\n"
