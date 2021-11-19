@@ -132,27 +132,19 @@ class Corpora:
         cqp.__kill__()
 
         # check availability and corpus sizes
-        corpora_available = list()
         sizes = list()
         for corpus_name in corpora:
-
             try:
-                corpus = Corpus(
-                    corpus_name, cqp_bin=self.cqp_bin,
-                    registry_path=self.registry_path, data_path=None
-                )
-                corpora_available.append(corpus_name)
-                sizes.append(corpus.corpus_size)
-
+                sizes.append(len(Attributes(
+                    corpus_name, registry_dir=self.registry_path
+                ).attribute('word', 'p')))
             except SystemError:
                 logger.warning(
                     'corpus "%s" defined in registry but not available' % corpus_name
                 )
 
         # create dataframe
-        corpora = DataFrame({'corpus': corpora_available,
-                             'tokens': sizes})
-        corpora = corpora.set_index('corpus')
+        corpora = DataFrame({'corpus': corpora, 'size': sizes}).set_index('corpus')
 
         return corpora
 
