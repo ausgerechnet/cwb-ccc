@@ -28,7 +28,7 @@ def guess_cl_directory():
     # ... guess according to CQP location
     cqp_location = os.popen('which cqp').read().rstrip()
     if cqp_location != "":
-        cwb_dirs += os.path.join(Path(cqp_location).parents[1], 'include')
+        cwb_dirs += [os.path.join(Path(cqp_location).parents[1], 'include')]
 
     return cwb_dirs
 
