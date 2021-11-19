@@ -277,7 +277,6 @@ def test_mmda(germaparl):
     s_context = 's'
     context = 20
     additional_discoursemes = {}
-    data_path = '/tmp/mmda-ccc/'
     windows = [3, 5, 7]
     cqp_bin = 'cqp'
     lib_path = None
@@ -300,8 +299,7 @@ def test_mmda(germaparl):
                                  s_context, context,
                                  additional_discoursemes,
                                  lib_path, cqp_bin,
-                                 germaparl['registry_path'],
-                                 data_path)
+                                 germaparl['registry_path'])
 
     collocates = const.collocates(windows=windows,
                                   p_show=p_show, flags=flags_show,
