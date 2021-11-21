@@ -61,7 +61,7 @@ def test_corpus_lib(germaparl):
 @pytest.mark.init
 def test_data_dir(germaparl):
     get_corpus(germaparl, lib=False, data_path=None)
-    paths = glob("/tmp/cache-ccc*")
+    paths = glob("/tmp/ccc-*")
     assert len(paths) >= 1
 
 

@@ -174,7 +174,7 @@ def init_data_path(data_path, corpus_name, lib_path=None):
     """
 
     if data_path is None:
-        data_path = os.path.join("/tmp", "cache-ccc-" + str(__version__))
+        data_path = os.path.join("/tmp", "ccc-" + str(__version__))
     if not isinstance(data_path, str):
         raise ValueError("parameter data_path must be str")
 
