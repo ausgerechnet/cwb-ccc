@@ -78,7 +78,6 @@ def correct_anchors(df, corrections):
 ###########
 def cqp_escape(token):
     """ escape CQP meta-characters
-    TODO: what about '"'
 
     :param str token: string to escape
     :return: escaped string
@@ -98,7 +97,9 @@ def cqp_escape(token):
         "{": r"\{",
         "}": r"\}",
         "^": r"\^",
-        "$": r"\$"
+        "$": r"\$",
+        '"': r"\"",
+        "'": r"\'"
     }))
 
 
