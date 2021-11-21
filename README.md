@@ -4,7 +4,7 @@
 
 
 ## Introduction ##
-This module is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and calculate collocates.
+This module is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (e.g. collocates and keywords).
 
 * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
@@ -26,14 +26,16 @@ The module needs a working installation of the [CWB](http://cwb.sourceforge.net/
 
 If you want to run queries with more than two anchor points, the module requires CWB version 3.4.16 or later.
 
+
 ### Installation ###
 You can install this module with pip from PyPI:
 
     pip3 install cwb-ccc
 
-You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and use `setup.py`:
+You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
-    python3 setup.py install
+    pipenv install --dev
+    python3 setup.py bdist_wheel
 
 
 ### Accessing Corpora ###
@@ -68,7 +70,7 @@ If you are using macros and wordlists, you have to store them in a separate fold
 
 You can use the `cqp_bin` to point the module to a specific version of `cqp` (this is also helpful if `cqp` is not in your `PATH`).
 
-By default, the `data_path` points to "/tmp/ccc-data/". Make sure that "/tmp/" exists and appropriate rights are granted. Otherwise, change the parameter when initializing the corpus.
+By default, the `data_path` points to "/tmp/ccc-{version}/". Make sure that "/tmp/" exists and appropriate rights are granted. Otherwise, change the parameter when initializing the corpus. Note that each corpus will have its own subdirectory for each library.
 
 If everything is set up correctly, you can list all available attributes of the activated corpus:
 
