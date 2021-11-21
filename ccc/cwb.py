@@ -168,7 +168,7 @@ class Corpora:
                       data_path=data_path)
 
 
-def init_data_path(data_path, corpus_name, lib_path):
+def init_data_path(data_path, corpus_name, lib_path=None):
     """ get a data directory / ensure that the given one complies with schema
 
     """
@@ -178,12 +178,8 @@ def init_data_path(data_path, corpus_name, lib_path):
     if not isinstance(data_path, str):
         raise ValueError("parameter data_path must be str")
 
-    # TODO: check read / write
-    os.makedirs(data_path, exist_ok=True)
-
     # generate library idx to invalidate cache when updated
     if lib_path is not None:
-        # TODO: read library, generate idx
         lib_idx = generate_library_idx(lib_path, 'lib-', 7)
     else:
         lib_idx = "lib-vanilla"
@@ -193,10 +189,13 @@ def init_data_path(data_path, corpus_name, lib_path):
     if not data_path.endswith(subdir):
         data_path = os.path.join(data_path, subdir)
 
-    # TODO: check read / write here or above?
-    os.makedirs(data_path, exist_ok=True)
-
-    return data_path
+    # create directory
+    try:
+        os.makedirs(data_path, exist_ok=True)
+    except PermissionError:
+        logger.error('no write permission at "%s"' % data_path)
+    else:
+        return data_path
 
 
 class Corpus:
