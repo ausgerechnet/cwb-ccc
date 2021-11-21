@@ -201,16 +201,11 @@ def node2cotext(row):
     # get lists
     cpos_list = list(range(start, end + 1))
     match_list = [match] * len(cpos_list)
-
-    # TODO get rid of this ridiculous loop by using map
-    offset_list = list()
-    for cpos in range(start, end + 1):
-        if cpos < match:
-            offset_list.append(cpos - match)
-        elif cpos > matchend:
-            offset_list.append(cpos - matchend)
-        else:
-            offset_list.append(0)
+    offset_list = [
+        (cpos - match) if cpos < match else
+        (cpos - matchend) if cpos > matchend else
+        0 for cpos in cpos_list
+    ]
 
     # return object
     result = {
