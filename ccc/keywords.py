@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # part of module
-from .collocates import add_ams
+from .counts import score_counts_signature
 # requirements
-from pandas import DataFrame, MultiIndex
+from pandas import DataFrame
 # logging
 import logging
 logger = logging.getLogger(__name__)
@@ -27,24 +27,19 @@ class Keywords:
 
         # determine layer to work on
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
-
-        # TODO: also comprises s-att -- implement convenient retrieval
-        p_available = set(self.corpus.attributes_available['attribute'].values)
-        if not set(self.p_query).issubset(p_available):
+        available_attributes = self.corpus.attributes_available['attribute'].values
+        if not set(self.p_query).issubset(set(available_attributes)):
             logger.warning(
-                'specfied p-attribute(s) (%s) not available' % " ".join(self.p_query)
+                'specfied p-attribute(s) ("%s") not available\n' % " ".join(self.p_query) +
+                'falling back to primary layer'
             )
-            logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
         # collect context and save result
         logger.info('collecting token counts of subcorpus')
-        counts = corpus.counts.dump(
+        self.counts = corpus.counts.dump(
             df_dump, start='match', end='matchend', p_atts=self.p_query, split=True
         )
-        counts.columns = ['f']
-
-        self.counts = counts
 
     def show(self, order='f', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
@@ -55,47 +50,27 @@ class Keywords:
             logger.warning("nothing to show")
             return DataFrame()
 
-        # get frequencies
-        f = self.counts.loc[self.counts['f'] >= min_freq]
+        # get subcorpus frequencies
+        f = self.counts.loc[self.counts['freq'] >= min_freq]
+        f1 = self.counts['freq'].sum()
 
-        # determine reference frequency
+        # get reference frequency
         if isinstance(marginals, str):
-            N = self.corpus.corpus_size
-            # get marginals
             if marginals == 'corpus':
-                if len(self.p_query) == 1:
-                    # coerce to multiindex (what was I thinking?)
-                    f2 = self.corpus.marginals(
-                        f.index.get_level_values(self.p_query[0]), self.p_query[0]
-                    )
-                    f2.index = MultiIndex.from_tuples(
-                        f2.index.map(lambda x: (x, )), names=self.p_query
-                    )
-                else:
-                    f2 = self.corpus.marginals_complex(f.index, self.p_query)
-                f2.columns = ['f2']
+                N = self.corpus.corpus_size
+                marginals = self.corpus.marginals(f.index, self.p_query)
             else:
                 raise NotImplementedError
-
         elif isinstance(marginals, DataFrame):
-            f2 = marginals
-            f2.columns = ['f2']
-            N = f2['f2'].sum()
-
+            # DataFrame must contain a column 'freq'
+            N = marginals['freq'].sum()
         else:
             raise NotImplementedError
 
-        # get sub-corpus size
-        f1 = self.counts['f'].sum()
-
-        keywords = add_ams(
-            f, f1, f2, N,
+        # score
+        keywords = score_counts_signature(
+            f[['freq']], f1, marginals[['freq']], N,
             min_freq, order, cut_off, flags, ams, frequencies
         )
-
-        # deal with index
-        if len(self.p_query) == 1:
-            keywords.index = keywords.index.map(lambda x: x[0])
-            keywords.index.name = self.p_query[0]
 
         return keywords

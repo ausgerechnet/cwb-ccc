@@ -1,0 +1,73 @@
+## adjective phrase
+MACRO ap(0)
+(
+  [pos = "AD.*"]+
+)
+;
+
+MACRO ap($0=Adj)
+(
+  $0[pos = "AD.*"]+
+)
+;
+
+## determiner phrase
+MACRO dp(0)
+(
+  [pos = "ART"]?
+  (
+    /ap[]
+  )*
+  [pos = "N.*"]+  # noun or proper name
+)
+;
+
+MACRO dp($0=MarkNoun)
+(
+  [pos = "ART"]?
+  (
+    /ap[]
+  )*
+  $0[pos = "N.*"]+  # noun or proper name
+)
+;
+
+## pronoun
+MACRO pron(0)
+(
+  [pos ="PPER"]
+)
+;
+
+MACRO pron($0=MarkPron)
+(
+  $0[pos="PPER"]
+)
+;
+
+## basic NP
+MACRO np_base(0)
+(
+  /dp[] | /pron[]
+)
+;
+
+MACRO np_base($0=MarkEl)
+(
+  /dp["$0"] | /pron["$0"]
+)
+;
+
+## full NP: possibly coordinated
+MACRO np(0)
+(
+  /np_base[] |
+  /np_base[] ([pos="KON"] | "als" "auch") /np_base[]
+)
+;
+
+MACRO np($0=MarkNoun)
+(
+  /np_base["$0"]
+)
+;

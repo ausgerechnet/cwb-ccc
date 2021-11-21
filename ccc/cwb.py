@@ -6,14 +6,15 @@ from io import StringIO
 from glob import glob
 # part of module
 from .cqp import CQP
-from .cache import Cache
+from .cache import Cache, generate_idx, generate_library_idx
 from .counts import Counts
 from .utils import preprocess_query
 from .utils import chunk_anchors, correct_anchors
 from .dumps import Dump
 from .counts import cwb_scan_corpus
+from .cl import Corpus as Attributes
+from .version import __version__
 # requirements
-from CWB.CL import Corpus as Attributes
 from pandas import DataFrame, read_csv
 from pandas.errors import EmptyDataError
 from numpy import minimum, maximum
@@ -55,7 +56,7 @@ def start_cqp(cqp_bin, registry_path,
     if lib_path is not None:
 
         # wordlists
-        wordlists = glob(os.path.join(lib_path, 'wordlists', '*'))
+        wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
@@ -63,7 +64,7 @@ def start_cqp(cqp_bin, registry_path,
             cqp.Exec(cqp_exec)
 
         # macros
-        macros = glob(os.path.join(lib_path, 'macros', '*'))
+        macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
@@ -77,7 +78,9 @@ def start_cqp(cqp_bin, registry_path,
 
 
 class Corpora:
-    """Interface to CWB-indexed corpora."""
+    """Interface to CWB-indexed corpora.
+
+    """
 
     def __init__(self, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/'):
@@ -94,16 +97,25 @@ class Corpora:
     def __str__(self):
         """Method for printing.
 
-        :return: available corpora
+        :return: paths, available corpora
         :rtype: str
+
         """
 
-        return "\n" + "\n".join([
-            'registry-path: "%s"' % self.registry_path,
-            'cqp-bin      : "%s"' % self.cqp_bin,
-            "corpora:",
-            self.show().to_string(),
+        corpora = self.show()
+
+        return '\n' + '\n'.join([
+            'registry path: "%s"' % self.registry_path,
+            'cqp binary   : "%s"' % self.cqp_bin,
+            'found %d corpora:' % len(corpora),
+            corpora.to_string(),
         ])
+
+    def __repr__(self):
+        """Info string
+
+        """
+        return self.__str__()
 
     def show(self):
         """Show all corpora defined in registry and available via CQP
@@ -120,32 +132,34 @@ class Corpora:
         cqp.__kill__()
 
         # check availability and corpus sizes
-        corpora_available = list()
         sizes = list()
         for corpus_name in corpora:
-
             try:
-                corpus = Corpus(
-                    corpus_name, cqp_bin=self.cqp_bin,
-                    registry_path=self.registry_path, data_path=None
-                )
-                corpora_available.append(corpus_name)
-                sizes.append(corpus.corpus_size)
-
+                sizes.append(len(Attributes(
+                    corpus_name, registry_dir=self.registry_path
+                ).attribute('word', 'p')))
             except SystemError:
                 logger.warning(
                     'corpus "%s" defined in registry but not available' % corpus_name
                 )
 
         # create dataframe
-        corpora = DataFrame({'corpus': corpora_available,
-                             'tokens': sizes})
-        corpora = corpora.set_index('corpus')
+        corpora = DataFrame({'corpus': corpora, 'size': sizes}).set_index('corpus')
 
         return corpora
 
     def activate(self, corpus_name,
-                 lib_path=None, data_path='/tmp/ccc-data/'):
+                 lib_path=None, data_path=None):
+        """Activate a corpus.
+
+        :param str corpus_name: name of corpus in CWB registry
+        :param str lib_path: /path/to/macros/and/wordlists/
+        :param str data_path: /path/to/data/and/cache/
+
+        :return: corpus
+        :rtype: Corpus
+
+        """
 
         return Corpus(corpus_name,
                       lib_path=lib_path,
@@ -154,50 +168,54 @@ class Corpora:
                       data_path=data_path)
 
 
+def init_data_path(data_path, corpus_name, lib_path=None):
+    """ get a data directory / ensure that the given one complies with schema
+
+    """
+
+    if data_path is None:
+        data_path = os.path.join("/tmp", "ccc-" + str(__version__))
+    if not isinstance(data_path, str):
+        raise ValueError("parameter data_path must be str")
+
+    # generate library idx to invalidate cache when updated
+    if lib_path is not None:
+        lib_idx = generate_library_idx(lib_path, 'lib-', 7)
+    else:
+        lib_idx = "lib-vanilla"
+
+    # each corpus has its separate directory for each library
+    subdir = corpus_name + "-" + lib_idx
+    if not data_path.endswith(subdir):
+        data_path = os.path.join(data_path, subdir)
+
+    # create directory
+    try:
+        os.makedirs(data_path, exist_ok=True)
+    except PermissionError:
+        logger.error('no write permission at "%s"' % data_path)
+    else:
+        return data_path
+
+
 class Corpus:
     """Interface to CWB-indexed corpus.
-
-    After initializing, the corpus class has ...
-
-    ... the following attributes:
-    .data_path
-    .registry_path
-    .cqp_bin
-    .lib_path
-    .corpus_name
-    .subcorpus [None]
-    .attributes_available
-    .corpus_size
-
-    ... the following initialized classes:
-    .attributes
-    .cache
-    .counts
-
-    ... the following methods:
-    .__str__
-    ._attributes_available
-    .start_cqp
-    .copy
-    .cpos2patts                 # p-attributes
-    .marginals                  # p-attributes
-    .cpos2sid                   # s-attributes
-    .show_nqr                   # subcorpora
-    .dump_from_s_att            # creating dumps
-    .dump_from_query            # creating dumps
-    .dump2patt                  # working on dumps
-    .dump2satt                  # working on dumps
-    .dump2context               # working on dumps
-    .query_s_att                # query alias
-    .query                      # query alias
 
     """
 
     def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
                  registry_path='/usr/local/share/cwb/registry/',
-                 data_path='/tmp/ccc-data/'):
+                 data_path=None):
         """Establish connection to CQP and corpus attributes, set paths, read
-        library. Raises KeyError if corpus not in registry.
+        library.
+
+        Raises KeyError if corpus not in registry.
+
+        data directory contains subdirectories for each corpus and
+        each library (/<data-path>/<corpus>-<lib-idx>/CACHE)
+        - marginals_complex
+        - dump_from_s_att
+        - dump_from_query
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_path: /path/to/macros/and/wordlists/
@@ -207,23 +225,13 @@ class Corpus:
 
         """
 
-        # process data path
-        if data_path is not None:
-            if not data_path.endswith(corpus_name):
-                data_path = os.path.join(data_path, corpus_name)
-            self.data_path = data_path
-            if not os.path.isdir(self.data_path):
-                os.makedirs(self.data_path)
-            cache_path = os.path.join(self.data_path, "CACHE")
-        else:
-            self.data_path = None
-            cache_path = None
+        # preprocess data path
+        data_path = init_data_path(data_path, corpus_name, lib_path)
 
-        # set registry path and cqp_bin
+        # save paths
+        self.data_path = data_path
         self.registry_path = registry_path
         self.cqp_bin = cqp_bin
-
-        # macros and wordlists
         self.lib_path = lib_path
 
         # init (sub-)corpus information
@@ -240,7 +248,7 @@ class Corpus:
         self.attributes_available = self._attributes_available()
 
         # init cache
-        self.cache = Cache(cache_path)
+        self.cache = Cache(os.path.join(self.data_path, "CACHE"))
 
         # init counts
         self.counts = Counts(self.corpus_name, self.registry_path)
@@ -248,19 +256,37 @@ class Corpus:
     def __str__(self):
         """Method for printing.
 
-        :return: corpus_name, corpus_size, data_path, subcorpus
+        :return: settings and paths
         :rtype: str
 
         """
 
-        return "\n".join([
-            'a ccc.Corpus: "%s"' % self.corpus_name,
-            "size        : %s" % str(self.corpus_size),
-            "data        : %s" % str(self.data_path),
-            "subcorpus   : %s" % str(self.subcorpus),
-            "attributes  :",
+        return '\n' + '\n'.join([
+            'ccc.Corpus: "%s"' % self.corpus_name,
+            'size      : %s' % str(self.corpus_size),
+            'data      : %s' % str(self.data_path),
+            'subcorpus : %s' % str(self.subcorpus),
+            '\navailable positional and structural attributes:',
             self.attributes_available.to_string(),
         ])
+
+    def __repr__(self):
+        """Info string.
+
+        """
+        return self.__str__()
+
+    def _macros_available(self):
+        """Get available macros (either system-defined or via library).
+
+        :return: defined macros
+        :rtype: list
+
+        """
+        cqp = self.start_cqp()
+        defined_macros = cqp.Exec("show macro;").split("\n")
+        cqp.__kill__()
+        return defined_macros
 
     def _attributes_available(self):
         """Get indexed p- and s-attributes. Will be run once when initializing
@@ -329,23 +355,28 @@ class Corpus:
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
-        :param bool ignore: whether to return (None, .*) for -1
+        :param bool ignore: whether to return (None, ..) for -1
 
         :return: p-attribute(s) at cpos
         :rtype: tuple
 
         """
 
-        if cpos == -1 and ignore:
-            token = [None] * len(p_atts)
+        return self.counts._cpos2patts(cpos, p_atts, ignore)
+
+    def marginals(self, items=None, p_atts=['word'], flags=0, pattern=False):
+
+        # allow lazy evocation
+        p_atts = [p_atts] if isinstance(p_atts, str) else p_atts
+
+        # simple
+        if len(p_atts) == 1 and items is not None:
+            return self.marginals_simple(items, p_atts[0], flags, pattern)
+
         else:
-            token = [
-                self.attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts
-            ]
+            return self.marginals_complex(items, p_atts)
 
-        return tuple(token)
-
-    def marginals(self, items, p_att='word', flags=0, pattern=False):
+    def marginals_simple(self, items, p_att='word', flags=0, pattern=False):
         """Extract marginal frequencies for given unigrams or unigram patterns
         of a single p-attribute.  0 if not in corpus.  For
         combinations of p-attributes, see marginals_complex.
@@ -361,30 +392,34 @@ class Corpus:
         """
 
         pattern = True if flags > 0 else pattern
-
-        tokens_all = self.attributes.attribute(p_att, 'p')
+        att = self.attributes.attribute(p_att, 'p')
 
         # loop through items and collect frequencies
-        counts = list()
-        for item in items:
-            if not pattern:
-                try:
-                    counts.append(tokens_all.frequency(item))
-                except KeyError:
-                    counts.append(0)
-            else:
-                cpos = tokens_all.find_pattern(item, flags=flags)
-                counts.append(len(cpos))
+        def att_frequency(att, item):
+            """ small helper function for list comprehension:
+            return frequency of 0 for items that are not in att
+            """
+            try:
+                return att.frequency(item)
+            except KeyError:
+                return 0
+
+        counts = [
+            att_frequency(att, item) if not pattern else
+            len(att.find_pattern(item, flags=flags)) for item in items
+        ]
 
         # create dataframe
         df = DataFrame({'freq': counts, p_att: items})
-        df = df.set_index(p_att)
+        df = df.set_index(p_att, drop=False)
+        df.index.name = 'item'
+        df = df.sort_values(['freq', 'item'], ascending=False)
 
         return df
 
     def marginals_complex(self, items, p_atts=['word']):
         """Extract marginal frequencies for p-attribute combinations,
-        e.g. ["word", "lemma"].  0 if not in corpus.  Marginals are
+        e.g. ["lemma", "pos"].  0 if not in corpus.  Marginals are
         retrieved using cwb-scan-corpus, result is cached.
 
         :param list items: list of tuples
@@ -395,19 +430,30 @@ class Corpus:
 
         """
 
-        # retrieve all marginals for p-att combination from cache if possible
+        # get all marginals for p-att combination
         identifier = "_".join(p_atts) + "_marginals"
         df = self.cache.get(identifier)
         if df is not None:
+            # get from cache if possible
             logger.info('using cached version of marginals of "%s"' % "_".join(p_atts))
         else:
             # calculate all marginals for p-att combination
-            df = cwb_scan_corpus(None, self.corpus_name, self.registry_path, p_atts)
+            df, R = cwb_scan_corpus(
+                self.corpus_name, self.registry_path, p_atts=p_atts, min_freq=0
+            )
             self.cache.set(identifier, df)
 
-        # select relevant rows
-        df = df.reindex(items)
-        df = df.fillna(0, downcast='infer')
+        if items is not None:
+            # preprocess tuples
+            items = [" ".join(i) for i in items] if isinstance(items[0], tuple) \
+                else items
+            # select relevant rows
+            df = df.reindex(items)
+            df = df.fillna(0, downcast='infer')
+
+        # sort by frequency
+        df.sort_values(by='freq')
+
         return df
 
     ################
@@ -457,29 +503,34 @@ class Corpus:
         return df
 
     def activate_subcorpus(self, nqr=None, df_dump=None):
-        """Activate subcorpus.  If no df_dump is given, this sets
-        self.subcorpus and logs an error if subcorpus not defined.  If
-        a df_dump is given, the df_dump will be undumped.
+        """Activate a Named Query Result (NQR).
 
-        :param str subcorpus: subcorpus name defined in CQP
+        - If no df_dump is given, this sets self.subcorpus and logs an
+          error if NQR is not defined.
+        - If a df_dump is given, the df_dump will be undumped and named
+          NQR.
+
+        :param str nqr: NQR defined in CQP
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
                                   with optional columns 'target' and 'keyword'
 
         """
 
-        if df_dump is not None:
-            cqp = self.start_cqp()
-            cqp.nqr_from_dump(df_dump, nqr)
-            cqp.nqr_save(self.corpus_name, nqr)
-            cqp.__kill__()
-
         if nqr is not None:
-            # raise an error if subcorpus not available
+
+            if df_dump is not None:
+                cqp = self.start_cqp()
+                cqp.nqr_from_dump(df_dump, nqr)
+                cqp.nqr_save(self.corpus_name, nqr)
+                cqp.__kill__()
+
             if nqr not in self.show_nqr()['subcorpus'].values:
+                # raise an error if subcorpus not available
                 logger.error('subcorpus "%s" not defined)' % nqr)
                 self.activate_subcorpus()
             else:
                 logger.info('switched to subcorpus "%s"' % nqr)
+
         else:
             logger.info('switched to corpus "%s"' % self.corpus_name)
 
@@ -583,7 +634,7 @@ class Corpus:
             cqp.__kill__()
         else:
             sbcrpssize = None
-        identifier = self.cache.generate_idx([
+        identifier = generate_idx([
              query, s_query, anchors, match_strategy, self.subcorpus, sbcrpssize
         ], prefix="df_dump:")
 
@@ -616,8 +667,11 @@ class Corpus:
             match_strategy=match_strategy,
             return_dump=True
         )
-        df_dump.columns = [0, 1]
+        if len(df_dump) == 0:
+            return df_dump
+
         logger.info("found %d matches" % len(df_dump))
+        df_dump.columns = [0, 1]
 
         # if there's nothing to return ...
         if df_dump.empty:
@@ -630,7 +684,6 @@ class Corpus:
 
             # restrict subsequent queries on initial matches
             cqp.nqr_activate(self.corpus_name, name)
-
             for pair in remaining_anchors:
                 logger.info(".. running query for anchor(s) %s" % str(pair))
                 # set appropriate anchors
@@ -652,8 +705,11 @@ class Corpus:
 
             # NA handling
             logger.info("post-processing dataframe")
-            df_dump = df_dump.dropna(axis=1, how='all')
-            df_dump = df_dump.fillna(-1, downcast='integer')
+            # df_dump = df_dump.dropna(axis=1, how='all')
+            # it is more reasonable to yield all requested columns
+            # (even if some are all NA) -- instead of silently
+            # dropping columns
+            df_dump = df_dump.fillna(-1, downcast='infer')
 
         # restrict output to requested anchors
         df_dump = df_dump[anchors]
@@ -674,7 +730,7 @@ class Corpus:
     def _dump2patt_row(self, row, p_att, start, end):
         """Retrieve p-attribute annotation from start to end of one row.
 
-        :param Series row: dataframe row that contain start and end keys
+        :param Series row: dataframe row that contains start and end keys
         :param str p_att: p-attribute to retrieve
         :param str start: key of start column (int or str)
         :param str end: key of end column (int or str)
@@ -683,8 +739,9 @@ class Corpus:
         :rtype: str
         """
 
-        cpos_start = row[start]
-        cpos_end = row[end]
+        # treat missing columns like missing values
+        cpos_start = row.get(start, -1)
+        cpos_end = row.get(end, -1)
 
         # if both are missing, return empty string
         if cpos_start == cpos_end == -1:
@@ -827,14 +884,15 @@ class Corpus:
         follows; the strategy for _contextend_ (right hand side) is
         analogous (using context_right, matchend and
         context_break_spanend).
-        if context_break_span is None and context_left is None
-            => context = match
-        if context_break_span is None and context_left is not None
-            => context = max(0, match - context_left)
-        if context_break_span is not None and context_left is None
-            => context = context_break_span
-        if context_break_span is not None and context_left is not None
-            => context = max(match - context_left, s_start)
+
+        - if context_break_span is None and context_left is None
+          => context = match
+        - if context_break_span is None and context_left is not None
+          => context = max(0, match - context_left)
+        - if context_break_span is not None and context_left is None
+          => context = context_break_span
+        - if context_break_span is not None and context_left is not None
+          => context = max(match - context_left, s_start)
 
         :param DataFrame df_dump: DataFrame indexed by (match, matchend)
         :param int context_left: maximum context to the left of match
@@ -936,7 +994,7 @@ class Corpus:
             cqp.__kill__()
 
         # return proper Dump
-        return Dump(self.copy(), df_spans, name_cqp=None)
+        return Dump(self.copy(), df_spans, name_cqp=name)
 
     def query(self, cqp_query, context=20, context_left=None,
               context_right=None, context_break=None, corrections=dict(),
@@ -965,7 +1023,10 @@ class Corpus:
         # preprocess input
         save = False if name is None else True  # save NQR from CQP to disk?
         name = 'Last' if name is None else name  # name in CQP
-        query, s_query, anchors = preprocess_query(cqp_query)
+        query_dict = preprocess_query(cqp_query)
+        query = query_dict['query']
+        s_query = query_dict['s_query']
+        anchors = query_dict['anchors']
         s_query = context_break if s_query is None else s_query
         context_left = context if context_left is None else context_left
         context_right = context if context_right is None else context_right

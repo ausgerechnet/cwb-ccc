@@ -356,7 +356,7 @@ def test_concordance_empty(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(conc.lines() is None)
+    assert(conc.lines().empty)
 
 
 @pytest.mark.fail

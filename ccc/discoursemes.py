@@ -1,25 +1,118 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# from anycache import anycache
 # part of module
-from .collocates import df_node_to_cooc, add_ams
+from .collocates import dump2cooc
 from .concordances import Concordance
+from .collocates import Collocates
 from .utils import format_cqp_query
 from . import Corpus
 # requirements
-from pandas import NA, MultiIndex
+from pandas import NA, DataFrame
+from association_measures.measures import calculate_measures
 # logging
 import logging
 logger = logging.getLogger(__name__)
 
 
-# TODO how to make this path configurable?
-# ANYCACHE_PATH = '/tmp/ccc-anycache/'
+########################################################
+# (1) FOCUS ON TOPIC: DIRECTED (IE INDEXED) DATAFRAMES #
+########################################################
+
+# init(dump, name='topic')
+# input : dump.df: === (m, me) ci c ce ==
+# output: self.df: === (m, me) ci c ce m_topic me_topic o_topic ===
+# with duplicate indices:
+
+#   (m   me)     ci        c       ce      m_t   me_t   o_t
+#  638  638      18      629      672      638    638     0
+#       638      18      629      672      640    640     2
+#  640  640      18      629      672      638    638    -2
+#       640      18      629      672      640    640     0
+# 1202 1202      36     1195     1218     1202   1202     0
+# ...   ...     ...      ...      ...      ...    ...   ...
+
+# #### 1 occurrence
+# ... die [CDU]:m-me+m_t-me_t will eigentlich ...
+
+# #### 2 occurrences
+# ... die [CDU]:m-me+m_t-me_t und [CSU] gehen da ...  0
+# ... die [CDU]:m-me und [CSU]:m_t-me_t gehen da ...  2
+# ... die [CDU]:m_t-me_t und [CSU]:m-me gehen da ... -2
+# ... die [CDU] und [CSU]:m-me+m_t-me_t gehen da ...  0
+
+# #### 3 occurrences
+# ... die [Union]:0+1, d.h. die [CDU] und [CSU] gehen da ...
+# ... die [Union]:0, d.h. die [CDU]:1 und [CSU] gehen da ...
+# ... die [Union]:0, d.h. die [CDU] und [CSU]:1 gehen da ...
+# ... die [Union]:1, d.h. die [CDU]:0 und [CSU] gehen da ...
+# ... die [Union], d.h. die [CDU]:0+1 und [CSU] gehen da ...
+# ... die [Union], d.h. die [CDU]:0 und [CSU]:1 gehen da ...
+# ... die [Union]:1, d.h. die [CDU] und [CSU]:0 gehen da ...
+# ... die [Union], d.h. die [CDU]:1 und [CSU]:0 gehen da ...
+# ... die [Union], d.h. die [CDU] und [CSU]:0+1 gehen da ...
+
+# add_discourseme(dump, name, drop=True)
+# input:  === (m, me) ci c ce m_t me_t o_t ==
+#         === (m_d, me_d) ci ==
+# output: === (m, me) ci c ce m_t me_t o_t m_d me_d o_d ==
+
+#   (m   me)     ci       c      ce    m_t   me_t    o_t     m_d   me_d   o_d
+#  638  638      18     629     672    638    638      0     636    636    -2
+#       638      18     629     672    640    640      2     636    636    -2
+#  640  640      18     629     672    638    638     -2     636    636    -4
+#       640      18     629     672    640    640      0     636    636    -4
+# 1202 1202      36    1195    1218   1202   1202      0    1205   1205     3
+#  ...  ...     ...     ...     ...    ...    ...    ...     ...    ...   ...
+
+# #### t . d
+# #### d . t
+# ... die [CDU]:0+1 [will]:2 eigentlich ...
+
+# #### t . t . d
+# #### t . d . t
+# #### d . t . t
+# ... die [CDU]:0+1 und [CSU] [will]:2 eigentlich ...
+# ... die [CDU]:0 und [CSU]:1 [will]:2 eigentlich ...
+# ... die [CDU]:1 und [CSU]:0 [will]:2 eigentlich ...
+# ... die [CDU] und [CSU]:0+1 [will]:2 eigentlich ...
+
+# add_discourseme(dump, name, drop=False)
+
+#     (m     me)     ci        c       ce     m_t    me_t      o_t    m_d    me_d    o_d
+#    638    638      18      629      672     638     638        0    636     636     -2
+#           638      18      629      672     640     640        2    636     636     -2
+#    640    640      18      629      672     638     638       -2    636     636     -4
+#           640      18      629      672     640     640        0    636     636     -4
+#   1202   1202      36     1195     1218    1202    1202        0   1205    1205      3
+# ...       ...     ...      ...      ...     ...     ...       ...   ...     ...    ...
+# 149292 149292    7317   149286   149306  149290  149290       -2   <NA>    <NA>   <NA>
+#        149292    7317   149286   149306  149292  149292        0   <NA>    <NA>   <NA>
+
+# group_lines()
+# === (m, me) ci c ce m0 m0e o0 m1 me1 o1 m2 me2 o2 ===
+# with duplicate indices to
+# === (m, me) ci c ce d0 d1 d2 ===
+# without duplicate indices, where
+# d0 = {(o0, m0, m0e), (o0, m0, m0e), ...}
+# d1 = {(o1, m1, m1e), ...}
+# ...
+
+##########################################################
+# (2) OUTER JOIN ON CONTEXTID: FULL TEXTUAL COOCCURRENCE #
+##########################################################
 
 
-# @anycache(ANYCACHE_PATH)
-def constellation_merge(df1, df2, name, drop=True):
+def constellation_left_join(df1, df2, name, drop=True):
+    """join an additional dump df2 to an existing constellation
+
+    :param DataFrame df1: constellation dump === (m, me) ci c ce m_t* me_t* o_t* m_1* me_1* o_1* ... ==
+    :param DataFrame df2: additional dump === (m, me) ci c ce ==
+    :param str name: name for additional discourseme
+    :param bool drop: drop all rows that do not contain all discoursemes within topic context?
+    :return: constellation dump including additional dump  === (m, me) ci c ce m_t me_t o_t m_1 me_1 o_1 ... m_name me_name o_name ==
+    :rtype: DataFrame
+    """
 
     # merge dumps via contextid ###
     df1 = df1.reset_index()
@@ -38,7 +131,7 @@ def constellation_merge(df1, df2, name, drop=True):
     # restrict to complete constellation ###
     if drop:
         m = m.dropna()
-        # also remove co-occurrences which are too far away
+        # only keep co-occurrences that are within context
         m = m.loc[
             (m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])
         ]
@@ -53,7 +146,25 @@ def constellation_merge(df1, df2, name, drop=True):
     })
 
     # set index ###
-    m = m.set_index(['match', 'matchend']).astype("Int64")
+    m = m.set_index(['match', 'matchend'])
+
+    return m
+
+
+def constellation_outer_join(df1, df2, name):
+    """join an additional dump df2 to an existing constellation
+
+    :param DataFrame df1: textual const.  === (ci) nr_1 nr_2 ... ==
+    :param DataFrame df2: additional dump === (m, me) ci c ce ==
+    :param str name: name for additional discourseme
+    :return: constellation dump incl. additional dump === (ci) nr_1 nr_2 ... nr_name ==
+    :rtype: DataFrame
+    """
+
+    # merge dumps via contextid ###
+    table = DataFrame(df2[['contextid']].value_counts())
+    table.columns = [name]
+    m = df1.join(table, how='outer').astype("Int64")
 
     return m
 
@@ -73,27 +184,32 @@ def role_formatter(row, names, s_show, window):
     :rtype: dict
 
     """
+
+    # init
     d = row['dict']
     roles = list()
-    # node role
+
+    # 'out_of_window' | None | 'node'
     role = ['out_of_window' if abs(t) > window else None for t in d['offset']]
     for i in range(d['cpos'].index(row.name[0]), d['cpos'].index(row.name[1]) + 1):
         role[i] = 'node'
     roles.append(role)
-    # discourseme roles
+
+    # discourseme names
     for name in names:
         role = [None] * len(d['offset'])
         for t in row[name]:
             for i in range(d['cpos'].index(t[1]), d['cpos'].index(t[2]) + 1):
                 role[i] = name
         roles.append(role)
+
     # combine individual roles into one list of lists
-    roles = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
-    # append to concordance line and line to output
-    d['role'] = roles
+    d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
+
     # append s-attributes
     for s in s_show:
         d[s] = row[s]
+
     return d
 
 
@@ -105,10 +221,27 @@ class Constellation:
         param str name: name of the node
         """
 
-        self.df = dump.df[['contextid', 'context', 'contextend']].astype("Int64")
-        self.discoursemes = {}
-        self.add_discourseme(dump, name=name)
         self.corpus = dump.corpus
+        # init with given dump
+        self.df = dump.df[['contextid', 'context', 'contextend']].astype("Int64")
+        # init added discoursemes
+        self.discoursemes = {}
+        # the topic is treated as common discourseme
+        self.add_discourseme(dump, name=name)
+
+    def __str__(self):
+        return (
+            "\n" + "a constellation with %d match indices" % len(self.df) + "\n" +
+            "%d registered discourseme(s) " % len(self.discoursemes) + "\n" +
+            "\n".join(["- '%s' with %d matches" % (d, len(self.discoursemes[d].df))
+                       for d in self.discoursemes])
+        )
+
+    def __repr__(self):
+        """Info string
+
+        """
+        return self.__str__()
 
     def add_discourseme(self, dump, name='discourseme', drop=True):
         """
@@ -121,11 +254,9 @@ class Constellation:
         if name in self.discoursemes.keys():
             logger.error('name "%s" already taken; cannot register discourseme' % name)
             return
+
         self.discoursemes[name] = dump
-
-        m = constellation_merge(self.df, dump.df, name, drop)
-
-        self.df = m
+        self.df = constellation_left_join(self.df, dump.df, name, drop=drop)
 
     def group_lines(self):
         """
@@ -175,14 +306,16 @@ class Constellation:
                 row, self.discoursemes.keys(), s_show, window
             ), axis=1
         ))
-        # return
+
         return output
 
     def collocates(self, windows=[3, 5, 7],
                    p_show=['lemma'], flags=None,
                    ams=None, frequencies=True,
-                   min_freq=2, order='log_likelihood', cut_off=None):
-        """Retrieve collocates
+                   min_freq=2, order='log_likelihood', cut_off=None,
+                   marginals='corpus'):
+        """Retrieve collocates for constellation.
+
         :param int window: window around node for pre-selected matches
 
         :return: collocates
@@ -190,8 +323,8 @@ class Constellation:
         """
 
         # get relevant contexts
-        df = self.df.drop_duplicates(subset=['context', 'contextend'])
-        df_cooc, f1_set = df_node_to_cooc(df)
+        df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
+        df_cooc, f1_set = dump2cooc(df_dump)
 
         logging.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
@@ -201,71 +334,92 @@ class Constellation:
         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
         # count once
-        N = self.corpus.corpus_size - len(f1_set)
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
-        node_freq.columns = ['in_nodes']
 
-        # count for each window
+        collocates = Collocates(
+            corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
+            df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
+        )
+
         output = dict()
         for window in windows:
-            output[window] = calculate_collocates(
-                self.corpus, df_cooc, node_freq, window, p_show,
-                N, min_freq, order, cut_off, flags, ams, frequencies
+            output[window] = collocates.show(
+                window=window, order=order, cut_off=cut_off, ams=ams,
+                min_freq=min_freq, frequencies=frequencies, flags=flags,
+                marginals=marginals
             )
 
         return output
 
 
-# @anycache(ANYCACHE_PATH)
-def calculate_collocates(corpus, df_cooc, node_freq, window, p_show,
-                         N, min_freq, order, cut_off, flags, ams, frequencies):
+class TextConstellation:
 
-    # move to requested window
-    relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
+    def __init__(self, dump, s_context, name='topic'):
+        """
+        param Dump dump: dump with dump.corpus, dump.df: == (m, me) ci, c, ce ==
+        param str name: name of the node
+        """
 
-    # number of possible occurrence positions within window
-    f1_inflated = len(relevant)
+        self.corpus = dump.corpus
+        table = DataFrame(dump.df[['contextid']].value_counts())
+        table.columns = [name]
+        self.df = table
+        self.s_context = s_context
+        self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
-    # get frequency counts
-    f = corpus.counts.cpos(relevant['cpos'], p_show)
-    f.columns = ['f']
+    def add_discourseme(self, dump, name='discourseme'):
 
-    # get marginals
-    if len(p_show) == 1:
-        # coerce to multiindex (what was I thinking?)
-        f2 = corpus.marginals(
-            f.index.get_level_values(p_show[0]), p_show[0]
-        )
-        f2.index = MultiIndex.from_tuples(
-            f2.index.map(lambda x: (x, )), names=p_show
-        )
-    else:
-        f2 = corpus.marginals_complex(f.index, p_show)
-    f2.columns = ['marginal']
+        # register discourseme
+        if name in self.df.columns:
+            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            return
 
-    # deduct node frequencies from marginals
-    f2 = f2.join(node_freq)
-    f2 = f2.fillna(0, downcast='infer')
-    f2['f2'] = f2['marginal'] - f2['in_nodes']
+        self.df = constellation_outer_join(self.df, dump.df, name)
 
-    # get sub-corpus size
-    f1 = f1_inflated
+    def associations(self, ams=None, frequencies=True,
+                     min_freq=2, order='log_likelihood',
+                     cut_off=None):
 
-    # score
-    collocates = add_ams(
-        f, f1, f2, N,
-        min_freq, order, cut_off, flags, ams, frequencies
-    )
+        tables = DataFrame()
+        cooc = self.df > 0
+        for name in self.df.columns:
+            table = round(textual_associations(
+                cooc, self.N, name
+            ).reset_index(), 2)
+            table['node'] = name
+            tables = tables.append(table)
 
-    # throw away anti-collocates by default
-    collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+        tables = tables[
+            ['node', 'candidate'] +
+            [d for d in tables.columns if d not in ['node', 'candidate']]
+        ]
 
-    # deal with index
-    if len(p_show) == 1:
-        collocates.index = collocates.index.map(lambda x: x[0])
-        collocates.index.name = p_show[0]
+        return tables
 
-    return collocates
+
+def textual_associations(cooc, N, column):
+    """Textual association.
+
+    """
+    f1 = cooc[column].sum()
+    candidates = [c for c in cooc.columns if c != column]
+    records = list()
+    for candidate in candidates:
+        f2 = cooc[candidate].sum()
+        f = (cooc[[column, candidate]].sum(axis=1) == 2).sum()
+        records.append({
+            'candidate': candidate,
+            'f1': f1,
+            'f2': f2,
+            'f': f,
+            'N': N
+        })
+
+    contingencies = DataFrame(records).set_index('candidate')
+    measures = calculate_measures(contingencies, freq=True)
+    contingencies = contingencies.join(measures)
+
+    return contingencies
 
 
 def create_constellation(corpus_name,
@@ -273,192 +427,48 @@ def create_constellation(corpus_name,
                          p_query, s_query, flags, escape,
                          s_context, context,
                          additional_discoursemes,
-                         lib_path, cqp_bin, registry_path, data_path,
-                         match_strategy='longest'):
+                         lib_path=None, cqp_bin='cqp',
+                         registry_path='/usr/local/share/cwb/registry/',
+                         data_path='/tmp/ccc-data/',
+                         match_strategy='longest',
+                         dataframe=False, drop=True, text=False):
     """
-    simple constellation creator, cached
+    simple constellation creator
     """
 
     # init corpus
     corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
 
     # init discourseme constellation
-    topic_query = format_cqp_query(topic_items,
-                                   p_query=p_query, s_query=s_query,
-                                   flags=flags, escape=escape)
-    topic_dump = corpus.query(topic_query, context=context, context_break=s_context,
-                              match_strategy=match_strategy)
-    const = Constellation(topic_dump, topic_name)
+    topic_query = format_cqp_query(
+        topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
+    )
+    topic_dump = corpus.query(
+        topic_query, context=context, context_break=s_context,
+        match_strategy=match_strategy
+    )
+
+    if not text:
+        const = Constellation(topic_dump, topic_name)
+    else:
+        const = TextConstellation(topic_dump, s_context, topic_name)
 
     # add further discoursemes
     for disc_name in additional_discoursemes.keys():
         disc_items = additional_discoursemes[disc_name]
-        disc_query = format_cqp_query(disc_items,
-                                      p_query=p_query, s_query=s_query,
-                                      flags=flags, escape=escape)
-        disc_dump = corpus.query(disc_query, context=None, context_break=s_context,
-                                 match_strategy=match_strategy)
-        const.add_discourseme(disc_dump, disc_name)
+        disc_query = format_cqp_query(
+            disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
+        )
+        disc_dump = corpus.query(
+            disc_query, context=None, context_break=s_context,
+            match_strategy=match_strategy
+        )
+        if not text:
+            const.add_discourseme(disc_dump, disc_name, drop=drop)
+        else:
+            const.add_discourseme(disc_dump, disc_name)
 
-    # put into cache
-    # cache.set(identifier, const)
-
-    return const
-
-
-# @anycache(ANYCACHE_PATH)
-# TODO take care of caching for random order
-def get_concordance(corpus_name,
-                    topic_name, topic_items,
-                    p_query='lemma', s_query=None, flags_query="%cd", escape_query=True,
-                    s_context='s', context=20,
-                    additional_discoursemes={},
-                    p_show=['word', 'lemma'], s_show=[], window=None,
-                    order='random', cut_off=100,
-                    lib_path=None, cqp_bin='cqp',
-                    registry_path='/usr/local/share/cwb/registry/',
-                    data_path='/tmp/ccc-data/'):
-    """
-    :param str corpus_name: name corpus in CWB registry
-    -- topic matches --
-    :param str topic_name: name of the topic ("node") discourseme
-    :param list topic_items: list of lexical items
-    :param str p_query: p-att layer to query
-    :param str s_query: s-att to use for delimiting queries
-    :param str flags_query: flags to use for querying
-    :param bool escape_query: whether to cqp-escape the query items
-    -- topic context --
-    :param str s_context: s-att to use for delimiting contexts
-    :param int context: context around the nodes used to identify relevant matches
-    -- discoursemes --
-    :param dict additional_discoursemes: {name: items}
-    -- concordance display --
-    :param list p_show: p-attributes to show
-    :param list s_show: s-attributes to show
-    :param int window: mark tokens further away as 'out_of_window'
-    :param str order: concordance order (first / last / random)
-    :param int cut_off: number of lines to retrieve
-    -- corpus settings --
-    :param str lib_path:
-    :param str cqp_bin:
-    :param str registry_path:
-    :param str data_path:
-
-    :return: dict of concordance lines (each one a dict, keys=1:N)
-    :rtype: dict
-    """
-
-    # preprocess parameters
-    s_query = s_context if s_query is None else s_query
-    window = context if window is None else window
-
-    # create constellation
-    const = create_constellation(corpus_name,
-                                 topic_name, topic_items,
-                                 p_query, s_query, flags_query, escape_query,
-                                 s_context, context,
-                                 additional_discoursemes,
-                                 lib_path, cqp_bin, registry_path, data_path)
-
-    # retrieve lines
-    lines = const.concordance(window=window,
-                              p_show=p_show, s_show=s_show,
-                              order=order, cut_off=cut_off)
-
-    # convert to dictionary
-    output = dict()
-    c = 0
-    for line in lines:
-        c += 1
-        output[c] = line
-
-    return output
-
-
-# @anycache(ANYCACHE_PATH)
-def get_collocates(corpus_name,
-                   topic_items,
-                   p_query='lemma', s_query=None, flags_query="%cd", escape_items=True,
-                   s_context='s', context=20,
-                   additional_discoursemes={},
-                   windows=[3, 5, 7], p_show=['word', 'lemma'], flags_show="",
-                   min_freq=2,
-                   order='random', cut_off=100,
-                   lib_path=None, cqp_bin='cqp',
-                   registry_path='/usr/local/share/cwb/registry/',
-                   data_path='/tmp/ccc-data/'):
-    """
-    :param str corpus_name: name corpus in CWB registry
-    -- topic --
-    :param list topic_items: list of lexical items
-    :param str p_query: p-att layer to query
-    :param str s_query: s-att to use for delimiting queries
-    :param str flags_query: flags to use for querying
-    :param bool escape_items: whether to cqp-escape the query items
-    -- context --
-    :param str s_context: s-att to use for delimiting contexts
-    :param int context: context around the nodes used to identify relevant matches
-    -- discoursemes --
-    :param dict additional_discoursemes: {name: items}
-    -- display --
-    :param list windows: windows (int) to use for collocation analyses around nodes
-    :param list p_show: p-atts to use for collocation analysis
-    :param str flags_show: post-hoc folding ("%cd") with cwb-ccc-algorithm
-    :param int min_freq: rare item treshold
-    :param str order: collocation order (columns in scored table)
-    :param int cut_off: number of collocates to retrieve
-    -- corpus --
-    :param str lib_path:
-    :param str cqp_bin:
-    :param str registry_path:
-    :param str data_path:
-
-    :return: dict of collocation tables (key=window)
-    :rtype: dict
-    """
-
-    # preprocess parameters
-    s_query = s_context if s_query is None else s_query
-    topic_name = 'topic'
-    frequencies = True
-    ams = None
-
-    # create constellation
-    const = create_constellation(corpus_name,
-                                 topic_name, topic_items,
-                                 p_query, s_query, flags_query, escape_items,
-                                 s_context, context,
-                                 additional_discoursemes,
-                                 lib_path, cqp_bin, registry_path, data_path)
-
-    collocates = const.collocates(windows=windows,
-                                  p_show=p_show, flags=flags_show,
-                                  ams=ams, frequencies=frequencies, min_freq=min_freq,
-                                  order=order, cut_off=cut_off)
-
-    for window in collocates.keys():
-        coll_window = collocates[window]
-        # drop superfluous columns and sort
-        coll_window = coll_window[[
-            'log_likelihood',
-            'log_ratio',
-            'f',
-            'f2',
-            'mutual_information',
-            'z_score',
-            't_score'
-        ]]
-
-        # rename AMs
-        am_dict = {
-            'log_likelihood': 'log likelihood',
-            'f': 'co-occurrence freq.',
-            'mutual_information': 'mutual information',
-            'log_ratio': 'log-ratio',
-            'f2': 'marginal freq.',
-            't_score': 't-score',
-            'z_score': 'z-score'
-        }
-        collocates[window] = coll_window.rename(am_dict, axis=1)
-
-    return collocates
+    if dataframe:
+        return const.df
+    else:
+        return const

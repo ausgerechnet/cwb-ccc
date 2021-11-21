@@ -2,25 +2,20 @@
 # meta:
 #   name: according_to_experts_x
 #   pattern: 0
-# corpus:
-#   corpus_name: BREXIT_V20190522_DEDUP
-#   lib_path: null
 # display:
-#   p_show: [word]
+#   p_show: [word, lemma]
 #   s_show: [tweet_id]
-#   p_slots: lemma
-#   p_text: word
 # anchors:
 #   corrections:
 #     1: -1
 #     3: -1
 #   slots:
-#     region_1: [0, 1]
+#     region_1: [match, 1]
 #     lonely_anchor: 1
 #     region_2: [2, 3]
 # query:
 #   context: null
-#   s_context: tweet
+#   context_break: tweet
 # ---
 
 [lemma = "as|being"]

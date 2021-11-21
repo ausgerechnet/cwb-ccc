@@ -4,7 +4,7 @@
 from random import sample
 import itertools
 # part of module
-from .utils import node2cooc
+from .utils import node2cotext
 # requirements
 from pandas import DataFrame
 # logging
@@ -56,8 +56,6 @@ class Concordance:
         - node_$p: match .. matchend
         - right_$p: matchend + 1 .. contextend
 
-        TODO: rename left_$p ./. $p_left, ...
-
         """
 
         df = df.reset_index()
@@ -82,11 +80,12 @@ class Concordance:
 
     def slots(self, df, p_show=['word'], slots=None):
         """Retrieve concordance lines of provided df in 'slot' formatting.
-        Slots are singletons or pairs of self.anchors.  By default,
-        all single anchors are slots.
+        Slots are singletons or pairs of self.anchors.  If no slots
+        are provided, all anchors and match and matchend are slots.
 
-        If slots is a list, it will be translated into a dictionary
-        with keys of the form "$slot[0]..$slot[1]".
+        If slots is a list (of singletons and / or pairs), it will be
+        translated into a dictionary with keys of the form
+        "$slot[0]..$slot[1]".
 
         For each single slot $s and each p-attribute $p in p_show,
         $slot_$p is retrieved.  For pairs, $slot[0]..$slot[1]_$p is
@@ -98,8 +97,10 @@ class Concordance:
 
         """
 
-        # TODO: rename $slot_$p ./. $p_$slot[0]..$slot[1]
+        # init output with simple view
+        df_lines = self.simple(df, p_show)
 
+        # get slots
         if slots is None:
             slots = self.anchors + [('match', 'matchend')]
 
@@ -114,16 +115,19 @@ class Concordance:
                 slots_dict[key] = slot
             slots = slots_dict
 
-        # init output with simple view
-        df_lines = self.simple(df, p_show)
-
         # add slots
         for key in slots.keys():
             # allow definition of slots as singletons
             if isinstance(slots[key], (int, str)):
                 start = end = slots[key]
+            # allow definition via lists of length 1
+            elif isinstance(slots[key], list) and len(slots[key]) == 1:
+                start = end = slots[key][0]
+            # proper definition as pair / list of two
             else:
                 start, end = slots[key]
+
+            # retrieve concordance lines
             df_lines[[str(key) + "_" + p for p in p_show]] = self.simple(
                 df, p_show=p_show, start=start, end=end
             )[p_show]
@@ -145,7 +149,7 @@ class Concordance:
         row['matchend'] = matchend
 
         # create cotext
-        cotext = node2cooc(row)
+        cotext = node2cotext(row)
 
         # lexicalize positions
         attribute_lists = zip(
@@ -227,11 +231,12 @@ class Concordance:
               order='first', cut_off=100, matches=None, slots=None):
         """Retrieve concordance lines from self.df_dump.  Central entry point
         for all methods.  Functionality includes:
-        (1) simple / kwic / dict / slots / dataframe format
-        (2) selection of p-attributes and s-attributes
-        (3) selection of matches using cut-off and order or a
-            pre-defined list of matches
-        (4) definition of slots via anchor points (only for form='slot')
+
+        1. simple / kwic / dict / slots / dataframe format
+        2. selection of p-attributes and s-attributes
+        3. selection of matches using cut-off and order or a
+           pre-defined list of matches
+        4. definition of slots via anchor points (only for form='slot')
 
         Return value of all formats is a DataFrame indexed by (match,
         matchend) and requested s-attributes of the match:
@@ -257,7 +262,7 @@ class Concordance:
         # check parameters
         if len(self.df_dump) == 0:
             logger.error("no concordance lines to show")
-            return
+            return DataFrame()
         if form not in ['simple', 'kwic', 'dict', 'dataframe', 'slots']:
             logger.error('format not implemented, using "simple" format')
             form = 'simple'
@@ -276,7 +281,7 @@ class Concordance:
             cut_off = len(matches)
         # order
         if order == 'random':
-            matches = sample(matches, cut_off)
+            matches = sample(list(matches), cut_off)
         elif order == 'first':
             matches = sorted(list(matches))[:cut_off]
         elif order == 'last':

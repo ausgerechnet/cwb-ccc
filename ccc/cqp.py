@@ -1,10 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+cqp.py: access to CQP
 
-# Version 2.0 of "PyCQP" by Joerg Asmussen, DSL (Febr. 2008)
-# Some changes by Philipp Heinrich (2020)
-
+Original Version by Joerg Asmussen (2008)
+Current version by Philipp Heinrich (2020)
+"""
 
 import sys
 import os
@@ -411,8 +413,12 @@ class CQP:
         :rtype: DataFrame
 
         """
+        name = 'Last' if name is None else name
         logger.info('defining NQR "%s" from query' % name)
         self.Query('%s=%s;' % (name, query))
+        size = int(self.Exec("size %s" % name))
+        if size == 0:
+            return DataFrame()
         if return_dump:
             logger.info('dumping result')
             df_dump = self.Dump(name)

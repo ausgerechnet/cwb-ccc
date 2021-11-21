@@ -1,0 +1,43 @@
+name: Build & Test
+
+on: [workflow_dispatch, push]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install CWB
+      run: |
+        sudo apt-get install libncurses5-dev
+        svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk cwb
+        cd cwb
+        sed -i 's/SITE=beta-install/SITE=standard/' config.mk
+        sudo ./install-scripts/install-linux
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -q pipenv
+        make install
+    - name: Lint
+      continue-on-error: true
+      run: |
+        make lint
+    - name: Build
+      run: |
+        make compile
+        make build
+    - name: Test
+      run: |
+        make test

@@ -1,9 +1,9 @@
 from ccc import Corpus
 from ccc.keywords import Keywords
-from pandas import read_csv
+from ccc.counts import read_freq_list, score_counts
 import pytest
 
-from .conftest import LOCAL, DATA_PATH
+from .conftest import DATA_PATH
 
 
 def get_corpus(corpus_settings, data_path=DATA_PATH):
@@ -16,23 +16,18 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
     )
 
 
-@pytest.mark.skipif(not LOCAL, reason='works on my machine')
-@pytest.mark.brexit
 @pytest.mark.meta
-def test_keywords_from_satt_values(brexit):
+def test_keywords_from_satt_values(germaparl):
 
-    # get relevant ids
-    meta = read_csv(brexit['meta_path'], dtype=str, sep="\t")
-    ids_replies = set(meta.loc[meta['in_reply_status'] == "1"]['id'])
-
-    # create subcorpus
-    corpus = get_corpus(brexit)
-    df_dump = corpus.query_s_att('tweet_id', ids_replies).df
+    corpus = get_corpus(germaparl)
+    df_dump = corpus.query_s_att(
+        "text_party", {"GRUENE", "Bündnis 90/Die Grünen"}
+    ).df
 
     # keywords
     keywords = Keywords(corpus, df_dump, p_query='lemma')
     lines = keywords.show(order='log_ratio', cut_off=None)
-    assert(lines.index[0] == "@pama1969")
+    assert lines.index[0] == "Oppositionsfraktion"
 
 
 @pytest.mark.query
@@ -45,7 +40,7 @@ def test_keywords_from_query(germaparl):
     # keywords
     keywords = Keywords(corpus, df_dump)
     lines = keywords.show(order='log_ratio')
-    assert(lines.index[1] == "Gesundheitsreform")
+    assert lines.index[1] == "Gesundheitsreform"
 
 
 @pytest.mark.query
@@ -58,8 +53,7 @@ def test_keywords_from_dump(germaparl):
     # keywords
     keywords = Keywords(corpus, df_dump)
     lines = keywords.show(order='log_likelihood', min_freq=10)
-    print(lines)
-    assert(lines.index[1] == "Dame")
+    assert lines.index[1] == "Dame"
 
 
 @pytest.mark.subcorpus
@@ -80,7 +74,7 @@ def test_keywords_switch(germaparl):
     keywords = Keywords(corpus, df_dump=df_tail, p_query="lemma")
     lines_tail = keywords.show(order='log_likelihood')
 
-    assert(not lines_head.equals(lines_tail))
+    assert not lines_head.equals(lines_tail)
 
 
 @pytest.mark.query
@@ -92,4 +86,26 @@ def test_keywords_combo(germaparl):
 
     # keywords
     lines = dump.keywords(["lemma", "pos"], order='log_likelihood', min_freq=10)
-    assert(lines.index[1] == ("Dame", "NN"))
+    assert lines.index[0] == "und KON"
+
+
+def test_score_counts(germaparl, empirist):
+
+    df1, R1 = read_freq_list(germaparl['freq_list'])
+    df2, R2 = read_freq_list(empirist['freq_list'])
+
+    kw = score_counts(df1[['freq']], df2[['freq']], R1, R2, cut_off=None)
+    assert kw['log_likelihood']['die'] == 4087.276827
+
+
+@pytest.mark.now
+def test_keywords(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    left = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
+    right = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
+    kw = score_counts(left, right)
+
+    assert kw.iloc[0]['O11'] == 11469
+    assert kw.iloc[0]['conservative_log_ratio'] == 0

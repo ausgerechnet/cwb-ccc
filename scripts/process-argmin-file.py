@@ -1,11 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from ccc.cwb import Corpus
 from ccc.concordances import read_query_json, run_query
-from argparse import ArgumentParser
+
 import os
+from argparse import ArgumentParser
+
 import logging
 logger = logging.getLogger(__name__)
 

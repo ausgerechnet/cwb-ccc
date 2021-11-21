@@ -1,5 +1,7 @@
 legacy/
 
+*.so
+
 *.pyc
 __pycache__/
 
@@ -19,5 +21,3 @@ build/
 .Rproj.user
 .RData
 .Rhistory
-
-Pipfile.lock

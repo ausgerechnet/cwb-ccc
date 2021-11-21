@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import pkgutil
 from timeit import default_timer
 from functools import wraps
 # requirements
@@ -46,8 +47,10 @@ def apply_correction(row, correction):
     """
     value, lower_bound, upper_bound = row
     value += correction
-    if value < lower_bound or value > upper_bound:
-        value = -1
+    if value < lower_bound:
+        value = lower_bound
+    if value > upper_bound:
+        value = upper_bound
     return value
 
 
@@ -75,9 +78,8 @@ def correct_anchors(df, corrections):
 ###########
 def cqp_escape(token):
     """ escape CQP meta-characters
-    TODO: what about '"'
-    :param str token: string to escape
 
+    :param str token: string to escape
     :return: escaped string
     :rtype: str
 
@@ -95,7 +97,9 @@ def cqp_escape(token):
         "{": r"\{",
         "}": r"\}",
         "^": r"\^",
-        "$": r"\$"
+        "$": r"\$",
+        '"': r"\"",
+        "'": r"\'"
     }))
 
 
@@ -141,8 +145,24 @@ def format_cqp_query(items, p_query='word', s_query=None,
     return query
 
 
+def find_all(pattern, string):
+    p = re.compile(pattern)
+    matches = dict()
+    for m in p.finditer(string):
+        matches[m.group()] = [m.start(), m.end()]
+    return matches
+
+
 def preprocess_query(query):
-    """ parse anchors and 'within' statement from query """
+    """
+    - get s_query and strip 'within' statement
+    - get anchors
+    - get macros
+    - get wordlists
+
+    :return: raw query, s_query, anchors, macros, wordlists
+    :rtype: dict
+    """
 
     # get s_query and strip 'within' statement
     s_query = None
@@ -153,20 +173,24 @@ def preprocess_query(query):
             query = " ".join(tokens[:-2])
             s_query = tokens[-1]
 
-    # get anchors
-    p = re.compile(r"@\d")
-    anchors = dict()
-    for m in p.finditer(query):
-        anchors[m.group()] = [m.start(), m.end()]
-    anchors = [int(a[1]) for a in anchors.keys()]
+    # find anchors, macros, wordlists
+    anchors = [int(a[1]) for a in find_all(r"@\d", query).keys()]
+    macros = list(find_all(r"/[A-Za-z_]+\[\d*\]", query).keys())
+    wordlists = list(find_all(r"\$[A-Za-z_]+", query).keys())
 
-    return query, s_query, anchors
+    return {
+        'query': query,
+        's_query': s_query,
+        'anchors': anchors,
+        'macros': macros,
+        'wordlists': wordlists
+    }
 
 
 #################################
 # working on nodes and contexts #
 #################################
-def node2cooc(row):
+def node2cotext(row):
     """ convert one row of df_node to info for df_cooc """
 
     # take values from row
@@ -178,16 +202,11 @@ def node2cooc(row):
     # get lists
     cpos_list = list(range(start, end + 1))
     match_list = [match] * len(cpos_list)
-
-    # TODO get rid of this ridiculous loop by using map
-    offset_list = list()
-    for cpos in range(start, end + 1):
-        if cpos < match:
-            offset_list.append(cpos - match)
-        elif cpos > matchend:
-            offset_list.append(cpos - matchend)
-        else:
-            offset_list.append(0)
+    offset_list = [
+        (cpos - match) if cpos < match else
+        (cpos - matchend) if cpos > matchend else
+        0 for cpos in cpos_list
+    ]
 
     # return object
     result = {
@@ -293,10 +312,9 @@ def fold_item(item, flags="%cd"):
     if flags is None:
         return item
 
-    isstr = False
-    if isinstance(item, str):
-        isstr = True
-        item = (item, )
+    # is the item a string or a tuple?
+    isstr = isinstance(item, str)
+    item = (item, ) if isstr else item
 
     if "c" in flags:
         # lower-case
@@ -324,7 +342,6 @@ def fold_df(df, flags="%cd"):
 
 
 def filter_df(df, path):
-    import pkgutil
     data = pkgutil.get_data(__name__, path)
     items = set(data.decode().split("\n"))
     return df.loc[~df.index.isin(items)]
