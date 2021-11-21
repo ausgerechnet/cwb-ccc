@@ -36,14 +36,12 @@ class Collocates:
 
         # determine layer to work on
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
-
-        # TODO: also comprises s-att -- implement convenient retrieval
-        p_available = set(self.corpus.attributes_available['attribute'].values)
-        if not set(self.p_query).issubset(p_available):
+        available_attributes = self.corpus.attributes_available['attribute'].values
+        if not set(self.p_query).issubset(set(available_attributes)):
             logger.warning(
-                'specfied p-attribute(s) (%s) not available' % " ".join(self.p_query)
+                'specfied p-attribute(s) ("%s") not available\n' % " ".join(self.p_query) +
+                'falling back to primary layer'
             )
-            logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
         # collect cpos of matches and context
