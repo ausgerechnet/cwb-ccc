@@ -14,9 +14,9 @@ compile:
 	pipenv run cython -2 ccc/cl.pyx
 build:
 	pipenv run python3 setup.py build_ext --inplace
-dist:
-	pip3 install --upgrade setuptools wheel
-	python3 setup.py sdist bdist_wheel
+sdist:
+	pip3 install --upgrade setuptools
+	python3 setup.py sdist
 deploy:
 	python3 -m twine upload dist/*
 

@@ -38,7 +38,7 @@ jobs:
         make test
     - name: Create Dist
       run: |
-        make dist
+        make sdist
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
