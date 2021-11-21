@@ -1,6 +1,7 @@
 from ccc.cwb import Corpus
 from ccc.dumps import Dumps
 from pandas import DataFrame
+import pytest
 
 from .conftest import DATA_PATH
 
@@ -164,6 +165,7 @@ def test_keywords_options(germaparl):
 #########
 # DUMPS #
 #########
+@pytest.mark.dumps
 def test_dumps_keywords(germaparl):
 
     # subcorpora via s-attribute values
@@ -186,6 +188,7 @@ def test_dumps_keywords(germaparl):
     assert tables['purple'].index[0] == "ÖPNV-Gesetz"
 
 
+@pytest.mark.dumps
 def test_dumps_collocates(germaparl):
 
     # subcorpora via s-attribute values
@@ -210,6 +213,7 @@ def test_dumps_collocates(germaparl):
     assert tables['yellow'].index[0] == 'Freiheit'
 
 
+@pytest.mark.dumps
 def test_dumps_collocates_global(germaparl):
 
     # subcorpora via s-attribute values

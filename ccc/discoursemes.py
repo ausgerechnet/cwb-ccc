@@ -336,18 +336,75 @@ class Constellation:
         # count once
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
 
-        collocates = Collocates(
-            corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
-            df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
-        )
+        from .collocates import show_collocates
+        import concurrent.futures
+        # from functools import partial
 
         output = dict()
-        for window in windows:
-            output[window] = collocates.show(
-                window=window, order=order, cut_off=cut_off, ams=ams,
-                min_freq=min_freq, frequencies=frequencies, flags=flags,
-                marginals=marginals
-            )
+        # args = [
+        #     self.corpus.corpus_name,
+        #     df_cooc,
+        #     node_freq,
+        #     f1_set,
+        #     p_show,
+        #     order,
+        #     cut_off,
+        #     ams,
+        #     min_freq,
+        #     frequencies,
+        #     flags,
+        #     self.corpus.registry_path
+        # ]
+        # func = partial(show_collocates,
+        #                self.corpus.corpus_name,
+        #                df_cooc,
+        #                node_freq,
+        #                f1_set,
+        #                p_show,
+        #                order,
+        #                cut_off,
+        #                ams,
+        #                min_freq,
+        #                frequencies,
+        #                flags,
+        #                self.corpus.registry_path)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for w, t in zip(windows, executor.map(lambda window: show_collocates(
+                    window, **{
+                        'corpus_name': self.corpus.corpus_name,
+                        'df_cooc': df_cooc,
+                        'node_freq': node_freq,
+                        'f1_set': f1_set,
+                        'p_atts': p_show,
+                        'order': order,
+                        'cut_off': cut_off,
+                        'ams': ams,
+                        'min_freq': min_freq,
+                        'freq': frequencies,
+                        'flags': flags,
+                        'registry_path': self.corpus.registry_path
+                    }
+            ), windows)):
+                output[w] = t
+
+        # output = dict()
+        # for window in windows:
+        #     output[window] = show_collocates(**{
+        #         'window': window,
+        #         'corpus_name': self.corpus.corpus_name,
+        #         'df_cooc': df_cooc,
+        #         'node_freq': node_freq,
+        #         'f1_set': f1_set,
+        #         'p_atts': p_show,
+        #         'order': order,
+        #         'cut_off': cut_off,
+        #         'ams': ams,
+        #         'min_freq': min_freq,
+        #         'freq': frequencies,
+        #         'flags': flags,
+        #         'registry_path': self.corpus.registry_path
+        #     })
 
         return output
 

@@ -580,3 +580,108 @@ def score_counts_signature(f, f1, f2, N, min_freq=2,
         order=order, cut_off=cut_off, flags=flags, ams=ams,
         freq=freq, digits=digits
     )
+
+
+#############
+# re-factor #
+#############
+def _cpos2patts(attributes, cpos, p_atts=['word'], ignore=True):
+    """Retrieve p-attributes of corpus position.
+
+    :param int cpos: corpus position to fill
+    :param list p_atts: p-attribute(s) to fill position with
+    :param bool ignore: whether to return (None, .*) for -1
+
+    :return: p-attribute(s) at cpos
+    :rtype: tuple
+
+    """
+    if cpos == -1 and ignore:
+        token = [None] * len(p_atts)
+    else:
+
+        token = [
+            attributes.attribute(p_att, 'p')[cpos] for p_att in p_atts
+        ]
+
+    return tuple(token)
+
+
+def count_cpos(corpus_name, cpos_list, p_atts=['word'],
+               registry_path="/usr/local/share/cwb/registry/"):
+    """Create a frequency table for the p-attribute values of the
+    cpos-list.
+
+    :param list cpos_list: corpus positions to fill
+    :param list p_atts: p-attribute (combinations) to count
+
+    :return: counts of the p_attribute (combinations) of the positions
+    :rtype: FreqFrame
+
+    """
+    attributes = Crps(corpus_name, registry_dir=registry_path)
+    items = [_cpos2patts(attributes, p, p_atts=p_atts, ignore=True) for p in cpos_list]
+    df_counts = count_items(items, p_atts)
+    return df_counts
+
+
+def count_cooc_window(corpus_name, df_cooc, window=5, p_atts=['word'],
+                      registry_path="/usr/local/share/cwb/registry/"):
+
+    relevant = df_cooc.loc[abs(df_cooc['offset']) <= window]
+    f1 = len(relevant)
+    f = count_cpos(corpus_name, cpos_list=relevant['cpos'],
+                   p_atts=p_atts, registry_path=registry_path)
+    return f, f1
+
+
+def marginals_simple(corpus_name, items, p_att='word', flags=0, pattern=False,
+                     registry_path="/usr/local/share/cwb/registry/"):
+    """Extract marginal frequencies for given unigrams or unigram patterns
+    of a single p-attribute.  0 if not in corpus.  For
+    combinations of p-attributes, see marginals_complex.
+
+    :param list items: items to get marginals for
+    :param str p_att: p-attribute to get frequencies for
+    :param int flags: 1 = %c, 2 = %d, 3 = %cd (will activate wildcards)
+    :param bool pattern: activate wildcards?
+
+    :return: frequencies of the items in the whole corpus indexed by items
+    :rtype: FreqFrame
+
+    """
+
+    pattern = True if flags > 0 else pattern
+    attributes = Crps(corpus_name, registry_dir=registry_path)
+    att = attributes.attribute(p_att, 'p')
+
+    # loop through items and collect frequencies
+    def att_frequency(att, item):
+        """ small helper function for list comprehension:
+        return frequency of 0 for items that are not in att
+        """
+        try:
+            return att.frequency(item)
+        except KeyError:
+            return 0
+
+    counts = [
+        att_frequency(att, item) if not pattern else
+        len(att.find_pattern(item, flags=flags)) for item in items
+    ]
+
+    # create dataframe
+    df = DataFrame({'freq': counts, p_att: items})
+    df = df.set_index(p_att, drop=False)
+    df.index.name = 'item'
+    df = df.sort_values(['freq', 'item'], ascending=False)
+
+    return df
+
+
+def marginals(corpus_name, items, p_atts=['word'], flags=0, pattern=False,
+              registry_path="/usr/local/share/cwb/registry/"):
+
+    if len(p_atts) == 1:
+        return marginals_simple(corpus_name, items, p_atts[0],
+                                flags, pattern, registry_path)

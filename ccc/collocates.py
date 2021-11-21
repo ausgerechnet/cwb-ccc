@@ -193,3 +193,33 @@ def dump2cooc(df_dump, context=None):
     df_defl = df_defl[df_defl['offset'] != 0]
 
     return df_defl, f1_set
+
+
+def show_collocates(window, corpus_name, df_cooc, node_freq,
+                    f1_set, p_atts=['word'], order='O11',
+                    cut_off=100, ams=None, min_freq=2, freq=False,
+                    flags=None,
+                    registry_path="/usr/local/share/cwb/registry/"):
+
+    from .counts import count_cooc_window, marginals
+    from .cl import Corpus as Crps
+
+    # count once
+    f, f1 = count_cooc_window(
+        corpus_name, df_cooc, window, p_atts, registry_path
+    )
+    attributes = Crps(corpus_name, registry_dir=registry_path)
+    corpus_size = len(attributes.attribute('word', 'p'))
+    N = corpus_size - len(f1_set)
+    marginals = marginals(corpus_name, f.index, p_atts)
+    f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
+        node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
+    )
+    f2 = f2.fillna(0, downcast='infer')
+    f2['f2'] = f2['marginal'] - f2['in_nodes']
+    collocates = score_counts_signature(
+        f[['freq']], f1, f2[['f2']], N,
+        min_freq, order, cut_off, flags, ams, freq
+    )
+
+    return collocates
