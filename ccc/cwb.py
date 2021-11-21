@@ -390,22 +390,24 @@ class Corpus:
         :rtype: FreqFrame
 
         """
-        pattern = True if flags > 0 else pattern
 
-        tokens_all = self.attributes.attribute(p_att, 'p')
+        pattern = True if flags > 0 else pattern
+        att = self.attributes.attribute(p_att, 'p')
 
         # loop through items and collect frequencies
-        # TODO: list apply
-        counts = list()
-        for item in items:
-            if not pattern:
-                try:
-                    counts.append(tokens_all.frequency(item))
-                except KeyError:
-                    counts.append(0)
-            else:
-                cpos = tokens_all.find_pattern(item, flags=flags)
-                counts.append(len(cpos))
+        def att_frequency(att, item):
+            """ small helper function for list comprehension:
+            return frequency of 0 for items that are not in att
+            """
+            try:
+                return att.frequency(item)
+            except KeyError:
+                return 0
+
+        counts = [
+            att_frequency(att, item) if not pattern else
+            len(att.find_pattern(item, flags=flags)) for item in items
+        ]
 
         # create dataframe
         df = DataFrame({'freq': counts, p_att: items})
