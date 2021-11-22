@@ -206,22 +206,17 @@ def show_collocates_w(window, corpus_name, df_cooc, node_freq,
                       flags=None,
                       registry_path="/usr/local/share/cwb/registry/"):
 
-    f, f1 = count_cooc_window(
-        corpus_name, df_cooc, window, p_atts, registry_path
-    )
+    f, f1 = count_cooc_window(corpus_name, df_cooc, window, p_atts, registry_path)
     attributes = Crps(corpus_name, registry_dir=registry_path)
     corpus_size = len(attributes.attribute('word', 'p'))
     N = corpus_size - len(f1_set)
-    marginals = count_marginals(corpus_name, f.index, p_atts)
+    marginals = count_marginals(corpus_name, f.index, p_atts, registry_path=registry_path)
     f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
         node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
     )
     f2 = f2.fillna(0, downcast='infer')
     f2['f2'] = f2['marginal'] - f2['in_nodes']
-    collocates = score_counts_signature(
-        f[['freq']], f1, f2[['f2']], N,
-        min_freq, order, cut_off, flags, ams, freq
-    )
+    collocates = score_counts_signature(f[['freq']], f1, f2[['f2']], N, min_freq, order, cut_off, flags, ams, freq)
 
     if freq:
         # throw away anti-collocates by default
