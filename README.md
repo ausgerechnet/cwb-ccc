@@ -7,7 +7,7 @@
 <!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
 
 ## Introduction ##
-**cwb-ccc** is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
+**cwb-ccc** is a Python3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
 * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
@@ -33,7 +33,7 @@ If you want to run queries with more than two anchor points, you will need CWB v
 ### Installation ###
 You can install this module with pip from PyPI:
 
-    pip3 install cwb-ccc
+    python -m pip install pipenv
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
@@ -444,9 +444,7 @@ dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 </details>
 <br/>
 
-By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus).
-
-**New in version 0.9.14**: You can now perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
+By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus). Note that you can also perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
 <details>
 <summary><code>dump.collocates(['lemma', 'pos'], order='log_likelihood')</code></summary>
 <p>
@@ -464,15 +462,15 @@ By default, collocates are calculated on the "lemma"-layer, assuming that this i
 </details>
 <br/>
 
-For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
-
 By default, the dataframe contains the counts, namely
 - observed and expected absolute frequencies (columns O11, ..., E22),
 - observed and expected relative frequencies (instances per million, IPM), 
 - marginal frequencies, and 
 - instances within nodes.
 
-You can drop the counts by specifying `freq=False`. By default, the dataframe is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
+and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
+
+For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
 
 The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
 
@@ -598,9 +596,7 @@ you can use its `keywords()` method for retrieving keywords:
 </details>
 <br/>
 
-Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns.
-
-**New in version 0.9.14**: Keywords for p-attribute combinations:
+Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns. And just as with collocates, you can calculate keywords for p-attribute combinations:
 
 <details>
 <summary><code>dump.keywords(["lemma", "pos"], order="log_likelihood")</code></summary>
@@ -662,9 +658,9 @@ The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with a
 </details>
 <br/>
 
-The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus as a reference.  Make sure you install all development dependencies:
+The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus (as well as some reference counts and scores from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists).  Make sure you install all development dependencies:
 
-    pip install pipenv
+    python -m pip install pipenv
     pipenv install --dev
 
 You can then simply
