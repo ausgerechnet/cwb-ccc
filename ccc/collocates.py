@@ -1,14 +1,16 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 from itertools import chain
-# part of module
-from .utils import node2cotext
-from .counts import score_counts_signature
+
 # requirements
 from pandas import DataFrame
-# logging
-import logging
+
+# part of module
+from .counts import score_counts_signature
+from .utils import node2cotext
+
 logger = logging.getLogger(__name__)
 
 

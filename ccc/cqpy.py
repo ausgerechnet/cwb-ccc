@@ -9,11 +9,13 @@
 
 """
 
-import re
-import yaml
 import json
-# logging
 import logging
+import re
+
+# requirements
+import yaml
+
 logger = logging.getLogger(__name__)
 
 

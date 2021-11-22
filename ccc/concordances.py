@@ -1,14 +1,16 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from random import sample
 import itertools
-# part of module
-from .utils import node2cotext
+import logging
+from random import sample
+
 # requirements
 from pandas import DataFrame
-# logging
-import logging
+
+# part of module
+from .utils import node2cotext
+
 logger = logging.getLogger(__name__)
 
 

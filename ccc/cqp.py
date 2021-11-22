@@ -8,19 +8,22 @@ Original Version by Joerg Asmussen (2008)
 Current version by Philipp Heinrich (2020)
 """
 
-import sys
+import logging
 import os
-import re
 import random
-import time
-import subprocess
+import re
 import select
 import signal
-from io import StringIO
-from pandas import read_csv, DataFrame
-from tempfile import NamedTemporaryFile
+import subprocess
+import sys
 import threading
-import logging
+import time
+from io import StringIO
+from tempfile import NamedTemporaryFile
+
+# requirements
+from pandas import DataFrame, read_csv
+
 logger = logging.getLogger(__name__)
 
 

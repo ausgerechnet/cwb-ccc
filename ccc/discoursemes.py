@@ -1,17 +1,18 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# part of module
-from .collocates import dump2cooc
-from .concordances import Concordance
-from .collocates import Collocates
-from .utils import format_cqp_query
-from . import Corpus
-# requirements
-from pandas import NA, DataFrame
-from association_measures.measures import calculate_measures
-# logging
 import logging
+
+# requirements
+from association_measures.measures import calculate_measures
+from pandas import NA, DataFrame
+
+# part of module
+from . import Corpus
+from .collocates import Collocates, dump2cooc
+from .concordances import Concordance
+from .utils import format_cqp_query
+
 logger = logging.getLogger(__name__)
 
 

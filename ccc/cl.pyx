@@ -9,8 +9,8 @@ Current version by Philipp Heinrich (2021)
 """
 
 import codecs
-from cpython.version cimport PY_MAJOR_VERSION
 
+from cpython.version cimport PY_MAJOR_VERSION
 
 encoding_names = {
     'utf8': 'UTF-8',

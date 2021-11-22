@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import shelve
-import os
-from hashlib import sha256
-from glob import glob
-# logging
 import logging
+import os
+import shelve
+from glob import glob
+from hashlib import sha256
+
 logger = logging.getLogger(__name__)
 
 

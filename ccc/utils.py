@@ -1,16 +1,17 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
+import logging
 import pkgutil
-from timeit import default_timer
+import re
 from functools import wraps
+from timeit import default_timer
+
 # requirements
 import numpy as np
 from pandas import NA
 from unidecode import unidecode
-# logging
-import logging
+
 logger = logging.getLogger(__name__)
 
 
