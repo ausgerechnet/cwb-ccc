@@ -679,8 +679,8 @@ def marginals_simple(corpus_name, items, p_att='word', flags=0, pattern=False,
     return df
 
 
-def marginals(corpus_name, items, p_atts=['word'], flags=0, pattern=False,
-              registry_path="/usr/local/share/cwb/registry/"):
+def count_marginals(corpus_name, items, p_atts=['word'], flags=0, pattern=False,
+                    registry_path="/usr/local/share/cwb/registry/"):
 
     if len(p_atts) == 1:
         return marginals_simple(corpus_name, items, p_atts[0],

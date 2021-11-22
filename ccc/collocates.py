@@ -2,9 +2,14 @@
 # -*- coding: utf-8 -*-
 
 from itertools import chain
+from multiprocessing import Pool, cpu_count
+from functools import partial
 # part of module
 from .utils import node2cotext
 from .counts import score_counts_signature
+from .counts import count_cooc_window
+from .counts import count_marginals
+from .cl import Corpus as Crps
 # requirements
 from pandas import DataFrame
 # logging
@@ -195,23 +200,19 @@ def dump2cooc(df_dump, context=None):
     return df_defl, f1_set
 
 
-def show_collocates(window, corpus_name, df_cooc, node_freq,
-                    f1_set, p_atts=['word'], order='O11',
-                    cut_off=100, ams=None, min_freq=2, freq=False,
-                    flags=None,
-                    registry_path="/usr/local/share/cwb/registry/"):
+def show_collocates_w(window, corpus_name, df_cooc, node_freq,
+                      f1_set, p_atts=['word'], order='O11',
+                      cut_off=100, ams=None, min_freq=2, freq=False,
+                      flags=None,
+                      registry_path="/usr/local/share/cwb/registry/"):
 
-    from .counts import count_cooc_window, marginals
-    from .cl import Corpus as Crps
-
-    # count once
     f, f1 = count_cooc_window(
         corpus_name, df_cooc, window, p_atts, registry_path
     )
     attributes = Crps(corpus_name, registry_dir=registry_path)
     corpus_size = len(attributes.attribute('word', 'p'))
     N = corpus_size - len(f1_set)
-    marginals = marginals(corpus_name, f.index, p_atts)
+    marginals = count_marginals(corpus_name, f.index, p_atts)
     f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
         node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
     )
@@ -222,4 +223,39 @@ def show_collocates(window, corpus_name, df_cooc, node_freq,
         min_freq, order, cut_off, flags, ams, freq
     )
 
+    if freq:
+        # throw away anti-collocates by default
+        collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+        # add node and marginal frequencies
+        collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
+
     return collocates
+
+
+def show_collocates(windows, corpus_name, df_cooc, node_freq,
+                    f1_set, p_atts=['word'], order='O11',
+                    cut_off=100, ams=None, min_freq=2, freq=False,
+                    flags=None,
+                    registry_path="/usr/local/share/cwb/registry/"):
+
+    parameters = {
+        'corpus_name': corpus_name,
+        'df_cooc': df_cooc,
+        'node_freq': node_freq,
+        'f1_set': f1_set,
+        'p_atts': p_atts,
+        'order': order,
+        'cut_off': cut_off,
+        'ams': ams,
+        'min_freq': min_freq,
+        'freq': freq,
+        'flags': flags,
+        'registry_path': registry_path
+    }
+
+    output = dict()
+    with Pool(None) as pool:
+        for w, t in zip(windows, pool.map(partial(show_collocates_w, **parameters), windows)):
+            output[w] = t
+
+    return output
