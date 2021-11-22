@@ -1,12 +1,10 @@
 # Collocation and Concordance Computation #
-
-[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
-[![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/)
-<!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
+[![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
 [![Downloads](https://pepy.tech/badge/cwb-ccc)](https://pepy.tech/project/cwb-ccc)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-
+<!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
 
 ## Introduction ##
 **cwb-ccc** is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
