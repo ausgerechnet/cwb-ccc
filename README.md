@@ -1,7 +1,11 @@
 # Collocation and Concordance Computation #
 
-[![PyPI Latest Release](https://img.shields.io/pypi/v/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/)
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
+[![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
+[![PyPI Latest Release](https://img.shields.io/pypi/v/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/)
+<!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
+[![Downloads](https://pepy.tech/badge/cwb-ccc)](https://pepy.tech/project/cwb-ccc)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
 
 ## Introduction ##
