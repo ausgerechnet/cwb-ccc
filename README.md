@@ -1,10 +1,11 @@
 # Collocation and Concordance Computation #
 
-[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml)
+[![PyPI Latest Release](https://img.shields.io/pypi/v/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/)
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
 
 
 ## Introduction ##
-This module is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (e.g. collocates and keywords).
+**cwb-ccc** is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
 * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
@@ -24,7 +25,7 @@ This module is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](htt
 ### Prerequisites ###
 The module needs a working installation of the [CWB](http://cwb.sourceforge.net/) and operates on CWB-indexed corpora.
 
-If you want to run queries with more than two anchor points, the module requires CWB version 3.4.16 or later.
+If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.
 
 
 ### Installation ###
@@ -34,8 +35,9 @@ You can install this module with pip from PyPI:
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
+    python -m pip install pipenv
     pipenv install --dev
-    python3 setup.py bdist_wheel
+    pipenv run python3 setup.py bdist_wheel
 
 
 ### Accessing Corpora ###
@@ -376,14 +378,14 @@ lines = dump.concordance(
 <summary><code>lines</code></summary>
 <p>
 
-| *match* | *matchend* | word                          | name\_word      | party\_word   |
-|--------:|-----------:|:------------------------------|:----------------|:--------------|
-|    8211 |       8217 | Wolfgang Zöller [ CDU / CSU ] | Wolfgang Zöller | [ CDU / CSU ] |
-|   15997 |      16001 | Peter Struck [ SPD ]          | Peter Struck    | [ SPD ]       |
-|   25512 |      25516 | Jörg Tauss [ SPD ]            | Jörg Tauss      | [ SPD ]       |
-|   32808 |      32814 | Ina Albowitz [ F. D. P. ]     | Ina Albowitz    | [ F. D. P. ]  |
-|   36980 |      36984 | Christa Luft [ PDS ]          | Christa Luft    | [ PDS ]       |
-|     ... |        ... | ...                           | ...             | ...           |
+|   *match* |   *matchend* | word                          | lemma                         | name\_word      | name\_lemma     | party\_word   | party\_lemma   |
+|----------:|-------------:|:------------------------------|:------------------------------|:----------------|:----------------|:--------------|:---------------|
+|      8211 |         8217 | Wolfgang Zöller [ CDU / CSU ] | Wolfgang Zöller [ CDU / CSU ] | Wolfgang Zöller | Wolfgang Zöller | CDU / CSU     | CDU / CSU      |
+|     15997 |        16001 | Peter Struck [ SPD ]          | Peter Struck [ SPD ]          | Peter Struck    | Peter Struck    | SPD           | SPD            |
+|     25512 |        25516 | Jörg Tauss [ SPD ]            | Jörg Tauss [ SPD ]            | Jörg Tauss      | Jörg Tauss      | SPD           | SPD            |
+|     32808 |        32814 | Ina Albowitz [ F. D. P. ]     | Ina Albowitz [ F. D. P. ]     | Ina Albowitz    | Ina Albowitz    | F. D. P.      | F. D. P.       |
+|     36980 |        36984 | Christa Luft [ PDS ]          | Christa Luft [ PDS ]          | Christa Luft    | Christa Luft    | PDS           | PDS            |
+|...|...|...|...|...|...|...|...|
 
 </p>
 </details>
@@ -394,8 +396,7 @@ The module allows for correction of anchor points by integer offsets.  This is e
 ```python
 dump.correct_anchors({3: +1, 4: -1})
 lines = dump.concordance(
-  form='slots', p_show=['word', 'lemma'],
-  slots={"name": [1, 2], "party": [3, 4]}
+  form='slots', slots={"name": [1, 2], "party": [3, 4]}
 )
 ```
 
@@ -678,10 +679,9 @@ Note that the make commands above update the path to the binary data files (line
 
 
 ## Acknowledgements ##
-The module includes a slight adaptation of [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.  Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 
-The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
-
-This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
-
-Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
+- The module includes a slight adaptation of [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.
+- Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
+- The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
+- This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
+- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).

@@ -85,7 +85,7 @@ copymd(lines)
 lines = dump.concordance(p_show=["word", "lemma"], s_show=["text_id"])
 copymd(lines)
 
-lines = dump.concordance(form='kwic')
+lines = dump.concordance(form='kwic', cut_off=5)
 copymd(lines)
 
 lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
@@ -105,7 +105,8 @@ dump = corpus.query(
     r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
     context=0, context_break='s', match_strategy='longest',
 )
-lines = dump.concordance(form='slots', slots={"name": [1, 2], "party": [3, 4]})
+lines = dump.concordance(form='slots', p_show=['word', 'lemma'],
+                         slots={"name": [1, 2], "party": [3, 4]})
 copymd(lines)
 
 dump.correct_anchors({3: +1, 4: -1})
