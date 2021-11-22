@@ -444,21 +444,19 @@ def test_constellation_coll(germaparl, discoursemes):
 @pytest.mark.multiproc
 def test_constellation_coll_multi(germaparl, discoursemes):
 
-    # corpus = get_corpus(germaparl)
-    corpus = Corpus("GERMAPARL1318")
+    corpus = get_corpus(germaparl)
 
     # init constellation
     topic_dump = corpus.query(
-        '[lemma="Merkel"]',
+        '[lemma="und"]',
         context=None,
         context_break='s'
     )
-    print(topic_dump)
     const = Constellation(topic_dump)
 
-    dfs = const.collocates(windows=list(range(1, 11)))
-    assert len(dfs) == 10
-    # print(dfs[20])
+    dfs = const.collocates(windows=list(range(1, 21)))
+    assert len(dfs) == 20
+    assert len(dfs[20] == 1768)
 
 
 ##########################
