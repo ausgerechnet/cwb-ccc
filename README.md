@@ -31,9 +31,9 @@ If you want to run queries with more than two anchor points, you will need CWB v
 
 
 ### Installation ###
-You can install this module with pip from PyPI:
+You can install this module with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 
-    python -m pip install pipenv
+    python -m pip install cwb-ccc
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
@@ -180,7 +180,11 @@ There are two reasons for defining the context when running a query:
 Notwithstanding (1), the context can also be set after having run the query:
 
 ```python
-dump.set_context(context_left=5, context_right=10, context_break='s')
+dump.set_context(
+    context_left=5,
+    context_right=10,
+    context_break='s'
+)
 ```
 
 Note that this works "inplace".
@@ -269,7 +273,10 @@ The format can be changed using the `form` parameter.  The "kwic" format e.g. re
 If you want to inspect each query result in detail, use `form`="dataframe"; here, every concordance line is verticalized text formated as DataFrame with the _cpos_ of each token as index:
 
 ```python
-lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
+lines = dump.concordance(
+    p_show=['word', 'pos', 'lemma'],
+    form='dataframe'
+)
 ```
 
 <details>
@@ -314,7 +321,9 @@ The concordancer detects anchored queries automatically. The following query
 ```python
 dump = corpus.query(
   cqp_query=r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-  context=None, context_break='s', match_strategy='longest'
+  context=None, 
+  context_break='s', 
+  match_strategy='longest'
 )
 lines = dump.concordance(form='dataframe')
 ```
@@ -369,10 +378,13 @@ For an analysis of certain spans of your query matches, you can use anchor point
 ```python
 dump = corpus.query(
     r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-    context=0, context_break='s', match_strategy='longest',
+    context=0,
+    context_break='s',
+    match_strategy='longest',
 )
 lines = dump.concordance(
-  form='slots', p_show=['word', 'lemma'],
+  form='slots', 
+  p_show=['word', 'lemma'],
   slots={"name": [1, 2], "party": [3, 4]}
 )
 ```
@@ -398,7 +410,9 @@ The module allows for correction of anchor points by integer offsets.  This is e
 ```python
 dump.correct_anchors({3: +1, 4: -1})
 lines = dump.concordance(
-  form='slots', slots={"name": [1, 2], "party": [3, 4]}
+  form='slots',
+  slots={"name": [1, 2],
+  "party": [3, 4]}
 )
 ```
 
@@ -424,7 +438,11 @@ lines = dump.concordance(
 After executing a query, you can use `dump.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
 
 ```python
-dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
+dump = corpus.query(
+    '[lemma="SPD"]', 
+    context=10, 
+    context_break='s'
+)
 ```
 
 <details>
@@ -491,7 +509,10 @@ dump = corpus.query_s_att("np")
 You can also query the respective annotations:
 
 ```python
-dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
+dump = corpus.query_s_att(
+    "text_party", 
+    {"CDU", "CSU"}
+)
 ```
 
 will e.g. retrieve all `text` spans with respective constraints on the `party` annotation.
@@ -524,7 +545,11 @@ This way you can run queries on NQRs in CQP (a.k.a. *subqueries*).  Compare e.g.
 with the one a subcorpus:
 
 ```python
-corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+corpus.query_s_att(
+    "text_party", 
+    values={"CDU", "CSU"}, 
+    name="Union"
+)
 corpus.activate_subcorpus("Union")
 print(corpus.subcorpus)
 > 'Union'
@@ -574,7 +599,10 @@ You can access all available NQRs via
 
 Having created a subcorpus (a `dump`)
 ```python
-dump = corpus.query_s_att("text_party", values={"CDU", "CSU"})
+dump = corpus.query_s_att(
+    "text_party",
+    values={"CDU", "CSU"}
+)
 ```
 
 you can use its `keywords()` method for retrieving keywords:
