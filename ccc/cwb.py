@@ -1,25 +1,25 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 import os
-from io import StringIO
 from glob import glob
-# part of module
-from .cqp import CQP
-from .cache import Cache, generate_idx, generate_library_idx
-from .counts import Counts
-from .utils import preprocess_query
-from .utils import chunk_anchors, correct_anchors
-from .dumps import Dump
-from .counts import cwb_scan_corpus
-from .cl import Corpus as Attributes
-from .version import __version__
+from io import StringIO
+
 # requirements
+from numpy import maximum, minimum
 from pandas import DataFrame, read_csv
 from pandas.errors import EmptyDataError
-from numpy import minimum, maximum
-# logging
-import logging
+
+# part of module
+from .cache import Cache, generate_idx, generate_library_idx
+from .cl import Corpus as Attributes
+from .counts import Counts, cwb_scan_corpus
+from .cqp import CQP
+from .dumps import Dump
+from .utils import chunk_anchors, correct_anchors, preprocess_query
+from .version import __version__
+
 logger = logging.getLogger(__name__)
 
 

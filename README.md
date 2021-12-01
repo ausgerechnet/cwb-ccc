@@ -1,11 +1,14 @@
 # Collocation and Concordance Computation #
-
-[![PyPI Latest Release](https://img.shields.io/pypi/v/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/)
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
-
+[![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
+[![Downloads](https://pepy.tech/badge/cwb-ccc)](https://pepy.tech/project/cwb-ccc)
+[![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
+[![Imports: association-measures](https://img.shields.io/badge/%20imports-association--measures-%231674b1?style=flat&labelColor=gray)](https://github.com/fau-klue/pandas-association-measures)
+<!-- [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/) -->
+<!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
 
 ## Introduction ##
-**cwb-ccc** is a Python wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
+**cwb-ccc** is a Python3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
 * [Introduction](#introduction)
   * [Prerequisites](#prerequisites)
@@ -29,9 +32,9 @@ If you want to run queries with more than two anchor points, you will need CWB v
 
 
 ### Installation ###
-You can install this module with pip from PyPI:
+You can install this module with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 
-    pip3 install cwb-ccc
+    python -m pip install cwb-ccc
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
@@ -178,7 +181,11 @@ There are two reasons for defining the context when running a query:
 Notwithstanding (1), the context can also be set after having run the query:
 
 ```python
-dump.set_context(context_left=5, context_right=10, context_break='s')
+dump.set_context(
+    context_left=5,
+    context_right=10,
+    context_break='s'
+)
 ```
 
 Note that this works "inplace".
@@ -267,7 +274,10 @@ The format can be changed using the `form` parameter.  The "kwic" format e.g. re
 If you want to inspect each query result in detail, use `form`="dataframe"; here, every concordance line is verticalized text formated as DataFrame with the _cpos_ of each token as index:
 
 ```python
-lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
+lines = dump.concordance(
+    p_show=['word', 'pos', 'lemma'],
+    form='dataframe'
+)
 ```
 
 <details>
@@ -312,7 +322,9 @@ The concordancer detects anchored queries automatically. The following query
 ```python
 dump = corpus.query(
   cqp_query=r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-  context=None, context_break='s', match_strategy='longest'
+  context=None, 
+  context_break='s', 
+  match_strategy='longest'
 )
 lines = dump.concordance(form='dataframe')
 ```
@@ -367,10 +379,13 @@ For an analysis of certain spans of your query matches, you can use anchor point
 ```python
 dump = corpus.query(
     r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-    context=0, context_break='s', match_strategy='longest',
+    context=0,
+    context_break='s',
+    match_strategy='longest',
 )
 lines = dump.concordance(
-  form='slots', p_show=['word', 'lemma'],
+  form='slots', 
+  p_show=['word', 'lemma'],
   slots={"name": [1, 2], "party": [3, 4]}
 )
 ```
@@ -396,7 +411,9 @@ The module allows for correction of anchor points by integer offsets.  This is e
 ```python
 dump.correct_anchors({3: +1, 4: -1})
 lines = dump.concordance(
-  form='slots', slots={"name": [1, 2], "party": [3, 4]}
+  form='slots',
+  slots={"name": [1, 2],
+  "party": [3, 4]}
 )
 ```
 
@@ -422,7 +439,11 @@ lines = dump.concordance(
 After executing a query, you can use `dump.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
 
 ```python
-dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
+dump = corpus.query(
+    '[lemma="SPD"]', 
+    context=10, 
+    context_break='s'
+)
 ```
 
 <details>
@@ -442,9 +463,7 @@ dump = corpus.query('[lemma="SPD"]', context=10, context_break='s')
 </details>
 <br/>
 
-By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus).
-
-**New in version 0.9.14**: You can now perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
+By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus). Note that you can also perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
 <details>
 <summary><code>dump.collocates(['lemma', 'pos'], order='log_likelihood')</code></summary>
 <p>
@@ -462,15 +481,15 @@ By default, collocates are calculated on the "lemma"-layer, assuming that this i
 </details>
 <br/>
 
-For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
-
 By default, the dataframe contains the counts, namely
 - observed and expected absolute frequencies (columns O11, ..., E22),
 - observed and expected relative frequencies (instances per million, IPM), 
 - marginal frequencies, and 
 - instances within nodes.
 
-You can drop the counts by specifying `freq=False`. By default, the dataframe is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
+and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
+
+For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
 
 The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
 
@@ -491,7 +510,10 @@ dump = corpus.query_s_att("np")
 You can also query the respective annotations:
 
 ```python
-dump = corpus.query_s_att("text_party", {"CDU", "CSU"})
+dump = corpus.query_s_att(
+    "text_party", 
+    {"CDU", "CSU"}
+)
 ```
 
 will e.g. retrieve all `text` spans with respective constraints on the `party` annotation.
@@ -524,7 +546,11 @@ This way you can run queries on NQRs in CQP (a.k.a. *subqueries*).  Compare e.g.
 with the one a subcorpus:
 
 ```python
-corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+corpus.query_s_att(
+    "text_party", 
+    values={"CDU", "CSU"}, 
+    name="Union"
+)
 corpus.activate_subcorpus("Union")
 print(corpus.subcorpus)
 > 'Union'
@@ -574,7 +600,10 @@ You can access all available NQRs via
 
 Having created a subcorpus (a `dump`)
 ```python
-dump = corpus.query_s_att("text_party", values={"CDU", "CSU"})
+dump = corpus.query_s_att(
+    "text_party",
+    values={"CDU", "CSU"}
+)
 ```
 
 you can use its `keywords()` method for retrieving keywords:
@@ -596,9 +625,7 @@ you can use its `keywords()` method for retrieving keywords:
 </details>
 <br/>
 
-Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns.
-
-**New in version 0.9.14**: Keywords for p-attribute combinations:
+Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns. And just as with collocates, you can calculate keywords for p-attribute combinations:
 
 <details>
 <summary><code>dump.keywords(["lemma", "pos"], order="log_likelihood")</code></summary>
@@ -660,9 +687,9 @@ The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with a
 </details>
 <br/>
 
-The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus as a reference.  Make sure you install all development dependencies:
+The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus (as well as some reference counts and scores from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists).  Make sure you install all development dependencies:
 
-    pip install pipenv
+    python -m pip install pipenv
     pipenv install --dev
 
 You can then simply

@@ -1,0 +1,16 @@
+# --- # CQPY query file
+# anchors:
+#   corrections:
+#     '1': -1
+#     match: -1
+#   slots:
+#     entity: [match, 1]
+#     vp: [2, 3]
+#     proposition: [4, contextend]
+#     five: 5
+# query:
+#   context: null
+#   context_break: s
+# ---
+
+/np[] @1:[::] @2:[::] [lemma != "sagen"]* @3:[lemma="sagen"] @5[lemma="nichts"]? (("," "dass") | ":")? @4:[::]

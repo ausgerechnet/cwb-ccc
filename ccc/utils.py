@@ -1,16 +1,17 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
+import logging
 import pkgutil
-from timeit import default_timer
+import re
 from functools import wraps
+from timeit import default_timer
+
 # requirements
 import numpy as np
 from pandas import NA
 from unidecode import unidecode
-# logging
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,7 +46,13 @@ def apply_correction(row, correction):
     :param list row: row of dump with [value, context, contextend]
     :param int correction: offset to add/subtract from position
     """
+
     value, lower_bound, upper_bound = row
+
+    if value == -1:
+        # missing value
+        return value
+
     value += correction
     if value < lower_bound:
         value = lower_bound

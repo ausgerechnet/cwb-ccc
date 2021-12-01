@@ -1,18 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import subprocess
-from io import StringIO
-from collections import Counter
-from tempfile import NamedTemporaryFile
-from association_measures import measures
-# part of module
-from .utils import time_it, fold_df
-from .cl import Corpus as Crps
-# requirements
-from pandas import DataFrame, read_csv, MultiIndex
-# logging
 import logging
+import subprocess
+from collections import Counter
+from io import StringIO
+from tempfile import NamedTemporaryFile
+
+# requirements
+from association_measures import measures
+from pandas import DataFrame, MultiIndex, read_csv
+
+# part of module
+from .cl import Corpus as Crps
+from .utils import fold_df, time_it
+
 logger = logging.getLogger(__name__)
 
 

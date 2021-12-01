@@ -1,15 +1,17 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# part of module
-from .concordances import Concordance
-from .collocates import Collocates
-from .keywords import Keywords
-from .utils import merge_intervals, correct_anchors
+import logging
+
 # requirements
 from pandas import DataFrame
-# logging
-import logging
+
+# part of module
+from .collocates import Collocates
+from .concordances import Concordance
+from .keywords import Keywords
+from .utils import correct_anchors, merge_intervals
+
 logger = logging.getLogger(__name__)
 
 
