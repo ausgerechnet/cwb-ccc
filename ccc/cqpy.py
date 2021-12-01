@@ -133,6 +133,25 @@ def cqpy_loads(doc):
     # add CQP
     query['cqp'] = cqp.lstrip().rstrip()
 
+    # post-process anchors
+    query = check_anchors(query)
+
+    return query
+
+
+def check_anchors(query):
+    """
+    make sure integer anchors are indeed integers
+    """
+    if 'anchors' in query:
+        if 'corrections' in query['anchors']:
+            corrections_int = dict()
+            for k, c in query['anchors']['corrections'].items():
+                try:
+                    corrections_int[int(k)] = c
+                except ValueError:  # for 'match', 'matchend', etc.
+                    pass
+            query['anchors']['corrections'] = corrections_int
     return query
 
 
@@ -209,6 +228,7 @@ def run_query(corpus, query,
 
     # determine anchor parameters
     if 'anchors' in query:
+        query = check_anchors(query)
         corrections = query['anchors'].get('corrections', corrections)
         slots = query['anchors'].get('slots', slots)
 

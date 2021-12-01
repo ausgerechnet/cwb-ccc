@@ -46,7 +46,13 @@ def apply_correction(row, correction):
     :param list row: row of dump with [value, context, contextend]
     :param int correction: offset to add/subtract from position
     """
+
     value, lower_bound, upper_bound = row
+
+    if value == -1:
+        # missing value
+        return value
+
     value += correction
     if value < lower_bound:
         value = lower_bound

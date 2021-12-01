@@ -35,3 +35,13 @@ def test_run_from_cqpy(germaparl, query_files):
     query = cqpy_load(query_files['jemand_sagt'])
     lines = run_query(corpus, query)
     assert all([v in lines.columns for v in ['word', 'entity_lemma', 'vp_lemma']])
+
+
+def test_run_from_cqpy_sloppy(germaparl, query_files):
+
+    corpus = get_corpus(germaparl)
+    query = cqpy_load(query_files['jemand_sagt_sloppy'])
+    lines = run_query(corpus, query)
+    assert lines[['five_word']].value_counts()[''] == 440
+    assert lines[['five_word']].value_counts()['nichts'] == 3
+    assert lines[['entity_lemma']].value_counts()['sie'] == 273
