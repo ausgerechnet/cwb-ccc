@@ -3,6 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
 [![Downloads](https://pepy.tech/badge/cwb-ccc)](https://pepy.tech/project/cwb-ccc)
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
+[![Imports: association-measures](https://img.shields.io/badge/%20imports-association--measures-%231674b1?style=flat&labelColor=gray)](https://github.com/fau-klue/pandas-association-measures)
 <!-- [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/) -->
 <!-- [![Package Status](https://img.shields.io/pypi/status/cwb-ccc.svg)](https://pypi.org/project/cwb-ccc/) -->
 
