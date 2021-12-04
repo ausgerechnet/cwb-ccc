@@ -1,5 +1,5 @@
 from ccc.cwb import Corpus
-from ccc.counts import cwb_scan_corpus, read_freq_list, cwb_lexdecode
+from ccc.counts import cwb_scan_corpus, read_freq_list, cwb_lexdecode, score_counts
 from ccc.utils import format_cqp_query
 import pandas as pd
 import pytest
@@ -431,3 +431,18 @@ def test_cwb_counts(germaparl):
 
     assert(df['freq'][queries[1]] == 55)
     cqp.__kill__()
+
+
+def test_score_counts(germaparl, empirist):
+
+    df1, R1 = read_freq_list(germaparl['freq_list'])
+    df2, R2 = read_freq_list(empirist['freq_list'])
+    df = df1[['freq']].rename(columns={'freq': 'f1'}).join(
+        df2[['freq']].rename(columns={'freq': 'f2'})
+    )
+    df['N1'] = R1
+    df['N2'] = R2
+    df = df.fillna(0, downcast='infer')
+
+    kw = score_counts(df, cut_off=None)
+    assert kw['log_likelihood']['die'] == 4087.276827

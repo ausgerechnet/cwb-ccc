@@ -207,7 +207,8 @@ def test_dumps_collocates(germaparl):
         window=20
     )
     assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Freiheit'
+    print(tables['yellow'])
+    assert tables['yellow'].index[0] == 'Grad'
 
 
 def test_dumps_collocates_global(germaparl):
