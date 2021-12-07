@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e68175e004b516d943e76c8ecb6a1c9f5d7ebeb64480355a8af6810def854125"
+            "sha256": "0a9c872c3d252725d05b8b890b2498642da7a3bedb81052e995316a1721731a1"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -16,9 +16,10 @@
     "default": {
         "association-measures": {
             "hashes": [
+                "sha256:15300c3481f949a934ec4e8c89a821114f5a8f894278dc8eff7dd0628690da1f",
                 "sha256:4dd35cbc4b572d82b76aeb3bbab3d6068bf378a0541cb4c4cf2688a508936a89"
             ],
-            "path": "./../pandas-association-measures/dist/association-measures-0.2.0.tar.gz",
+            "index": "pypi",
             "version": "==0.2.0"
         },
         "bottleneck": {
@@ -526,7 +527,7 @@
                 "sha256:6f62d78e2f89b4500b080fe3a81690850cd254227f27f75c3a0c491a1f351ba7",
                 "sha256:e8443a5e7a020e9d7f97f1d7d9cd17c88bcb3bc7e218bf9cf5095fe550be2951"
             ],
-            "markers": "python_version < '4.0' and python_full_version >= '3.6.1'",
+            "markers": "python_version < '4' and python_full_version >= '3.6.1'",
             "version": "==5.10.1"
         },
         "jeepney": {
@@ -889,18 +890,18 @@
         },
         "twine": {
             "hashes": [
-                "sha256:5a3e3fb52b926827c99e050f0c1e5d8ae599848f3eb27764f19b886c09134590",
-                "sha256:8d6a0ad895576c97e9ad4a5da2d6adea37fd5434ecabace0054013d537ddbc6c"
+                "sha256:28460a3db6b4532bde6a5db6755cf2dce6c5020bada8a641bb2c5c7a9b1f35b8",
+                "sha256:8c120845fc05270f9ee3e9d7ebbed29ea840e41f48cd059e04733f7e1d401345"
             ],
             "index": "pypi",
-            "version": "==3.7.0"
+            "version": "==3.7.1"
         },
         "urllib3": {
             "hashes": [
                 "sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece",
                 "sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
             "version": "==1.26.7"
         },
         "webencodings": {
