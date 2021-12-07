@@ -89,7 +89,6 @@ def test_keywords_combo(germaparl):
     assert lines.index[0] == "und KON"
 
 
-@pytest.mark.now
 def test_keywords(germaparl):
 
     corpus = get_corpus(germaparl)

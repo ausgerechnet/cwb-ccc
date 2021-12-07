@@ -243,7 +243,7 @@ def run_query(corpus, query,
         # backwards compatability
         for p in ['p_slots', 'p_text']:
             if p in query['display']:
-                logger.warning("use of '%s' is deprecated" % p)
+                # logger.warning("use of '%s' is deprecated" % p)
                 if query['display'][p] not in p_show:
                     p_show += [query['display'][p]]
 
@@ -264,5 +264,17 @@ def run_query(corpus, query,
         cut_off=cut_off,
         form=form
     )
+
+    # post-process: only return relevant columns
+    if 'display' in query:
+        if 'p_text' in query['display']:
+            drop = [p for p in p_show if p != query['display']['p_text']]
+            lines = lines.drop(drop, axis=1)
+        if 'p_slots' in query['display']:
+            drop = list()
+            for slot in slots.keys():
+                drop = ["_".join([slot, p]) for p in p_show
+                        if p != query['display']['p_slots']]
+                lines = lines.drop(drop, axis=1)
 
     return lines

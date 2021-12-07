@@ -113,6 +113,9 @@ def query_files():
         ),
         'jemand_sagt_sloppy': os.path.join(
             DIR_PATH, "corpora", "library", "queries", "jemand_sagt_sloppy.cqpy"
+        ),
+        'jemand_sagt_display': os.path.join(
+            DIR_PATH, "corpora", "library", "queries", "jemand_sagt_display.cqpy"
         )
     }
 
