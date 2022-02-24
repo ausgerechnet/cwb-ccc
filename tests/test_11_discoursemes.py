@@ -264,6 +264,35 @@ def test_create_constellation(germaparl, discoursemes):
     assert len(df) == 2990
 
 
+def test_create_textconstellation(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+
+    # get topic and additional discoursemes
+    names = list(discoursemes.keys())
+    topic_name = names[0]
+    topic_items = discoursemes.pop(topic_name)
+    additional_discoursemes = discoursemes
+
+    const = create_constellation(corpus_name, topic_name, topic_items,
+                                 p_query, s_query, flags, escape,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH, text=True)
+
+    assert len(const.df) == 2198
+
+
 @pytest.mark.mmda
 def test_mmda(germaparl):
 
@@ -466,7 +495,7 @@ def test_textual_constellation(germaparl, discoursemes):
         s_context=discoursemes['parameters']['s_context']
     )
     assert len(const.df) == 624
-    assert 'topic' in const.df.columns
+    assert 'MATCHES_topic' in const.df.columns
 
 
 def test_textual_constellation_add(germaparl, discoursemes):
@@ -509,66 +538,67 @@ def test_textual_constellation_add(germaparl, discoursemes):
     )
 
     assert len(const.df) == 2156
-    assert 'discourseme' in const.df.columns
+    assert 'MATCHES_discourseme' in const.df.columns
 
 
 def test_textual_constellation_association(germaparl, discoursemes):
 
-    corpus = get_corpus(germaparl)
+    corpus_name = germaparl['corpus_name']
 
-    # init constellation
-    topic_query = format_cqp_query(
-        discoursemes['items_topic'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    topic_dump = corpus.query(
-        topic_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const = TextConstellation(
-        topic_dump,
-        s_context=discoursemes['parameters']['s_context']
-    )
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
 
-    # add discourseme
-    disc1_query = format_cqp_query(
-        discoursemes['items_1'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    disc1_dump = corpus.query(
-        disc1_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const.add_discourseme(
-        disc1_dump,
-        name='disc1'
-    )
-    # add discourseme 2
-    disc2_query = format_cqp_query(
-        discoursemes['items_2'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    disc2_dump = corpus.query(
-        disc2_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const.add_discourseme(
-        disc2_dump,
-        name='disc2'
-    )
+    # get topic and additional discoursemes
+    names = list(discoursemes.keys())
+    topic_name = names[0]
+    topic_items = discoursemes.pop(topic_name)
+    additional_discoursemes = discoursemes
+
+    const = create_constellation(corpus_name, topic_name, topic_items,
+                                 p_query, s_query, flags, escape,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH, text=True)
 
     assoc = const.associations()
     assert len(assoc) == 6
     assert 'candidate' in assoc.columns
+
+
+@pytest.mark.now
+def test_textual_constellation_concordance(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+
+    # get topic and additional discoursemes
+    names = list(discoursemes.keys())
+    topic_name = names[0]
+    topic_items = discoursemes.pop(topic_name)
+    additional_discoursemes = discoursemes
+
+    const = create_constellation(corpus_name, topic_name, topic_items,
+                                 p_query, s_query, flags, escape,
+                                 s_context, context,
+                                 additional_discoursemes,
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH, text=True)
+
+    from pprint import pprint
+    lines = const.concordance()
+    pprint(lines[0])

@@ -152,22 +152,23 @@ def constellation_left_join(df1, df2, name, drop=True):
     return m
 
 
-def constellation_outer_join(df1, df2, name):
-    """join an additional dump df2 to an existing constellation
+def aggregate_matches(df, name, context_col='contextid',
+                      match_cols=['match', 'matchend']):
 
-    :param DataFrame df1: textual const.  === (ci) nr_1 nr_2 ... ==
-    :param DataFrame df2: additional dump === (m, me) ci c ce ==
-    :param str name: name for additional discourseme
-    :return: constellation dump incl. additional dump === (ci) nr_1 nr_2 ... nr_name ==
-    :rtype: DataFrame
-    """
+    # counts
+    counts = DataFrame(df[context_col].value_counts()).astype("Int64")
+    counts.columns = ['COUNTS_' + name]
 
-    # merge dumps via contextid ###
-    table = DataFrame(df2[['contextid']].value_counts())
-    table.columns = [name]
-    m = df1.join(table, how='outer').astype("Int64")
+    # matches
+    matches = df.reset_index()
+    matches['MATCHES_' + name] = matches[match_cols].values.tolist()
+    matches['MATCHES_' + name] = matches['MATCHES_' + name].apply(tuple)
+    matches = matches.groupby('contextid')['MATCHES_' + name].apply(set)
 
-    return m
+    # combine
+    table = counts.join(matches)
+
+    return table
 
 
 def role_formatter(row, names, s_show, window):
@@ -199,9 +200,17 @@ def role_formatter(row, names, s_show, window):
     # discourseme names
     for name in names:
         role = [None] * len(d['offset'])
-        for t in row[name]:
-            for i in range(d['cpos'].index(t[1]), d['cpos'].index(t[2]) + 1):
-                role[i] = name
+        if not isinstance(row[name], float):
+            for t in row[name]:
+                if len(t) == 2:
+                    # lazy definition without offset
+                    start = 0
+                    end = 1
+                else:
+                    start = 1
+                    end = 2
+                for i in range(d['cpos'].index(t[start]), d['cpos'].index(t[end]) + 1):
+                    role[i] = name
         roles.append(role)
 
     # combine individual roles into one list of lists
@@ -297,7 +306,7 @@ class Constellation:
 
         # convert dataframe
         df_grouped = self.group_lines()
-        # retrieve concordance lines
+        # retrieve concordance lines // TODO speed up: first cut-off, then retrieval
         conc = Concordance(self.corpus.copy(), df_grouped)
         lines = conc.lines(form='dict', p_show=p_show, s_show=s_show,
                            order=order, cut_off=cut_off)
@@ -362,11 +371,10 @@ class TextConstellation:
         """
 
         self.corpus = dump.corpus
-        table = DataFrame(dump.df[['contextid']].value_counts())
-        table.columns = [name]
-        self.df = table
         self.s_context = s_context
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
+
+        self.df = aggregate_matches(dump.df, name)
 
     def add_discourseme(self, dump, name='discourseme'):
 
@@ -375,15 +383,59 @@ class TextConstellation:
             logger.error('name "%s" already taken; cannot register discourseme' % name)
             return
 
-        self.df = constellation_outer_join(self.df, dump.df, name)
+        df = aggregate_matches(dump.df, name)
+        df = self.df.join(df, how='outer')
+
+        self.df = df
+
+    def concordance(self, p_show=['word', 'lemma'], s_show=[],
+                    order='random', cut_off=100):
+
+        df = self.df.sample(cut_off)
+
+        # join context..contextend
+        contexts = self.corpus.dump_from_s_att(self.s_context, annotation=False)
+        contexts.columns = ['contextid']
+        contexts = contexts.reset_index().set_index('contextid')
+        df = df.join(contexts).set_index(['match', 'matchend'])
+
+        # retrieve concordance lines
+        conc = Concordance(self.corpus.copy(), df)
+        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show,
+                           order=order, cut_off=cut_off)
+
+        # get boolean columns for each discourseme
+        names_bool = list()
+        for name in [c for c in df.columns if c.startswith("COUNTS_")]:
+            name_bool = '_'.join(['BOOL', name.split("COUNTS_")[-1]])
+            names_bool.append(name_bool)
+            lines[name_bool] = (lines[name] > 0)
+            lines[name_bool] = lines[name_bool].fillna(False)
+
+        # format roles
+        match_cols = [c for c in lines.columns if c.startswith("MATCHES_")]
+        match_names = [c.split("MATCHES_")[-1] for c in match_cols]
+        col_mapper = dict(zip(match_cols, match_names))
+        lines = lines.rename(columns=col_mapper)
+        lines = list(lines.apply(
+            lambda row: role_formatter(
+                row, match_names, s_show=names_bool+s_show, window=0
+            ), axis=1
+        ))
+
+        return lines
 
     def associations(self, ams=None, frequencies=True,
                      min_freq=2, order='log_likelihood',
                      cut_off=None):
 
+        counts = self.df[[c for c in self.df.columns if c.startswith("COUNTS_")]]
+        counts.columns = [c.split("COUNTS_")[-1] for c in counts.columns]
+        cooc = counts > 0
+
+        # TODO obere Dreiecksmatrix
         tables = DataFrame()
-        cooc = self.df > 0
-        for name in self.df.columns:
+        for name in counts.columns:
             table = round(textual_associations(
                 cooc, self.N, name
             ).reset_index(), 2)
