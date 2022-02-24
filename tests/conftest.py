@@ -87,16 +87,16 @@ def discoursemes():
     """ discoursemes """
 
     return {
-        'items_topic': ["CDU", "CSU"],
-        'items_1': ["und"],
-        'items_2': ["Bundesregierung"],
+        'topic': ["CDU", "CSU"],
+        'disc1': ["und"],
+        'disc2': ["Bundesregierung"],
         'parameters': {
             'flags_query': '%cd',
             'escape_query': False,
             'p_query': 'lemma',
             's_query': 's',
             's_context': 'p',
-            'context': 20,
+            'context': 20
         }
     }
 
