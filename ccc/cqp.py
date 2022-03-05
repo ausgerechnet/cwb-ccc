@@ -413,8 +413,14 @@ class CQP:
 
         """
         name = 'Last' if name is None else name
+
         logger.info('defining NQR "%s" from query' % name)
         self.Query('%s=%s;' % (name, query))
+
+        if not self.Ok():
+            logger.error('invalid query "%s"' % query)
+            return DataFrame()
+
         size = int(self.Exec("size %s" % name))
         if size == 0:
             return DataFrame()
