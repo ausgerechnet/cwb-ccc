@@ -48,10 +48,6 @@ def start_cqp(cqp_bin, registry_path,
 
     if data_path is not None:
         cqp.Exec('set DataDirectory "%s"' % data_path)
-    if corpus_name is not None:
-        cqp.Exec(corpus_name)
-    if subcorpus is not None:
-        cqp.Exec(subcorpus)
 
     if lib_path is not None:
 
@@ -69,10 +65,20 @@ def start_cqp(cqp_bin, registry_path,
             abs_path = os.path.abspath(macro)
             cqp_exec = 'define macro < "%s";' % abs_path
             cqp.Exec(cqp_exec)
-        # execute each macro once (avoids CQP shortcoming for nested macros)
+        # for wordlists defined in macros, it is necessary to execute the macro once
         macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
-            cqp.Exec(macro)
+            cqp.Exec(macro.split("(")[0] + "();")
+        # NB: this yields !cqp.Ok() if macro is not zero-valent
+
+    # initialize corpus after macro definition, so execution of macro doesn't spend time
+    if corpus_name is not None:
+        cqp.Exec(corpus_name)
+    if subcorpus is not None:
+        cqp.Exec(subcorpus)
+
+    if not cqp.Ok():
+        raise NotImplementedError()
 
     return cqp
 
@@ -283,10 +289,30 @@ class Corpus:
         :rtype: list
 
         """
+
         cqp = self.start_cqp()
         defined_macros = cqp.Exec("show macro;").split("\n")
         cqp.__kill__()
+
         return defined_macros
+
+    def _wordlists_available(self):
+        """Get available wordlists.
+
+        :return: defined wordlists
+        :rtype: list
+
+        """
+
+        cqp = self.start_cqp()
+        defined_wordlists = cqp.Exec("show var;").split("\n")
+        cqp.__kill__()
+
+        names = sorted(
+            [n.rstrip(" =") for n in defined_wordlists if n.startswith("$") and n.endswith(" =")]
+        )
+
+        return names
 
     def _attributes_available(self):
         """Get indexed p- and s-attributes. Will be run once when initializing

@@ -51,7 +51,17 @@ def test_corpus_descriptor(germaparl):
 
 
 @pytest.mark.init
-def test_corpus_lib(germaparl):
+def test_data_dir(germaparl):
+    get_corpus(germaparl, lib=False, data_path=None)
+    paths = glob("/tmp/ccc-*")
+    assert len(paths) >= 1
+
+
+#####################################################
+# MACROS AND WORDLISTS ##############################
+#####################################################
+@pytest.mark.init
+def test_macros(germaparl):
     corpus = get_corpus(germaparl, lib=False)
     assert '/np(0)' not in corpus._macros_available()
     corpus = get_corpus(germaparl, lib=True)
@@ -59,10 +69,9 @@ def test_corpus_lib(germaparl):
 
 
 @pytest.mark.init
-def test_data_dir(germaparl):
-    get_corpus(germaparl, lib=False, data_path=None)
-    paths = glob("/tmp/ccc-*")
-    assert len(paths) >= 1
+def test_wordlists(germaparl):
+    corpus = get_corpus(germaparl, lib=True)
+    assert "$parties" in corpus._wordlists_available()
 
 
 #####################################################
