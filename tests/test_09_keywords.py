@@ -1,6 +1,6 @@
 from ccc import Corpus
 from ccc.keywords import Keywords
-from ccc.counts import read_freq_list, score_counts
+from ccc.counts import score_counts
 import pytest
 
 from .conftest import DATA_PATH
@@ -89,23 +89,22 @@ def test_keywords_combo(germaparl):
     assert lines.index[0] == "und KON"
 
 
-def test_score_counts(germaparl, empirist):
-
-    df1, R1 = read_freq_list(germaparl['freq_list'])
-    df2, R2 = read_freq_list(empirist['freq_list'])
-
-    kw = score_counts(df1[['freq']], df2[['freq']], R1, R2, cut_off=None)
-    assert kw['log_likelihood']['die'] == 4087.276827
-
-
-@pytest.mark.now
 def test_keywords(germaparl):
 
     corpus = get_corpus(germaparl)
 
-    left = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
-    right = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']]
-    kw = score_counts(left, right)
+    left = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']].rename(
+        columns={'freq': 'f1'}
+    )
+    right = corpus.marginals(p_atts=['lemma', 'pos'])[['freq']].rename(
+        columns={'freq': 'f2'}
+    )
 
-    assert kw.iloc[0]['O11'] == 11469
+    df = left.join(right).fillna(0, downcast='infer')
+    df['N1'] = df['f1'].sum()
+    df['N2'] = df['f2'].sum()
+    kw = score_counts(df)
+    kw = kw.sort_values(by='O11', ascending=False)
+
+    assert kw.iloc[0]['O11'] == 1095
     assert kw.iloc[0]['conservative_log_ratio'] == 0

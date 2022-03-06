@@ -3,6 +3,7 @@ from ccc.cl import Corpus
 
 from pandas import DataFrame
 from time import sleep
+# import pytest
 
 
 def test_cqp_version():
@@ -123,3 +124,57 @@ def test_cl(germaparl):
 
     # first word of 1235th sentence
     assert(words[s_1234[0]] == "Die")
+
+
+def test_nqr_from_dump_error(germaparl):
+    cqp = CQP(
+        binary="cqp",
+        options='-c -r ' + germaparl['registry_path']
+    )
+    cqp.Exec(germaparl['corpus_name'])
+
+    # valid dump:
+    df_dump = DataFrame(
+        data={
+            'match': [0, 2],
+            'matchend': [3, 4]
+        }
+    ).set_index(['match', 'matchend'])
+    cqp.nqr_from_dump(df_dump, name='Valid')
+    assert cqp.Ok()
+    assert int(cqp.Exec('size Valid;')) == 2
+
+    # error type 1: missing values
+    df_dump = DataFrame(
+        data={
+            'match': [0, 0],
+            'matchend': [10, -1]
+        }
+    ).set_index(['match', 'matchend'])
+    cqp.nqr_from_dump(df_dump, name='Error1')
+    assert not cqp.Ok()
+    assert int(cqp.Exec('size Error1;')) == 0
+
+    # error type 2: match after matchend
+    df_dump = DataFrame(
+        data={
+            'match': [0, 10],
+            'matchend': [10, 9]
+        }
+    ).set_index(['match', 'matchend'])
+    cqp.nqr_from_dump(df_dump, name='Error2')
+    assert not cqp.Ok()
+    assert int(cqp.Exec('size Error2;')) == 0
+
+    # valid dump:
+    df_dump = DataFrame(
+        data={
+            'match': [0, 2],
+            'matchend': [3, 4]
+        }
+    ).set_index(['match', 'matchend'])
+    cqp.nqr_from_dump(df_dump, name='Valid')
+    assert cqp.Ok()
+    assert int(cqp.Exec('size Valid;')) == 2
+
+    cqp.__kill__()

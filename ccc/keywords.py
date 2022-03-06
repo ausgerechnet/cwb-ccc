@@ -8,7 +8,7 @@ import logging
 from pandas import DataFrame
 
 # part of module
-from .counts import score_counts_signature
+from .counts import score_counts
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,10 @@ class Keywords:
             logger.warning("nothing to show")
             return DataFrame()
 
-        # get subcorpus frequencies
-        f = self.counts.loc[self.counts['freq'] >= min_freq]
-        f1 = self.counts['freq'].sum()
+        # get subcorpus frequencies und apply min freq
+        f = self.counts.rename(columns={'freq': 'f'})
+        f1 = f['f'].sum()
+        f = f.loc[f['f'] >= min_freq]
 
         # get reference frequency
         if isinstance(marginals, str):
@@ -70,10 +71,13 @@ class Keywords:
         else:
             raise NotImplementedError
 
+        # create dataframe
+        f2 = marginals[['freq']].rename(columns={'freq': 'f2'})
+        df = f2.join(f)
+        df['f1'] = f1
+        df['N'] = N
+
         # score
-        keywords = score_counts_signature(
-            f[['freq']], f1, marginals[['freq']], N,
-            min_freq, order, cut_off, flags, ams, frequencies
-        )
+        keywords = score_counts(df, order, cut_off, flags, ams)
 
         return keywords

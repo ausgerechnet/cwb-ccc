@@ -10,7 +10,7 @@ from pandas import DataFrame
 from .collocates import Collocates
 from .concordances import Concordance
 from .keywords import Keywords
-from .utils import correct_anchors, merge_intervals
+from .utils import correct_anchors, merge_intervals, fold_df
 
 logger = logging.getLogger(__name__)
 
@@ -71,17 +71,21 @@ class Dump:
         """
         self.df = correct_anchors(self.df, corrections)
 
-    def breakdown(self, p_atts=['word']):
+    def breakdown(self, p_atts=['word'], flags=""):
         """Frequency breakdown of match..matchend.
 
         """
 
         logger.info('creating frequency breakdown')
-        return self.corpus.counts.dump(
+        breakdown = self.corpus.counts.dump(
             df_dump=self.df,
             start='match', end='matchend',
             p_atts=p_atts, strategy=1
         )
+
+        breakdown = fold_df(breakdown, flags)
+
+        return breakdown
 
     def matches(self):
         """

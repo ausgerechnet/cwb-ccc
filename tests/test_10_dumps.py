@@ -1,6 +1,7 @@
 from ccc.cwb import Corpus
 from ccc.dumps import Dumps
 from pandas import DataFrame
+import pytest
 
 from .conftest import DATA_PATH
 
@@ -63,7 +64,7 @@ def test_matches(germaparl):
 
 def test_matches_subcorpus(germaparl):
     corpus = get_corpus(germaparl)
-    dump_base = corpus.query(r'[pos="NE"]? [pos="NE"] "\[" ".*" "]")', name="Base")
+    dump_base = corpus.query(r'[pos="NE"]? [pos="NE"] "\[" ".*" "\]"', name="Base")
     tokens_base = len(dump_base.matches())
     corpus.subcorpus = "Base"
     dump_neg = corpus.query('[pos="NE"]')
@@ -207,7 +208,8 @@ def test_dumps_collocates(germaparl):
         window=20
     )
     assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Freiheit'
+    print(tables['yellow'])
+    assert tables['yellow'].index[0] == 'Grad'
 
 
 def test_dumps_collocates_global(germaparl):

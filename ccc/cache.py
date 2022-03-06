@@ -38,11 +38,27 @@ class Cache:
             directory = os.path.dirname(path)
             os.makedirs(directory, exist_ok=True)
 
+    def delete(self, identifier):
+
+        if self.path is None:
+            logger.info('cache: no path')
+            return
+
+        if isinstance(identifier, str):
+            key = identifier
+        else:
+            key = generate_idx(identifier)
+
+        with shelve.open(self.path) as db:
+            if key in db.keys():
+                logger.info('cache: deleting object "%s"' % key)
+                del db[key]
+
     def get(self, identifier):
 
         if self.path is None:
             logger.info('cache: no path')
-            return None
+            return
 
         if isinstance(identifier, str):
             key = identifier

@@ -107,7 +107,8 @@ class CQP:
         version_string = version_string.rstrip()  # Equivalent to Perl's chomp
         self.CQP_process.stdout.flush()
         if print_version:
-            logger.info(version_string)
+            print(version_string)
+        logger.debug("CQP " + "-" * 43 + " started")
         version_regexp = re.compile(
             r'^CQP\s+(?:\w+\s+)*([0-9]+)\.([0-9]+)(?:\.b?([0-9]+))?(?:\s+(.*))?$'
         )
@@ -157,11 +158,9 @@ class CQP:
             # print "Deleting CQP with pid", self.CQP_process.pid, "...",
             self.CQPrunning = False
             self.execStart = time.time()
-            if self.debug:
-                logger.info("Shutting down CQP backend ...")
+            logger.debug("Shutting down CQP backend ...")
             self.CQP_process.stdin.write('exit;')  # exits CQP backend
-            if self.debug:
-                logger.info("Done\nCQP object deleted.")
+            logger.debug("... -- CQP object deleted.")
             self.execStart = None
             # print "Finished"
 
@@ -181,8 +180,7 @@ class CQP:
         self.status = 'ok'
         cmd = cmd.rstrip()  # Equivalent to Perl's 'chomp'
         cmd = re.sub(r';\s*$', r'', cmd)
-        if self.debug:
-            logger.info("CQP <<", cmd + ";")
+        logger.debug("CQP << " + cmd + ";")
         try:
             self.CQP_process.stdin.write(cmd + '; .EOL.;\n')
         except IOError:
@@ -201,11 +199,9 @@ class CQP:
             ln = self.CQP_process.stdout.readline()
             ln = ln.strip()  # strip off whitespace from start and end of line
             if re.match(r'-::-EOL-::-', ln):
-                if self.debug:
-                    print("CQP " + "-" * 60)
+                logger.debug("CQP " + "-" * 40 + " terminated")
                 break
-            if self.debug:
-                print("CQP >> " + ln)
+            logger.debug("CQP >> " + ln)
             if ln != '':
                 result.append(ln)
             self.CQP_process.stdout.flush()
@@ -417,8 +413,14 @@ class CQP:
 
         """
         name = 'Last' if name is None else name
+
         logger.info('defining NQR "%s" from query' % name)
         self.Query('%s=%s;' % (name, query))
+
+        if not self.Ok():
+            logger.error('invalid query "%s"' % query)
+            return DataFrame()
+
         size = int(self.Exec("size %s" % name))
         if size == 0:
             return DataFrame()

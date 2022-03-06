@@ -87,16 +87,16 @@ def discoursemes():
     """ discoursemes """
 
     return {
-        'items_topic': ["CDU", "CSU"],
-        'items_1': ["und"],
-        'items_2': ["Bundesregierung"],
+        'topic': ["CDU", "CSU"],
+        'disc1': ["und"],
+        'disc2': ["Bundesregierung"],
         'parameters': {
             'flags_query': '%cd',
             'escape_query': False,
             'p_query': 'lemma',
             's_query': 's',
             's_context': 'p',
-            'context': 20,
+            'context': 20
         }
     }
 
@@ -113,6 +113,9 @@ def query_files():
         ),
         'jemand_sagt_sloppy': os.path.join(
             DIR_PATH, "corpora", "library", "queries", "jemand_sagt_sloppy.cqpy"
+        ),
+        'jemand_sagt_display': os.path.join(
+            DIR_PATH, "corpora", "library", "queries", "jemand_sagt_display.cqpy"
         )
     }
 

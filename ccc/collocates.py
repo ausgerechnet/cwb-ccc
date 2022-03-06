@@ -8,7 +8,7 @@ from itertools import chain
 from pandas import DataFrame
 
 # part of module
-from .counts import score_counts_signature
+from .counts import score_counts
 from .utils import node2cotext
 
 logger = logging.getLogger(__name__)
@@ -72,15 +72,12 @@ class Collocates:
         logger.info('slicing window %d' % window)
         relevant = self.df_cooc.loc[abs(self.df_cooc['offset']) <= window]
 
-        # number of possible occurrence positions within window
-        f1 = len(relevant)
-
         # frequency counts
         f = self.corpus.counts.cpos(relevant['cpos'], self.p_query)
 
-        return f, f1
+        return f
 
-    def show(self, window=5, order='O11', cut_off=100, ams=None,
+    def show(self, window=5, order='log_likelihood', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
              marginals='corpus'):
 
@@ -89,8 +86,10 @@ class Collocates:
             logger.error("nothing to show")
             return DataFrame()
 
-        # get subcorpus frequencies
-        f, f1 = self.count(window)
+        # get window counts and apply min freq
+        f = self.count(window).rename(columns={'freq': 'f'})
+        f1 = f['f'].sum()
+        f = f.loc[f['f'] >= min_freq]
 
         # get reference frequencies
         if isinstance(marginals, str):
@@ -112,11 +111,13 @@ class Collocates:
         f2 = f2.fillna(0, downcast='infer')
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
+        # create dataframe
+        df = f2.join(f)
+        df['f1'] = f1
+        df['N'] = N
+
         # score
-        collocates = score_counts_signature(
-            f[['freq']], f1, f2[['f2']], N,
-            min_freq, order, cut_off, flags, ams, frequencies
-        )
+        collocates = score_counts(df, order, cut_off, flags, ams)
 
         if frequencies:
             # throw away anti-collocates by default
