@@ -29,7 +29,7 @@ def count_items(items, names, tuples=True):
     :rtype: FreqFrame
     """
 
-    logger.info("... counting %d items" % len(items))
+    logger.info("counting %d items" % len(items))
     counts = Counter(items)
     df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
 
@@ -497,7 +497,7 @@ def score_counts(df, order='log_likelihood', cut_off=1000,
 
     """
 
-    logger.info('creating table of association measures')
+    logger.info('scoring %d counts' % len(df))
 
     # post-processing: fold items
     df = fold_df(df, flags)

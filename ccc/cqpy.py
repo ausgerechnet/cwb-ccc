@@ -180,7 +180,7 @@ def cqpy_dumps(query, comment=True):
     if comment:
         out = "\n".join(["# " + line for line in out.split("\n")])
     # actual cqp query
-    out += "\n\n" + cqp
+    out += "\n\n" + cqp + "\n"
 
     return out
 

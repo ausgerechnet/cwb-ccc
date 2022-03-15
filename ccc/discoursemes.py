@@ -375,7 +375,7 @@ class Constellation:
         df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
         df_cooc, f1_set = dump2cooc(df_dump)
 
-        logging.info('get cpos that are consumed by discoursemes')
+        logger.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
             f1_set.update(self.discoursemes[idx].matches())
 
