@@ -269,6 +269,29 @@ def test_dump_from_query_anchors(germaparl):
     assert all(elem in df_dump.columns for elem in germaparl['anchors'])
 
 
+@pytest.mark.dump
+def test_dump_from_query_anchors_implementation(germaparl):
+
+    corpus = get_corpus(germaparl)
+    df_dump1 = corpus.dump_from_query(
+        query=germaparl['query_anchor'],
+        s_query=germaparl['s_query'],
+        anchors=germaparl['anchors'],
+        match_strategy='standard'
+    )
+
+    corpus = get_corpus(germaparl)
+    df_dump2 = corpus.dump_from_query(
+        query=germaparl['query_anchor'],
+        s_query=germaparl['s_query'],
+        anchors=germaparl['anchors'],
+        match_strategy='standard',
+        cwb_version={'minor': 4, 'patch': 16}
+    )
+
+    assert df_dump1.equals(df_dump2)
+
+
 #################################################
 # WORKING ON DUMPS ##############################
 #################################################
