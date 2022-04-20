@@ -77,7 +77,7 @@ class Collocates:
 
     def show(self, window=5, order='log_likelihood', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
-             marginals='corpus'):
+             marginals='corpus', show_negative=False):
 
         # consistency check
         if len(self.f1_set) == 0:
@@ -119,7 +119,8 @@ class Collocates:
 
         if frequencies:
             # throw away anti-collocates by default
-            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+            if not show_negative:
+                collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
             # add node and marginal frequencies
             collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
