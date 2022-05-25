@@ -413,7 +413,10 @@ class TextConstellation:
         self.s_context = s_context
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
-        self.df = aggregate_matches(dump.df, name)
+        try:
+            self.df = aggregate_matches(dump.df, name)
+        except KeyError:        # no matches
+            self.df = DataFrame()
 
     def add_discourseme(self, dump, name='discourseme'):
 
@@ -422,8 +425,17 @@ class TextConstellation:
             logger.error('name "%s" already taken; cannot register discourseme' % name)
             return
 
-        df = aggregate_matches(dump.df, name)
-        df = self.df.join(df, how='outer')
+        try:
+            df = aggregate_matches(dump.df, name)
+        except KeyError:        # no matches
+            df = DataFrame()
+
+        if df.empty:
+            pass
+        elif self.df.empty:
+            self.df = df
+        else:
+            df = self.df.join(df, how='outer')
 
         self.df = df.sort_index()
 
