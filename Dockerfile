@@ -28,6 +28,9 @@ RUN apt-get update && \
     python3-pip \
     python3-setuptools \
     cython3 \
+    wget \
+    tar \
+    gzip \
     less \
     mg
 
@@ -35,9 +38,10 @@ RUN apt-get update && \
 #####################
 # INSTALL LATEST CWB
 #####################
-RUN svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk /cwb
+RUN wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5-RC/cwb-3.4.33-src.tar.gz/download && \
+    tar xvzf download && mv cwb-3.4.33-src /cwb
 WORKDIR /cwb
-RUN sed -i 's/SITE=beta-install/SITE=standard/' config.mk &&\
+RUN sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
     ./install-scripts/install-linux
 
 
@@ -58,7 +62,8 @@ RUN make build
 ##########
 # TESTING
 ##########
-# update registry directory is done in makefile
+# registry directory is updated in makefile
 # RUN HERE=$(pwd) && \
 #     sed -i "s|HOME .*|HOME $HERE/tests/corpora/data/germaparl1386|g" tests/corpora/registry/germaparl1386
+
 RUN make test

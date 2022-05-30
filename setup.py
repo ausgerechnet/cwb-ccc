@@ -19,7 +19,7 @@ with open(os.path.join(here, 'ccc', 'version.py')) as f:
 def guess_cl_directory():
 
     # ... fallback
-    cwb_dirs = {"/usr/local/include/"}
+    cwb_dirs = {"/usr/local/lib/"}
 
     # ... take from environment variable
     if 'CWB_DIR' in os.environ:
