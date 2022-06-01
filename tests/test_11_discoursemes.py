@@ -5,7 +5,6 @@ from ccc.discoursemes import TextConstellation
 from .conftest import DATA_PATH
 
 from pandas import DataFrame
-import pytest
 
 
 #######################
@@ -576,7 +575,6 @@ def test_textual_constellation_association(germaparl, discoursemes):
     assert 'candidate' in assoc.columns
 
 
-@pytest.mark.now
 def test_textual_constellation_concordance(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']

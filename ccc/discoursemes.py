@@ -5,7 +5,7 @@ import logging
 
 # requirements
 from association_measures.measures import calculate_measures
-from pandas import NA, DataFrame
+from pandas import NA, DataFrame, concat
 
 # part of module
 from . import Corpus
@@ -123,11 +123,11 @@ def constellation_left_join(df1, df2, name, drop=True, window=None):
     # calculate offset ###
     m['offset_y'] = 0       # init as overlap
     # y .. x
-    m.at[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
+    m.loc[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
     # x .. y
-    m.at[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
+    m.loc[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
     # missing y
-    m.at[m['match_y'].isna(), 'offset_y'] = NA
+    m.loc[m['match_y'].isna(), 'offset_y'] = NA
 
     # restrict to complete constellation ###
     if drop:
@@ -501,7 +501,7 @@ class TextConstellation:
                 cooc, self.N, name
             ).reset_index(), 2)
             table['node'] = name
-            tables = tables.append(table)
+            tables = concat([tables, table])
 
         tables = tables[
             ['node', 'candidate'] +
