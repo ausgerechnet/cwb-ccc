@@ -34,15 +34,14 @@ RUN apt-get update && \
     less \
     mg
 
-
 #####################
 # INSTALL LATEST CWB
 #####################
-RUN wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5-RC/cwb-3.4.33-src.tar.gz/download && \
-    tar xvzf download && mv cwb-3.4.33-src /cwb
+RUN svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk /cwb
 WORKDIR /cwb
-RUN sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
-    ./install-scripts/install-linux
+RUN  sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
+    ./install-scripts/install-linux && \
+    ldconfig
 
 
 ##############################
@@ -54,16 +53,12 @@ RUN python3 -m pip install --upgrade pip && \
 WORKDIR /cwb-ccc
 COPY . /cwb-ccc
 
+
+###############
+# BUILD & TEST
+###############
 RUN make clean
 RUN make install
 RUN make compile
 RUN make build
-
-##########
-# TESTING
-##########
-# registry directory is updated in makefile
-# RUN HERE=$(pwd) && \
-#     sed -i "s|HOME .*|HOME $HERE/tests/corpora/data/germaparl1386|g" tests/corpora/registry/germaparl1386
-
 RUN make test

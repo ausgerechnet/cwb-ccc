@@ -1,6 +1,8 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from setuptools import find_packages
 from distutils.core import setup, Extension
-from pathlib import Path
 import os
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -13,24 +15,6 @@ with open(os.path.join(here, 'README.md')) as f:
 version = {}
 with open(os.path.join(here, 'ccc', 'version.py')) as f:
     exec(f.read(), version)
-
-
-# CL directory for C-extension
-def guess_cl_directory():
-
-    # ... fallback
-    cwb_dirs = {"/usr/local/lib/"}
-
-    # ... take from environment variable
-    if 'CWB_DIR' in os.environ:
-        cwb_dirs.add(os.environ['CWB_DIR'])
-
-    # ... guess according to CQP location
-    cqp_location = os.popen('which cqp').read().rstrip()
-    if cqp_location != "":
-        cwb_dirs.add(os.path.join(Path(cqp_location).parents[1], 'include/'))
-
-    return list(cwb_dirs)
 
 
 # define (and compile) C-extension
@@ -46,8 +30,7 @@ extensions = [
     Extension(
         name="ccc.cl",
         sources=['ccc/cl' + ext],
-        libraries=['cl', 'pcre', 'glib-2.0'],
-        library_dirs=guess_cl_directory()
+        libraries=['cl', 'pcre', 'glib-2.0']
     )
 ]
 
@@ -69,11 +52,11 @@ setup(
     ext_modules=extensions,
     install_requires=[
         "association-measures>=0.2.0",
-        "pandas>=1.2.0",
+        "pandas>=1.1.5",
         "numexpr>=2.7.1",
-        "Bottleneck>=1.3.2",
-        "unidecode>=1.1.1",
-        "pyyaml>=5.4.1"
+        "Bottleneck>=1.3.4",
+        "unidecode>=1.3.4",
+        "pyyaml>=6.0"
     ],
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -86,5 +69,5 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Cython',
     ],
-    python_requires='>=3.6.1',
+    python_requires='>=3.6.2',
 )
