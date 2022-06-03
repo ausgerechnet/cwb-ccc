@@ -51,6 +51,7 @@ setup(
     url="https://github.com/ausgerechnet/cwb-ccc",
     ext_modules=extensions,
     install_requires=[
+        "wheel>=0.37.1",
         "association-measures>=0.2.0",
         "pandas>=1.1.5",
         "numexpr>=2.7.1",
