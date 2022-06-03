@@ -174,7 +174,7 @@ def aggregate_matches(df, name, context_col='contextid',
     return table
 
 
-def role_formatter(row, names, s_show, window):
+def format_roles(row, names, s_show, window, htmlify_meta=False):
     """Take a row of a dataframe indexed by match, matchend of the node,
     columns for each discourseme with sets of tuples indicating discourseme positions,
     columns for each s in s_show,
@@ -241,8 +241,14 @@ def role_formatter(row, names, s_show, window):
     d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
 
     # add s-attributes
-    for s in s_show:
-        d[s] = row[s]
+    if htmlify_meta:
+        meta = {key: row[key] for key in s_show}
+        d['meta'] = DataFrame.from_dict(
+            meta, orient='index'
+        ).to_html(bold_rows=False, header=False)
+    else:
+        for s in s_show:
+            d[s] = row[s]
 
     return d
 
@@ -321,7 +327,8 @@ class Constellation:
 
     def concordance(self, window=5,
                     p_show=['word', 'lemma'], s_show=[],
-                    order='random', cut_off=100, random_seed=42):
+                    order='random', cut_off=100, random_seed=42,
+                    htmlify_meta=False):
         """Retrieve concordance lines for constellation.
 
         :param int window: cpos further away from node will be marked 'out_of_window'
@@ -350,13 +357,13 @@ class Constellation:
                            order=order, cut_off=cut_off)
 
         # map roles
-        output = list(lines.apply(
-            lambda row: role_formatter(
-                row, self.discoursemes.keys(), s_show, window
+        output = lines.apply(
+            lambda row: format_roles(
+                row, self.discoursemes.keys(), s_show, window, htmlify_meta
             ), axis=1
-        ))
+        )
 
-        return output
+        return list(output)
 
     def collocates(self, windows=[3, 5, 7],
                    p_show=['lemma'], flags=None,
@@ -380,7 +387,7 @@ class Constellation:
             f1_set.update(self.discoursemes[idx].matches())
 
         # correct df_cooc
-        # df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
+        df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
         # count once
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
@@ -479,7 +486,7 @@ class TextConstellation:
         col_mapper = dict(zip(match_cols, match_names))
         lines = lines.rename(columns=col_mapper)
         lines = list(lines.apply(
-            lambda row: role_formatter(
+            lambda row: format_roles(
                 row, match_names, s_show=names_bool+s_show, window=window
             ), axis=1
         ))
