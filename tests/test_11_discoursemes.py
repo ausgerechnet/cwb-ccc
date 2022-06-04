@@ -507,7 +507,9 @@ def test_constellation_coll(germaparl, discoursemes):
     dfs = const.collocates(windows=list(range(1, 21)))
     assert len(dfs) == 20
     assert len(dfs[1]) == 2
-    assert len(dfs[20]) == 8
+    # if approximate, i.e. nodes are not removed:
+    # assert len(dfs[20]) == 8
+    assert len(dfs[20]) == 5
 
 
 ##########################
