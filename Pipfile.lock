@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "5693c7649e0919bb3791d2922a0e102e32af411b435fcc695f4ae66bb9486aab"
+            "sha256": "9ef65da24c8af39ae36925d932e2a52205315d57c99a0479dbc0ec49516ca58e"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -15,7 +15,10 @@
     },
     "default": {
         "association-measures": {
-            "path": "./../pandas-association-measures",
+            "hashes": [
+                "sha256:ace21597ae41a69d4292d8383d8497d186dfcd7c51f87283439a15f8a5e765fc"
+            ],
+            "index": "pypi",
             "version": "==0.2.1"
         },
         "bottleneck": {
