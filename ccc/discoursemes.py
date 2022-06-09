@@ -441,7 +441,7 @@ class TextConstellation:
             df = DataFrame()
 
         if df.empty:
-            pass
+            return
         elif self.df.empty:
             self.df = df
         else:
