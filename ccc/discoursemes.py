@@ -242,10 +242,13 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
 
     # add s-attributes
     if htmlify_meta:
-        meta = {key: row[key] for key in s_show}
+        meta = {key: row[key] for key in s_show if not key.startswith("BOOL")}
         d['meta'] = DataFrame.from_dict(
             meta, orient='index'
         ).to_html(bold_rows=False, header=False)
+        for s in s_show:
+            if s.startswith("BOOL"):
+                d[s] = row[s]
     else:
         for s in s_show:
             d[s] = row[s]
@@ -448,7 +451,8 @@ class TextConstellation:
 
     def concordance(self, window=0,
                     p_show=['word', 'lemma'], s_show=[],
-                    order='random', cut_off=100, random_seed=42):
+                    order='random', cut_off=100, random_seed=42,
+                    htmlify_meta=False):
 
         # cut off and sampling
         cut_off = len(self.df) if cut_off is None or cut_off > len(self.df) else cut_off
@@ -485,13 +489,14 @@ class TextConstellation:
         match_names = [c.split("MATCHES_")[-1] for c in match_cols]
         col_mapper = dict(zip(match_cols, match_names))
         lines = lines.rename(columns=col_mapper)
-        lines = list(lines.apply(
-            lambda row: format_roles(
-                row, match_names, s_show=names_bool+s_show, window=window
-            ), axis=1
-        ))
 
-        return lines
+        output = lines.apply(
+            lambda row: format_roles(
+                row, match_names, s_show=names_bool+s_show, window=window, htmlify_meta=htmlify_meta
+            ), axis=1
+        )
+
+        return list(output)
 
     def associations(self, ams=None, frequencies=True,
                      min_freq=2, order='log_likelihood',
