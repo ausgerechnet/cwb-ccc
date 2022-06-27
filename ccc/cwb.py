@@ -23,6 +23,14 @@ from .version import __version__
 logger = logging.getLogger(__name__)
 
 
+def decode(text):
+    try:
+        text = text.decode('utf-8')
+    except UnicodeDecodeError:
+        text = ""
+    return text
+
+
 def start_cqp(cqp_bin, registry_path,
               data_path=None, corpus_name=None,
               lib_path=None, subcorpus=None):
@@ -609,7 +617,7 @@ class Corpus:
             if not annotation:
                 logger.info('s-att "%s" does not have any annotation' % s_att)
             else:
-                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+                df[2] = df[2].apply(decode)
 
         # post-process
         df = df.reset_index()
@@ -886,7 +894,7 @@ class Corpus:
             if not annotation:
                 logger.info('s-att "%s" does not have any annotation' % s_att)
             else:
-                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+                df[2] = df[2].apply(decode)
 
         # restore original index and post-process
         df = df.set_index(['match', 'matchend'])
