@@ -61,9 +61,11 @@ class Dump:
             context_right = context
 
         # set context
-        self.df = self.corpus.dump2context(
+        df = self.corpus.dump2context(
             self.df, context_left, context_right, context_break
         )
+
+        return Dump(self.corpus, df, self.name_cqp)
 
     def correct_anchors(self, corrections):
         """Correct anchors by integer offsets.
