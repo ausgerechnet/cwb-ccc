@@ -34,6 +34,9 @@ collocates.plot <- function(df.plot,
   if(! 'item' %in% names(df.plot)){
     df.plot$item <- row.names(df.plot)
   }
+
+  # cut items that are too long
+  df.plot$item <- str_sub(df.plot$item, 1, max_item_length)
   
   # encode significance thresholds
   df.plot$significance <- cut(df.plot[, significance],
@@ -43,7 +46,6 @@ collocates.plot <- function(df.plot,
   
   # plot
   df.plot %>% 
-    mutate(item = str_sub(item, 1, max_item_length)) %>%
     ggplot(aes_string(x = nrow(df.plot):1,
                       y = am,
                       colour = "significance",
