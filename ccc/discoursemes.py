@@ -9,6 +9,7 @@ from pandas import NA, DataFrame, concat
 
 # part of module
 from . import Corpus
+from .dumps import Dump
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
 from .utils import format_cqp_query
@@ -419,14 +420,29 @@ class TextConstellation:
         param str name: name of the node
         """
 
-        self.corpus = dump.corpus
+        if isinstance(dump, dict):
+            dumps = dump.copy()
+            name = list(dumps.keys())[0]
+            dump = dumps.pop(name)
+
+        elif isinstance(dump, Dump):
+            dumps = {}
+
+        else:
+            raise ValueError()
+
+        # create
         self.s_context = s_context
+        self.corpus = dump.corpus
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
         try:
             self.df = aggregate_matches(dump.df, name)
         except KeyError:        # no matches
             self.df = DataFrame()
+
+        for name, dump in dumps.items():
+            self.add_discourseme(dump, name)
 
     def add_discourseme(self, dump, name='discourseme'):
 
@@ -436,6 +452,7 @@ class TextConstellation:
             return
 
         try:
+            dump = dump.set_context(context_break=self.s_context)
             df = aggregate_matches(dump.df, name)
         except KeyError:        # no matches
             df = DataFrame()
@@ -547,6 +564,7 @@ def textual_associations(cooc, N, column):
     return contingencies
 
 
+# TODO parallelize
 def create_constellation(corpus_name,
                          # discoursemes
                          topic_discourseme,
