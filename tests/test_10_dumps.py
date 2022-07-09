@@ -85,7 +85,7 @@ def test_set_context(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"CSU"', context_break='text')
     assert dump.df['context'].iloc[0] == 620
-    dump.set_context(10, context_break='text', context_right=10)
+    dump = dump.set_context(10, context_break='text', context_right=10)
     assert dump.df['context'].iloc[0] == 630
 
 

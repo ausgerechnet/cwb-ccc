@@ -1,9 +1,101 @@
-import pytest
+from ccc import Corpus
+from pandas import read_csv, concat
 from ccc.discoursemes import create_constellation
 from .conftest import DATA_PATH
 
 
-@pytest.mark.now
+#########
+# LOCAL #
+#########
+def test_textual_constellation_breakdown_local():
+
+    covcorp = Corpus("COV_PRESSE_DE")
+
+    # get discoursemes
+    df_discoursemes = read_csv("tests/covcorp-discoursemes.tsv", sep="\t")
+    df_discoursemes['cqp'] = df_discoursemes['item'].apply(
+        lambda x: '[smorlemma="%s" & sttspos="%s"]' % tuple(x.split(" "))
+    )
+    print(df_discoursemes['cat'].value_counts())
+    discourseme_queries = dict()
+    for cat in ['maßnahmen', 'erreger']:
+        discourseme_queries[cat] = "( " + " | ".join(
+            list(df_discoursemes.loc[df_discoursemes['cat'] == cat]['cqp'].values)
+        ) + " )"
+
+    # run queries
+    dumps = dict()
+    for name, query in discourseme_queries.items():
+        dumps[name] = covcorp.query(
+            discourseme_queries[name], context_break='text', context=None
+        )
+
+    # create constellation
+    # topic = dumps.pop('maßnahmen')
+    # const = TextConstellation(topic, s_context='text', name='maßnahmen')
+    # for name, dump in dumps.items():
+    #     const.add_discourseme(dump, name)
+
+    print('A')
+    dfs = list()
+    for name, dump in dumps.items():
+        print(name)
+        b = dump.breakdown()
+        b['discourseme'] = name
+        dfs.append(b)
+
+    print('B')
+    breakdown = concat(dfs)
+    print(breakdown)
+
+
+def test_textual_constellation_creation_local():
+
+    covcorp = Corpus("COV_PRESSE_DE")
+
+    # get discoursemes
+    df_discoursemes = read_csv("tests/covcorp-discoursemes.tsv", sep="\t").sample(20, random_state=42)
+    df_discoursemes['cqp'] = df_discoursemes['item'].apply(
+        lambda x: '[smorlemma="%s" & sttspos="%s"]' % tuple(x.split(" "))
+    )
+    print(df_discoursemes['cat'].value_counts())
+
+    # queries
+    discourseme_queries = dict()
+    for cat in ['maßnahmen', 'erreger']:
+        discourseme_queries[cat] = "( " + " | ".join(
+            list(df_discoursemes.loc[df_discoursemes['cat'] == cat]['cqp'].values)
+        ) + " )"
+
+    # run queries
+    dumps = dict()
+    for name, query in discourseme_queries.items():
+        dumps[name] = covcorp.query(
+            discourseme_queries[name], context_break='text', context=None
+        )
+
+    # create constellation
+    from ccc.discoursemes import TextConstellation
+    const = TextConstellation(dumps, s_context='text')
+    print(const.N)
+    # topic = dumps.pop('maßnahmen')
+    # const = TextConstellation(topic, s_context='text', name='maßnahmen')
+    # for name, dump in dumps.items():
+    #     const.add_discourseme(dump, name)
+
+    # print('A')
+    # dfs = list()
+    # for name, dump in dumps.items():
+    #     print(name)
+    #     b = dump.breakdown()
+    #     b['discourseme'] = name
+    #     dfs.append(b)
+
+    # print('B')
+    # breakdown = concat(dfs)
+    # print(breakdown)
+
+
 def test_constellation_concordance():
 
     corpus_name = "GEREDE_V2_DEV0"
