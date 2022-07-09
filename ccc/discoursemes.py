@@ -105,6 +105,12 @@ logger = logging.getLogger(__name__)
 ##########################################################
 
 
+# TODO discourseme definition: items, queries, corpora
+class Discourseme:
+    def __init__(self):
+        pass
+
+
 def constellation_left_join(df1, df2, name, drop=True, window=None):
     """join an additional dump df2 to an existing constellation
 
@@ -466,10 +472,15 @@ class TextConstellation:
 
         self.df = df.sort_index()
 
+    def breakdown(self, p_atts=['word']):
+
+        print(self.df.columns)
+        raise NotImplementedError()
+
     def concordance(self, window=0,
                     p_show=['word', 'lemma'], s_show=[],
                     order='random', cut_off=100, random_seed=42,
-                    htmlify_meta=False):
+                    htmlify_meta=False, form='list'):
 
         # cut off and sampling
         cut_off = len(self.df) if cut_off is None or cut_off > len(self.df) else cut_off
@@ -507,13 +518,17 @@ class TextConstellation:
         col_mapper = dict(zip(match_cols, match_names))
         lines = lines.rename(columns=col_mapper)
 
-        output = lines.apply(
-            lambda row: format_roles(
-                row, match_names, s_show=names_bool+s_show, window=window, htmlify_meta=htmlify_meta
-            ), axis=1
-        )
-
-        return list(output)
+        if form == 'table':
+            return lines
+        elif form == 'list':
+            output = lines.apply(
+                lambda row: format_roles(
+                    row, match_names, s_show=names_bool+s_show, window=window, htmlify_meta=htmlify_meta
+                ), axis=1
+            )
+            return list(output)
+        else:
+            raise NotImplementedError()
 
     def associations(self, ams=None, frequencies=True,
                      min_freq=2, order='log_likelihood',
@@ -564,7 +579,10 @@ def textual_associations(cooc, N, column):
     return contingencies
 
 
+########################################################
+# CONSTELLATION CREATION FROM DISCOURSEMES AND QUERIES
 # TODO parallelize
+########################################################
 def create_constellation(corpus_name,
                          # discoursemes
                          topic_discourseme,
