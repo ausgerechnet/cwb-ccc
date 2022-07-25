@@ -17,12 +17,11 @@ jobs:
     - name: Install CWB
       run: |
         sudo apt-get install libncurses5-dev
-        wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5-RC/cwb-3.4.33-src.tar.gz/download
-        tar xvzf download
-        mv cwb-3.4.33-src cwb
+        svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk cwb
         cd cwb
         sed -i 's/SITE=beta-install/SITE=standard/' config.mk
         sudo ./install-scripts/install-linux
+        ldconfig
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
