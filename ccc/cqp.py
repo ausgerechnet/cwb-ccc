@@ -78,7 +78,7 @@ class CQP:
                     self.CQPrunning = False
                     break
 
-    def __init__(self, binary="/usr/local/bin/cqp", options='-c', print_version=False):
+    def __init__(self, binary="cqp", options='-c', print_version=False):
         """Class constructor."""
         self.execStart = time.time()
         self.maxProcCycles = 1.0
