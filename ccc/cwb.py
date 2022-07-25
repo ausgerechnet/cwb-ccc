@@ -23,6 +23,14 @@ from .version import __version__
 logger = logging.getLogger(__name__)
 
 
+def decode(text):
+    try:
+        text = text.decode('utf-8')
+    except UnicodeDecodeError:
+        text = ""
+    return text
+
+
 def start_cqp(cqp_bin, registry_path,
               data_path=None, corpus_name=None,
               lib_path=None, subcorpus=None):
@@ -609,7 +617,7 @@ class Corpus:
             if not annotation:
                 logger.info('s-att "%s" does not have any annotation' % s_att)
             else:
-                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+                df[2] = df[2].apply(decode)
 
         # post-process
         df = df.reset_index()
@@ -625,7 +633,8 @@ class Corpus:
         return df
 
     def dump_from_query(self, query, s_query=None, anchors=[],
-                        match_strategy='standard', name='Last', save=False):
+                        match_strategy='standard', name='Last', save=False,
+                        cwb_version=None):
         """Execute query, get DataFrame of corpus positions (CWB dump).
         Resulting df_dump is indexed by (match, matchend).
 
@@ -678,14 +687,25 @@ class Corpus:
         cqp = self.start_cqp()
         cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
 
+        # get CWB version
+        if cwb_version is None:
+            cwb_version = {'major': cqp.major_version,
+                           'minor': cqp.minor_version,
+                           'patch': cqp.beta_version}
+
         # include optional within clause
         if s_query is None:
             start_query = query
         else:
             start_query = query + ' within ' + s_query
 
-        # first run: anchors at 0 and 1 (considering within clause)
+        # get anchors
+        remaining_anchors = list(chunk_anchors(anchors, 2))
+
+        # run the query
         logger.info("running CQP query")
+
+        # first run: anchors at 0 and 1 (considering within clause)
         cqp.Exec('set ant 0; ank 1;')
         df_dump = cqp.nqr_from_query(
             query=start_query,
@@ -693,24 +713,27 @@ class Corpus:
             match_strategy=match_strategy,
             return_dump=True
         )
-        if len(df_dump) == 0:
-            return df_dump
-
         logger.info("found %d matches" % len(df_dump))
-        df_dump.columns = [0, 1]
 
         # if there's nothing to return ...
-        if df_dump.empty:
+        if len(df_dump) == 0:
             cqp.__kill__()
             return df_dump
 
-        # join all other anchors
-        remaining_anchors = list(chunk_anchors(anchors, 2))
+        df_dump.columns = [0, 1]
+
         if len(remaining_anchors) > 0:
 
             # restrict subsequent queries on initial matches
-            cqp.nqr_activate(self.corpus_name, name)
+            if cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31:
+                cqp.Exec("Temp = <<%s/>> ( %s );" % (name, query))
+            elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
+                cqp.nqr_activate(self.corpus_name, name)
+            else:
+                raise NotImplementedError("cannot work with several anchors for CWB versions older than 3.4.16")
+
             for pair in remaining_anchors:
+
                 logger.info(".. running query for anchor(s) %s" % str(pair))
                 # set appropriate anchors
                 cqp.Exec('set ant %d;' % pair[0])
@@ -718,9 +741,14 @@ class Corpus:
                     cqp.Exec('set ank %d;' % pair[1])
                 else:
                     cqp.Exec('set ank %d;' % 1)
+
                 # dump new anchors
-                cqp.Query('tmp = <match> ( %s );' % query)
-                df = cqp.Dump("tmp")
+                if cwb_version['minor'] == 4 and cwb_version['patch'] >= 31:
+                    cqp.Query("Temp = <<%s/>> ( %s );" % (name, query))
+                elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
+                    cqp.Query('Temp = <match> ( %s );' % query)
+                df = cqp.Dump("Temp")
+
                 # select columns and join to global df
                 if len(pair) == 2:
                     df.columns = [pair[0], pair[1]]
@@ -866,7 +894,7 @@ class Corpus:
             if not annotation:
                 logger.info('s-att "%s" does not have any annotation' % s_att)
             else:
-                df[2] = df[2].apply(lambda x: x.decode('utf-8'))
+                df[2] = df[2].apply(decode)
 
         # restore original index and post-process
         df = df.set_index(['match', 'matchend'])

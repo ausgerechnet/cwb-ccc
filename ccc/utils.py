@@ -120,6 +120,7 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
     # gather all MWUs
     mwu_queries = list()
+    single_items = list()
     for item in items:
 
         # escape item (optional)
@@ -128,19 +129,24 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
         # split items on white-space
         tokens = item.split(" ")
-        mwu_query = ""
+        if len(tokens) > 1:
+            mwu_query = ""
 
-        # convert to CQP syntax considering p-att and flags
-        for token in tokens:
-            mwu_query += '[{p_query}="{token}"{flags}]'.format(
-                p_query=p_query, token=token, flags=flags
-            )
+            # convert to CQP syntax considering p-att and flags
+            for token in tokens:
+                mwu_query += '[{p_query}="{token}"{flags}]'.format(
+                    p_query=p_query, token=token, flags=flags
+                )
 
-        # add MWU item to list
-        mwu_queries.append("(" + mwu_query + ")")
+            # add MWU item to list
+            mwu_queries.append("(" + mwu_query + ")")
+        else:
+            single_items.append(tokens[0])
 
+    singles_query = "([" + p_query + "=" + '"' + "|".join(single_items) + '"' + flags + "])"
+    queries = mwu_queries + [singles_query]
     # disjunctive join
-    query = ' | '.join(mwu_queries)
+    query = ' | '.join(queries)
 
     # add s_query (optional)
     if s_query is not None:

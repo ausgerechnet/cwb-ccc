@@ -3,9 +3,9 @@ from ccc.utils import format_cqp_query
 from ccc.discoursemes import Constellation, create_constellation
 from ccc.discoursemes import TextConstellation
 from .conftest import DATA_PATH
+import pytest
 
 from pandas import DataFrame
-import pytest
 
 
 #######################
@@ -352,6 +352,45 @@ def test_constellation_conc(germaparl, discoursemes):
     assert isinstance(lines[0]['word'], list)
 
 
+def test_constellation_conc_htmlify_meta(germaparl, discoursemes):
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+
+    # get topic and additional discoursemes
+    topic_items = discoursemes.pop('topic')
+    topic_discourseme = {
+        'topic': topic_items
+    }
+    discoursemes = discoursemes
+
+    # filter
+    const = create_constellation(germaparl['corpus_name'],
+                                 # discoursemes
+                                 topic_discourseme,
+                                 discoursemes,
+                                 {},
+                                 # context settings
+                                 parameters['s_context'],
+                                 parameters['context'],
+                                 # query settings
+                                 parameters['p_query'],
+                                 parameters['s_query'],
+                                 parameters['flags_query'],
+                                 parameters['escape_query'],
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH)
+
+    lines = const.concordance(s_show=['text_id'], htmlify_meta=True)
+
+    assert len(lines) == 3
+    assert isinstance(lines[0], dict)
+    assert 'word' in lines[0]
+    assert isinstance(lines[0]['word'], list)
+    assert isinstance(lines[0]['meta'], str)
+
+
 ###############
 # COLLOCATION #
 ###############
@@ -468,6 +507,8 @@ def test_constellation_coll(germaparl, discoursemes):
     dfs = const.collocates(windows=list(range(1, 21)))
     assert len(dfs) == 20
     assert len(dfs[1]) == 2
+    # if approximate, i.e. nodes are not removed:
+    # assert len(dfs[20]) == 8
     assert len(dfs[20]) == 5
 
 
@@ -577,7 +618,6 @@ def test_textual_constellation_association(germaparl, discoursemes):
     assert 'candidate' in assoc.columns
 
 
-@pytest.mark.now
 def test_textual_constellation_concordance(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']
@@ -613,3 +653,39 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
     lines = const.concordance(cut_off=None)
 
     assert len(lines) == 2198
+
+
+def test_textual_constellation_breakdown(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+
+    # create constellation
+    const = create_constellation(corpus_name,
+                                 # discoursemes
+                                 {},
+                                 discoursemes,
+                                 {},
+                                 # context settings
+                                 s_context,
+                                 context,
+                                 # query settings
+                                 p_query,
+                                 s_query,
+                                 flags,
+                                 escape,
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH)
+
+    # TODO implement
+    with pytest.raises(NotImplementedError):
+        assert const.breakdown()

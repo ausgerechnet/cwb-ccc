@@ -61,9 +61,11 @@ class Dump:
             context_right = context
 
         # set context
-        self.df = self.corpus.dump2context(
+        df = self.corpus.dump2context(
             self.df, context_left, context_right, context_break
         )
+
+        return Dump(self.corpus, df, self.name_cqp)
 
     def correct_anchors(self, corrections):
         """Correct anchors by integer offsets.
@@ -132,7 +134,8 @@ class Dump:
 
     def collocates(self, p_query=['lemma'], mws=20, window=5, order='O11',
                    cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, marginals='corpus'):
+                   frequencies=True, flags=None, marginals='corpus',
+                   show_negative=False):
 
         mws = max(mws, window)
 
@@ -151,7 +154,8 @@ class Dump:
             min_freq=min_freq,
             frequencies=frequencies,
             flags=flags,
-            marginals=marginals
+            marginals=marginals,
+            show_negative=show_negative
         )
 
     def keywords(self, p_query=['lemma'], order='O11', cut_off=100,

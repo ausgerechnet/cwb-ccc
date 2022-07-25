@@ -32,10 +32,8 @@ class Keywords:
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
         available_attributes = self.corpus.attributes_available['attribute'].values
         if not set(self.p_query).issubset(set(available_attributes)):
-            logger.warning(
-                'specfied p-attribute(s) ("%s") not available\n' % " ".join(self.p_query) +
-                'falling back to primary layer'
-            )
+            logger.warning('specfied p-attribute(s) ("%s") not available' % " ".join(self.p_query))
+            logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
         # collect context and save result

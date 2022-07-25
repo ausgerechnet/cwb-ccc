@@ -41,7 +41,7 @@ class Cache:
     def delete(self, identifier):
 
         if self.path is None:
-            logger.info('cache: no path')
+            logger.info('no cache path')
             return
 
         if isinstance(identifier, str):
@@ -49,15 +49,15 @@ class Cache:
         else:
             key = generate_idx(identifier)
 
-        with shelve.open(self.path) as db:
-            if key in db.keys():
-                logger.info('cache: deleting object "%s"' % key)
-                del db[key]
+        with shelve.open(self.path) as shelf:
+            if key in shelf.keys():
+                logger.info('deleting object "%s" from cache' % key)
+                del shelf[key]
 
     def get(self, identifier):
 
         if self.path is None:
-            logger.info('cache: no path')
+            logger.info('no cache path')
             return
 
         if isinstance(identifier, str):
@@ -65,17 +65,17 @@ class Cache:
         else:
             key = generate_idx(identifier)
 
-        with shelve.open(self.path) as db:
-            if key in db.keys():
-                logger.info('cache: retrieving object "%s"' % key)
-                return db[key]
+        with shelve.open(self.path) as shelf:
+            if key in shelf.keys():
+                logger.info('retrieving object "%s" from cache' % key)
+                return shelf[key]
             else:
                 return None
 
     def set(self, identifier, value):
 
         if self.path is None:
-            logger.info('cache: no path')
+            logger.info('no cache path')
             return
 
         if isinstance(identifier, str):
@@ -83,6 +83,6 @@ class Cache:
         else:
             key = generate_idx(identifier)
 
-        with shelve.open(self.path) as db:
-            logger.info('cache: saving object "%s"' % key)
-            db[key] = value
+        with shelve.open(self.path) as shelf:
+            logger.info('saving object "%s" to cache' % key)
+            shelf[key] = value

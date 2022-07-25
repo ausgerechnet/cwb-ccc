@@ -181,14 +181,12 @@ There are two reasons for defining the context when running a query:
 Notwithstanding (1), the context can also be set after having run the query:
 
 ```python
-dump.set_context(
+dump = dump.set_context(
     context_left=5,
     context_right=10,
     context_break='s'
 )
 ```
-
-Note that this works "inplace".
 
 You can set CQP's matching strategy ("standard", "longest", "shortest", "traditional") via the `match_strategy` parameter.
 

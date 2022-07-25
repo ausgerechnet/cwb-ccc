@@ -40,10 +40,8 @@ class Collocates:
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
         available_attributes = self.corpus.attributes_available['attribute'].values
         if not set(self.p_query).issubset(set(available_attributes)):
-            logger.warning(
-                'specfied p-attribute(s) ("%s") not available\n' % " ".join(self.p_query) +
-                'falling back to primary layer'
-            )
+            logger.warning('specfied p-attribute(s) ("%s") not available' % " ".join(self.p_query))
+            logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
         # collect cpos of matches and context
@@ -79,7 +77,7 @@ class Collocates:
 
     def show(self, window=5, order='log_likelihood', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
-             marginals='corpus'):
+             marginals='corpus', show_negative=False):
 
         # consistency check
         if len(self.f1_set) == 0:
@@ -121,7 +119,8 @@ class Collocates:
 
         if frequencies:
             # throw away anti-collocates by default
-            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+            if not show_negative:
+                collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
             # add node and marginal frequencies
             collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 

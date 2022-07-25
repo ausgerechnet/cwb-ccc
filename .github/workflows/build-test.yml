@@ -17,7 +17,9 @@ jobs:
     - name: Install CWB
       run: |
         sudo apt-get install libncurses5-dev
-        svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk cwb
+        wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5-RC/cwb-3.4.33-src.tar.gz/download
+        tar xvzf download
+        mv cwb-3.4.33-src cwb
         cd cwb
         sed -i 's/SITE=beta-install/SITE=standard/' config.mk
         sudo ./install-scripts/install-linux
