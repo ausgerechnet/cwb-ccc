@@ -184,7 +184,7 @@ class Concordance:
             for a in self.anchors:
                 df[a] = False
                 if row[a] in df.index:
-                    df.at[row[a], a] = True
+                    df.loc[row[a], a] = True
             return df
 
     def dict(self, df, p_show=['word']):
