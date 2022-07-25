@@ -5,7 +5,7 @@ install:
 lint:
 	pipenv run pylint --rcfile=.pylintrc ccc/*.py
 test:
-	sed -i "s|HOME .*|HOME $(shell pwd)/tests/corpora/data/germaparl1386|g" tests/corpora/registry/germaparl1386
+	sed --in-place='' "s|HOME .*|HOME $(shell pwd)/tests/corpora/data/germaparl1386|g" tests/corpora/registry/germaparl1386
 	pipenv run pytest
 coverage:
 	pipenv run pytest --cov-report term-missing -v --cov=ccc/
