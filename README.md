@@ -700,9 +700,6 @@ and
 
 which uses [pytest](https://pytest.org/) to check that all methods work reliably.
 
-Note that the make commands above update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl1386)) in order to make the tests, since the CWB requires an absolute path here.
-
-
 ## Acknowledgements ##
 
 - The module includes a slight adaptation of [cwb-python](https://github.com/fau-klue/cwb-python), a Python port of Perl's CWB::CL; thanks to **Yannick Versley** for the implementation.
