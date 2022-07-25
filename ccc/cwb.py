@@ -725,7 +725,7 @@ class Corpus:
         if len(remaining_anchors) > 0:
 
             # restrict subsequent queries on initial matches
-            if cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31:
+            if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
                 cqp.Exec("Temp = <<%s/>> ( %s );" % (name, query))
             elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
                 cqp.nqr_activate(self.corpus_name, name)
@@ -743,7 +743,7 @@ class Corpus:
                     cqp.Exec('set ank %d;' % 1)
 
                 # dump new anchors
-                if cwb_version['minor'] == 4 and cwb_version['patch'] >= 31:
+                if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
                     cqp.Query("Temp = <<%s/>> ( %s );" % (name, query))
                 elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
                     cqp.Query('Temp = <match> ( %s );' % query)
