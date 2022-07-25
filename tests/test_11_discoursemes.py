@@ -398,7 +398,8 @@ def test_constellation_collocates(germaparl):
         match_strategy,
         lib_path,
         cqp_bin,
-        germaparl['registry_path']
+        germaparl['registry_path'],
+        DATA_PATH
     )
 
     collocates = const.collocates(windows=windows,

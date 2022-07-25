@@ -4,6 +4,7 @@ from ccc.utils import merge_intervals
 from ccc.utils import filter_df
 from ccc import Corpus
 
+from .conftest import DATA_PATH
 
 def test_preprocess_query():
     query = (
@@ -81,7 +82,7 @@ def test_merge_intervals():
 
 
 def test_filter_df(germaparl):
-    c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'])
+    c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'], data_path=DATA_PATH)
     dump = c.query(germaparl['query'])
     coll = dump.collocates()
     assert ',' in coll.index
