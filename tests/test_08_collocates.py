@@ -226,3 +226,8 @@ def test_compare_counts(germaparl, ucs_counts):
     assert((counts['O11'] + counts['O21']).equals(counts['f2_ucs']))
     assert((counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs']))
     assert((counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs']))
+
+
+@pytest.mark.benchmark
+def test_perf_collocates(benchmark, germaparl):
+    benchmark.pedantic(test_collo_combo, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)

@@ -165,6 +165,7 @@ def test_keywords_options(germaparl):
 #########
 # DUMPS #
 #########
+@pytest.mark.dumps
 def test_dumps_keywords(germaparl):
 
     # subcorpora via s-attribute values
@@ -187,6 +188,7 @@ def test_dumps_keywords(germaparl):
     assert tables['purple'].index[0] == "ÖPNV-Gesetz"
 
 
+@pytest.mark.dumps
 def test_dumps_collocates(germaparl):
 
     # subcorpora via s-attribute values
@@ -208,7 +210,6 @@ def test_dumps_collocates(germaparl):
         window=20
     )
     assert len(tables) == len(parties)
-    print(tables['yellow'])
     assert tables['yellow'].index[0] == 'Grad'
 
 
@@ -235,3 +236,8 @@ def test_dumps_collocates_global(germaparl):
     )
     assert len(tables) == len(parties)
     assert tables['yellow'].index[0] == 'Grad'
+
+
+@pytest.mark.benchmark
+def test_perf_dumps(benchmark, germaparl):
+    benchmark.pedantic(test_dumps_collocates, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)

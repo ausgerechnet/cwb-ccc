@@ -402,3 +402,8 @@ def test_concordance_fallback(germaparl):
         conc.lines(order='last', form='simple', p_show=['word', 'lemma']),
         pd.DataFrame)
     )
+
+
+@pytest.mark.benchmark
+def test_perf_concordance(benchmark, germaparl):
+    benchmark.pedantic(test_concordance_dataframes, kwargs={'germaparl': germaparl}, rounds=10, iterations=5)
