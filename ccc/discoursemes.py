@@ -9,9 +9,9 @@ from pandas import NA, DataFrame, concat
 
 # part of module
 from . import Corpus
-from .dumps import Dump
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
+from .dumps import Dump
 from .utils import format_cqp_query
 
 logger = logging.getLogger(__name__)
@@ -350,7 +350,7 @@ class Constellation:
         # convert dataframe
         df = self.group_lines()
 
-        # cut off and sampling
+        # cut off and sampling (done here to be able to use random_seed)
         cut_off = len(df) if cut_off is None or cut_off > len(df) else cut_off
         if order == 'random':
             df = df.sample(cut_off, random_state=random_seed)

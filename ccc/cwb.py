@@ -571,6 +571,12 @@ class Corpus:
         # activate subcorpus
         self.subcorpus = nqr
 
+        # TODO: no inplace operation above!
+        corpus_ret = self.copy()
+        corpus_ret.subcorpus = nqr
+
+        return corpus_ret
+
     ##################
     # CREATING DUMPS #
     ##################

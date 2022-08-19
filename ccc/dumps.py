@@ -10,7 +10,7 @@ from pandas import DataFrame
 from .collocates import Collocates
 from .concordances import Concordance
 from .keywords import Keywords
-from .utils import correct_anchors, merge_intervals, fold_df
+from .utils import correct_anchors, fold_df, merge_intervals
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,12 @@ class Dump:
             ), columns=['context', 'contextend'])
 
         return self._context
+
+    def marginals(self, start='match', end='matchend', p_atts=['word']):
+
+        return self.corpus.counts.dump(
+            self.df, start=start, end=end, p_atts=p_atts, split=True
+        )
 
     def concordance(self, form='simple', p_show=['word'], s_show=[],
                     order='first', cut_off=100, matches=None, slots=None):

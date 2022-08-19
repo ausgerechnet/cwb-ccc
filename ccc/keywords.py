@@ -13,6 +13,7 @@ from .counts import score_counts
 logger = logging.getLogger(__name__)
 
 
+# TODO re-write as regular methods
 class Keywords:
     """ keyword analysis """
 
@@ -76,6 +77,36 @@ class Keywords:
         df['N'] = N
 
         # score
-        keywords = score_counts(df, order, cut_off, flags, ams)
+        keywords = score_counts(df, order, cut_off, flags, ams, vocab=f1)
 
         return keywords
+
+
+def keywords(corpus, corpus_reference, p, p_reference, order='O11',
+             cut_off=100, ams=None, min_freq=2, frequencies=True, flags=None):
+    """directly extract keywords by comparing two (sub-)corpora
+
+    :param ccc.Corpus corpus: target corpus
+    :param ccc.Corpus corpus_reference: reference corpus
+    :param str p: p-att
+    :param str p_reference: p-att
+    :param str order: AM to order
+    :param list ams: list of AMs
+    :param int min_freq: minimum number of occurrences in target corpus
+    :param bool frequencies: add frequency columns
+    :param list flags: '%cd'
+
+    """
+
+    # get and merge both dataframes of counts
+    left = corpus.marginals(p_atts=p)[['freq']].rename(columns={'freq': 'f1'})
+    right = corpus_reference.marginals(p_atts=p_reference)[['freq']].rename(columns={'freq': 'f2'})
+    df = left.join(right, how='outer')
+    df['N1'] = left['f1'].sum()
+    df['N2'] = right['f2'].sum()
+
+    # score counts
+    keywords = score_counts(df, order=order, cut_off=cut_off,
+                            flags=flags, ams=ams, digits=4)
+
+    return keywords

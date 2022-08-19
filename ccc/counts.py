@@ -481,7 +481,7 @@ class Counts:
 
 
 def score_counts(df, order='log_likelihood', cut_off=1000,
-                 flags=None, ams=None, digits=6):
+                 flags=None, ams=None, digits=6, vocab=None):
     """score counts in DataFrame.
 
     :param DataFrame df: DataFrame with reasonably-named columns, index 'item'
@@ -503,7 +503,10 @@ def score_counts(df, order='log_likelihood', cut_off=1000,
     df = fold_df(df, flags)
 
     # calculate association
-    df = measures.score(df, measures=ams, freq=True, digits=digits)
+    df = measures.score(df, measures=ams, freq=True, per_million=True, digits=digits)
+    # TODO assoc-measures 0.2.3:
+    # - vocab=vocab
+    # - boundary='poisson'
 
     # sort
     df = df.sort_values(by=[order, 'item'], ascending=False)
