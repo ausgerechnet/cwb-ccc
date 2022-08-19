@@ -171,7 +171,9 @@ def dump2cooc(df_dump, context=None):
         df['end'] = df[['end', 'contextend']].min(axis=1)
 
     logger.info("(1a) create local contexts")
-    df = DataFrame.from_records(df.apply(node2cotext, axis=1).values)
+    df = DataFrame.from_records(
+        node2cotext(df['match'], df['matchend'], df['context'], df['contextend'])
+    )
 
     logger.info("(1b) concatenate local contexts")
     df_infl = DataFrame({

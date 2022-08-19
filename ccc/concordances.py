@@ -9,7 +9,7 @@ from random import sample
 from pandas import DataFrame
 
 # part of module
-from .utils import node2cotext
+from .utils import _node2cotext
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class Concordance:
         row['matchend'] = matchend
 
         # create cotext
-        cotext = node2cotext(row)
+        cotext = _node2cotext(row['match'], row['matchend'], row['context'], row['contextend'])
 
         # lexicalize positions
         attribute_lists = zip(

@@ -203,17 +203,13 @@ def preprocess_query(query):
 #################################
 # working on nodes and contexts #
 #################################
-def node2cotext(row):
-    """ convert one row of df_node to info for df_cooc """
+def _node2cotext(match, matchend, context, contextend):
+    """converts the four cpos-values of nodes into a dict of lists of
+    cpos, match, and offset
 
-    # take values from row
-    match = row['match']
-    matchend = row['matchend']
-    start = row['context']
-    end = row['contextend']
-
+    """
     # get lists
-    cpos_list = list(range(start, end + 1))
+    cpos_list = list(range(context, contextend + 1))
     match_list = [match] * len(cpos_list)
     offset_list = [
         (cpos - match) if cpos < match else
@@ -229,6 +225,9 @@ def node2cotext(row):
     }
 
     return result
+
+
+node2cotext = np.vectorize(_node2cotext)
 
 
 def merge_intervals(inter, start_index=0):
