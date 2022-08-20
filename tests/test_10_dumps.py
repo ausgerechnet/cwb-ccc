@@ -182,9 +182,9 @@ def test_dumps_keywords(germaparl):
     dumps = Dumps(corpus, parties, s_att='text_party')
     tables = dumps.keywords(order='log_ratio')
     assert tables['green'].index[0] == "Oppositionsfraktion"
-    assert tables['red'].index[0] == "Grenzgrundstück"
+    assert tables['red'].index[0] == "Bereicherung"
     assert tables['black'].index[0] == "Universität"
-    assert tables['yellow'].index[0] == "Stimmenthaltung"
+    assert tables['yellow'].index[0] == "Wirtschafts-"
     assert tables['purple'].index[0] == "ÖPNV-Gesetz"
 
 

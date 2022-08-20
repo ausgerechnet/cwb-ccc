@@ -73,6 +73,7 @@ class Keywords:
         # create dataframe
         f2 = marginals[['freq']].rename(columns={'freq': 'f2'})
         df = f2.join(f)
+        df = df.fillna(0)
         df['f1'] = f1
         df['N'] = N
 
@@ -104,6 +105,7 @@ def keywords(corpus, corpus_reference, p, p_reference, order='O11',
     df = left.join(right, how='outer')
     df['N1'] = left['f1'].sum()
     df['N2'] = right['f2'].sum()
+    df = df.fillna(0)
 
     # score counts
     keywords = score_counts(df, order=order, cut_off=cut_off,

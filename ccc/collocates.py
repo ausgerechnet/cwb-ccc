@@ -111,6 +111,7 @@ class Collocates:
 
         # create dataframe
         df = f2.join(f)
+        df = df.fillna(0)
         df['f1'] = f1
         df['N'] = N
 
