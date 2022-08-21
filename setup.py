@@ -52,7 +52,7 @@ setup(
     ext_modules=extensions,
     install_requires=[
         "wheel>=0.37.1",
-        "association-measures>=0.2.2",
+        "association-measures>=0.2.3",
         "pandas>=1.1.5",
         "numexpr>=2.7.1",
         "Bottleneck>=1.3.4",

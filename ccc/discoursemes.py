@@ -4,7 +4,7 @@
 import logging
 
 # requirements
-from association_measures.measures import calculate_measures
+from association_measures.measures import score
 from pandas import NA, DataFrame, concat
 
 # part of module
@@ -573,8 +573,8 @@ def textual_associations(cooc, N, column):
             'N': N
         })
     contingencies = DataFrame(records).set_index('candidate')
-    measures = calculate_measures(contingencies, freq=True)
-    contingencies = contingencies.join(measures)
+    measures = score(contingencies, freq=True)
+    contingencies = contingencies.join(measures.drop(['N'], axis=1))
 
     return contingencies
 
