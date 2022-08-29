@@ -230,7 +230,8 @@ class Concordance:
         return df
 
     def lines(self, form='simple', p_show=['word'], s_show=[],
-              order='first', cut_off=100, matches=None, slots=None):
+              order='first', cut_off=100, matches=None, slots=None,
+              cwb_ids=False):
         """Retrieve concordance lines from self.df_dump.  Central entry point
         for all methods.  Functionality includes:
 
@@ -314,5 +315,7 @@ class Concordance:
                 df[s_att] = tmp[s_att]
             else:               # ID if no annotation
                 df[s_att] = tmp[s_att + "_cwbid"]
+            if cwb_ids:
+                df[s_att + "_cwbid"] = tmp[s_att + "_cwbid"]
 
         return df

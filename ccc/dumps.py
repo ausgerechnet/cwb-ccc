@@ -121,7 +121,8 @@ class Dump:
         )
 
     def concordance(self, form='simple', p_show=['word'], s_show=[],
-                    order='first', cut_off=100, matches=None, slots=None):
+                    order='first', cut_off=100, matches=None,
+                    slots=None, cwb_ids=False):
 
         conc = Concordance(
             self.corpus.copy(),
@@ -135,7 +136,8 @@ class Dump:
             order=order,
             cut_off=cut_off,
             matches=matches,
-            slots=slots
+            slots=slots,
+            cwb_ids=cwb_ids
         )
 
     def collocates(self, p_query=['lemma'], mws=20, window=5, order='O11',
