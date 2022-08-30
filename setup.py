@@ -20,7 +20,7 @@ USE_CYTHON = False              # use cython -2 ccc/cl.pyx instead
 here = os.path.abspath(os.path.dirname(__file__))
 
 # description
-with open(os.path.join(here, 'README.md')) as f:
+with open(os.path.join(here, 'README.md'), mode='rt', encoding='utf-8') as f:
     long_description = f.read()
 
 # version
@@ -85,7 +85,7 @@ setup(
     python_requires='>=3.6.2',
     install_requires=[
         "wheel>=0.37.1",
-        "association-measures>=0.2.3",
+        "association-measures>=0.2.4",
         "pandas>=1.1.5",
         "numexpr>=2.7.1",
         "Bottleneck>=1.3.4",
