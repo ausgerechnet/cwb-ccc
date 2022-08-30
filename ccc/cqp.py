@@ -152,14 +152,12 @@ class CQP:
     def __del__(self):
         """Stop running CQP instance."""
         if self.CQPrunning:
-            # print "Deleting CQP with pid", self.CQP_process.pid, "...",
             self.CQPrunning = False
             self.execStart = time.time()
             logger.debug("Shutting down CQP backend ...")
             self.CQP_process.stdin.write('exit;')  # exits CQP backend
             logger.debug("... -- CQP object deleted.")
             self.execStart = None
-            # print "Finished"
 
     def __kill__(self):
         """ like self.__del__, but correct """
