@@ -106,7 +106,7 @@
 
 ### ScoreFrame ###
 
-    returned by score_counts() and score_counts_signature()
+    returned by score_counts()
 
     == (item) freq, O11*..O22*, E11*..E22*, AM1, AM2, ... ==
 
