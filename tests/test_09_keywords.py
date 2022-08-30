@@ -1,5 +1,5 @@
 from ccc import Corpus
-from ccc.keywords import Keywords
+from ccc.keywords import Keywords, keywords
 from ccc.counts import score_counts
 import pytest
 
@@ -103,8 +103,24 @@ def test_keywords(germaparl):
     df = left.join(right).fillna(0, downcast='infer')
     df['N1'] = df['f1'].sum()
     df['N2'] = df['f2'].sum()
-    kw = score_counts(df)
-    kw = kw.sort_values(by='O11', ascending=False)
-
-    assert kw.iloc[0]['O11'] == 1095
+    kw = score_counts(df, order='O11')
+    assert kw.iloc[0]['O11'] == 11469
     assert kw.iloc[0]['conservative_log_ratio'] == 0
+
+
+@pytest.mark.subcorpus
+def test_keywords_func(germaparl):
+
+    corpus = get_corpus(germaparl)
+    green = corpus.query_s_att("text_party", {"GRUENE", "Bündnis 90/Die Grünen"})
+    red = corpus.query_s_att("text_party", {"SPD", "S.P.D."})
+    kw = keywords(green, red, ['lemma'], ['lemma'], 'conservative_log_ratio')
+    assert kw.index[0] == 'Dr.'
+
+
+@pytest.mark.subcorpus
+def test_keywords_func_corpora(germaparl):
+
+    corpus = get_corpus(germaparl)
+    kw = keywords(corpus, corpus, ['lemma'], ['word'], 'conservative_log_ratio')
+    print(kw)

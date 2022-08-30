@@ -4,13 +4,14 @@
 import logging
 
 # requirements
-from association_measures.measures import calculate_measures
-from pandas import NA, DataFrame
+from association_measures.measures import score
+from pandas import NA, DataFrame, concat
 
 # part of module
 from . import Corpus
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
+from .dumps import Dump
 from .utils import format_cqp_query
 
 logger = logging.getLogger(__name__)
@@ -104,6 +105,12 @@ logger = logging.getLogger(__name__)
 ##########################################################
 
 
+# TODO discourseme definition: items, queries, corpora
+class Discourseme:
+    def __init__(self):
+        pass
+
+
 def constellation_left_join(df1, df2, name, drop=True, window=None):
     """join an additional dump df2 to an existing constellation
 
@@ -123,11 +130,11 @@ def constellation_left_join(df1, df2, name, drop=True, window=None):
     # calculate offset ###
     m['offset_y'] = 0       # init as overlap
     # y .. x
-    m.at[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
+    m.loc[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
     # x .. y
-    m.at[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
+    m.loc[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
     # missing y
-    m.at[m['match_y'].isna(), 'offset_y'] = NA
+    m.loc[m['match_y'].isna(), 'offset_y'] = NA
 
     # restrict to complete constellation ###
     if drop:
@@ -174,7 +181,7 @@ def aggregate_matches(df, name, context_col='contextid',
     return table
 
 
-def role_formatter(row, names, s_show, window):
+def format_roles(row, names, s_show, window, htmlify_meta=False):
     """Take a row of a dataframe indexed by match, matchend of the node,
     columns for each discourseme with sets of tuples indicating discourseme positions,
     columns for each s in s_show,
@@ -241,8 +248,17 @@ def role_formatter(row, names, s_show, window):
     d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
 
     # add s-attributes
-    for s in s_show:
-        d[s] = row[s]
+    if htmlify_meta:
+        meta = {key: row[key] for key in s_show if not key.startswith("BOOL")}
+        d['meta'] = DataFrame.from_dict(
+            meta, orient='index'
+        ).to_html(bold_rows=False, header=False)
+        for s in s_show:
+            if s.startswith("BOOL"):
+                d[s] = row[s]
+    else:
+        for s in s_show:
+            d[s] = row[s]
 
     return d
 
@@ -321,7 +337,8 @@ class Constellation:
 
     def concordance(self, window=5,
                     p_show=['word', 'lemma'], s_show=[],
-                    order='random', cut_off=100, random_seed=42):
+                    order='random', cut_off=100, random_seed=42,
+                    htmlify_meta=False):
         """Retrieve concordance lines for constellation.
 
         :param int window: cpos further away from node will be marked 'out_of_window'
@@ -333,7 +350,7 @@ class Constellation:
         # convert dataframe
         df = self.group_lines()
 
-        # cut off and sampling
+        # cut off and sampling (done here to be able to use random_seed)
         cut_off = len(df) if cut_off is None or cut_off > len(df) else cut_off
         if order == 'random':
             df = df.sample(cut_off, random_state=random_seed)
@@ -350,13 +367,13 @@ class Constellation:
                            order=order, cut_off=cut_off)
 
         # map roles
-        output = list(lines.apply(
-            lambda row: role_formatter(
-                row, self.discoursemes.keys(), s_show, window
+        output = lines.apply(
+            lambda row: format_roles(
+                row, self.discoursemes.keys(), s_show, window, htmlify_meta
             ), axis=1
-        ))
+        )
 
-        return output
+        return list(output)
 
     def collocates(self, windows=[3, 5, 7],
                    p_show=['lemma'], flags=None,
@@ -375,7 +392,7 @@ class Constellation:
         df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
         df_cooc, f1_set = dump2cooc(df_dump)
 
-        logging.info('get cpos that are consumed by discoursemes')
+        logger.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
             f1_set.update(self.discoursemes[idx].matches())
 
@@ -409,11 +426,29 @@ class TextConstellation:
         param str name: name of the node
         """
 
-        self.corpus = dump.corpus
+        if isinstance(dump, dict):
+            dumps = dump.copy()
+            name = list(dumps.keys())[0]
+            dump = dumps.pop(name)
+
+        elif isinstance(dump, Dump):
+            dumps = {}
+
+        else:
+            raise ValueError()
+
+        # create
         self.s_context = s_context
+        self.corpus = dump.corpus
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
-        self.df = aggregate_matches(dump.df, name)
+        try:
+            self.df = aggregate_matches(dump.df, name)
+        except KeyError:        # no matches
+            self.df = DataFrame()
+
+        for name, dump in dumps.items():
+            self.add_discourseme(dump, name)
 
     def add_discourseme(self, dump, name='discourseme'):
 
@@ -422,14 +457,30 @@ class TextConstellation:
             logger.error('name "%s" already taken; cannot register discourseme' % name)
             return
 
-        df = aggregate_matches(dump.df, name)
-        df = self.df.join(df, how='outer')
+        try:
+            dump = dump.set_context(context_break=self.s_context)
+            df = aggregate_matches(dump.df, name)
+        except KeyError:        # no matches
+            df = DataFrame()
+
+        if df.empty:
+            return
+        elif self.df.empty:
+            self.df = df
+        else:
+            df = self.df.join(df, how='outer')
 
         self.df = df.sort_index()
 
+    def breakdown(self, p_atts=['word']):
+
+        print(self.df.columns)
+        raise NotImplementedError()
+
     def concordance(self, window=0,
                     p_show=['word', 'lemma'], s_show=[],
-                    order='random', cut_off=100, random_seed=42):
+                    order='random', cut_off=100, random_seed=42,
+                    htmlify_meta=False, form='list'):
 
         # cut off and sampling
         cut_off = len(self.df) if cut_off is None or cut_off > len(self.df) else cut_off
@@ -466,13 +517,18 @@ class TextConstellation:
         match_names = [c.split("MATCHES_")[-1] for c in match_cols]
         col_mapper = dict(zip(match_cols, match_names))
         lines = lines.rename(columns=col_mapper)
-        lines = list(lines.apply(
-            lambda row: role_formatter(
-                row, match_names, s_show=names_bool+s_show, window=window
-            ), axis=1
-        ))
 
-        return lines
+        if form == 'table':
+            return lines
+        elif form == 'list':
+            output = lines.apply(
+                lambda row: format_roles(
+                    row, match_names, s_show=names_bool+s_show, window=window, htmlify_meta=htmlify_meta
+                ), axis=1
+            )
+            return list(output)
+        else:
+            raise NotImplementedError()
 
     def associations(self, ams=None, frequencies=True,
                      min_freq=2, order='log_likelihood',
@@ -489,7 +545,7 @@ class TextConstellation:
                 cooc, self.N, name
             ).reset_index(), 2)
             table['node'] = name
-            tables = tables.append(table)
+            tables = concat([tables, table])
 
         tables = tables[
             ['node', 'candidate'] +
@@ -517,12 +573,16 @@ def textual_associations(cooc, N, column):
             'N': N
         })
     contingencies = DataFrame(records).set_index('candidate')
-    measures = calculate_measures(contingencies, freq=True)
-    contingencies = contingencies.join(measures)
+    measures = score(contingencies, freq=True)
+    contingencies = contingencies.join(measures.drop(['N'], axis=1))
 
     return contingencies
 
 
+########################################################
+# CONSTELLATION CREATION FROM DISCOURSEMES AND QUERIES
+# TODO parallelize
+########################################################
 def create_constellation(corpus_name,
                          # discoursemes
                          topic_discourseme,
@@ -542,7 +602,8 @@ def create_constellation(corpus_name,
                          cqp_bin='cqp',
                          registry_path='/usr/local/share/cwb/registry/',
                          data_path='/tmp/ccc-data/',
-                         window=None):
+                         window=None,
+                         approximate=False):
     """simple constellation creator. returns a Constellation() if a
     topic_discourseme is given, otherwise a TextConstellation(). Note
     that for TextConstellations, there is no difference between
@@ -582,6 +643,9 @@ def create_constellation(corpus_name,
         )
         const = Constellation(topic_dump, topic_name)
 
+        if approximate:
+            sub = topic_dump.df.set_index(['context', 'contextend'])
+            corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
         # add filter discoursemes
         for disc_name, disc_items in filter_discoursemes.items():
             disc_query = format_cqp_query(
@@ -593,7 +657,10 @@ def create_constellation(corpus_name,
                 context_break=s_context,
                 match_strategy=match_strategy
             )
-            const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
+            if len(disc_dump.df) > 0:
+                const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
+            else:
+                raise ValueError()
 
         # add additional discoursemes
         for disc_name, disc_items in additional_discoursemes.items():
@@ -606,7 +673,9 @@ def create_constellation(corpus_name,
                 context_break=s_context,
                 match_strategy=match_strategy
             )
-            const.add_discourseme(disc_dump, disc_name, drop=False)
+            if len(disc_dump.df) > 0:
+                const.add_discourseme(disc_dump, disc_name, drop=False)
+        corpus.activate_subcorpus()
 
     # no topic -> TextConstellation()
     else:
@@ -633,6 +702,95 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
+            disc_dump = corpus.query(
+                disc_query,
+                context=None,
+                context_break=s_context,
+                match_strategy=match_strategy
+            )
+            const.add_discourseme(disc_dump, disc_name)
+
+    return const
+
+
+def create_constellation_query(corpus_name,
+                               # discoursemes
+                               topic_discourseme,
+                               filter_discoursemes,
+                               additional_discoursemes,
+                               # context settings
+                               s_context,
+                               context=20,
+                               # CWB settings
+                               match_strategy='longest',
+                               lib_path=None,
+                               cqp_bin='cqp',
+                               registry_path='/usr/local/share/cwb/registry/',
+                               data_path='/tmp/ccc-data/',
+                               window=None):
+    """same as above, but with pre-formatted CQP queries
+
+    """
+
+    # init corpus
+    corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+
+    # topic -> Constellation()
+    if len(topic_discourseme) > 0:
+
+        if len(topic_discourseme) > 1:
+            raise ValueError("only one topic discourseme can be given")
+
+        # init with topic
+        topic_name = list(topic_discourseme.keys())[0]
+        topic_query = topic_discourseme[topic_name]
+        topic_dump = corpus.query(
+            topic_query,
+            context=context,
+            context_break=s_context,
+            match_strategy=match_strategy
+        )
+        const = Constellation(topic_dump, topic_name)
+
+        # add filter discoursemes
+        for disc_name, disc_query in filter_discoursemes.items():
+            disc_dump = corpus.query(
+                disc_query,
+                context=None,
+                context_break=s_context,
+                match_strategy=match_strategy
+            )
+            const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
+
+        # add additional discoursemes
+        for disc_name, disc_query in additional_discoursemes.items():
+            disc_dump = corpus.query(
+                disc_query,
+                context=None,
+                context_break=s_context,
+                match_strategy=match_strategy
+            )
+            const.add_discourseme(disc_dump, disc_name, drop=False)
+
+    # no topic -> TextConstellation()
+    else:
+
+        # no filter implemented: all discoursemes are equal
+        discoursemes = {**filter_discoursemes, **additional_discoursemes}
+
+        # init with arbitrary topic
+        topic_name = list(discoursemes.keys())[0]
+        topic_query = discoursemes.pop(topic_name)
+        topic_dump = corpus.query(
+            topic_query,
+            context=context,
+            context_break=s_context,
+            match_strategy=match_strategy
+        )
+        const = TextConstellation(topic_dump, s_context, topic_name)
+
+        # add further discoursemes
+        for disc_name, disc_query in discoursemes.items():
             disc_dump = corpus.query(
                 disc_query,
                 context=None,

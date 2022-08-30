@@ -10,7 +10,7 @@ from pandas import DataFrame
 from .collocates import Collocates
 from .concordances import Concordance
 from .keywords import Keywords
-from .utils import correct_anchors, merge_intervals, fold_df
+from .utils import correct_anchors, fold_df, merge_intervals
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +61,11 @@ class Dump:
             context_right = context
 
         # set context
-        self.df = self.corpus.dump2context(
+        df = self.corpus.dump2context(
             self.df, context_left, context_right, context_break
         )
+
+        return Dump(self.corpus, df, self.name_cqp)
 
     def correct_anchors(self, corrections):
         """Correct anchors by integer offsets.
@@ -112,8 +114,15 @@ class Dump:
 
         return self._context
 
+    def marginals(self, start='match', end='matchend', p_atts=['word']):
+
+        return self.corpus.counts.dump(
+            self.df, start=start, end=end, p_atts=p_atts, split=True
+        )
+
     def concordance(self, form='simple', p_show=['word'], s_show=[],
-                    order='first', cut_off=100, matches=None, slots=None):
+                    order='first', cut_off=100, matches=None,
+                    slots=None, cwb_ids=False):
 
         conc = Concordance(
             self.corpus.copy(),
@@ -127,12 +136,14 @@ class Dump:
             order=order,
             cut_off=cut_off,
             matches=matches,
-            slots=slots
+            slots=slots,
+            cwb_ids=cwb_ids
         )
 
     def collocates(self, p_query=['lemma'], mws=20, window=5, order='O11',
                    cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, marginals='corpus'):
+                   frequencies=True, flags=None, marginals='corpus',
+                   show_negative=False):
 
         mws = max(mws, window)
 
@@ -151,7 +162,8 @@ class Dump:
             min_freq=min_freq,
             frequencies=frequencies,
             flags=flags,
-            marginals=marginals
+            marginals=marginals,
+            show_negative=show_negative
         )
 
     def keywords(self, p_query=['lemma'], order='O11', cut_off=100,

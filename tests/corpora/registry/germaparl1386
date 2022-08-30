@@ -7,7 +7,7 @@ NAME "GermaParl1386: all speeches of the 86th session of the 13th German Bundest
 # corpus ID (must be lowercase in registry!)
 ID   germaparl1386
 # path to binary data files
-HOME /home/ausgerechnet/implementation/cwb-ccc/tests/corpora/data/germaparl1386
+HOME tests/corpora/data/germaparl1386
 
 # corpus properties provide additional information about the corpus:
 ##:: charset = "utf8"	# character encoding of corpus data

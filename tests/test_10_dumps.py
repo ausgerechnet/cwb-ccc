@@ -85,7 +85,7 @@ def test_set_context(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"CSU"', context_break='text')
     assert dump.df['context'].iloc[0] == 620
-    dump.set_context(10, context_break='text', context_right=10)
+    dump = dump.set_context(10, context_break='text', context_right=10)
     assert dump.df['context'].iloc[0] == 630
 
 
@@ -165,6 +165,7 @@ def test_keywords_options(germaparl):
 #########
 # DUMPS #
 #########
+@pytest.mark.dumps
 def test_dumps_keywords(germaparl):
 
     # subcorpora via s-attribute values
@@ -181,12 +182,13 @@ def test_dumps_keywords(germaparl):
     dumps = Dumps(corpus, parties, s_att='text_party')
     tables = dumps.keywords(order='log_ratio')
     assert tables['green'].index[0] == "Oppositionsfraktion"
-    assert tables['red'].index[0] == "Grenzgrundstück"
-    assert tables['black'].index[0] == "Universität"
-    assert tables['yellow'].index[0] == "Stimmenthaltung"
+    assert tables['red'].index[0] == "Bereicherung"
+    assert tables['black'].index[0] == "Abgabenquote"
+    assert tables['yellow'].index[0] == "Wirtschafts-"
     assert tables['purple'].index[0] == "ÖPNV-Gesetz"
 
 
+@pytest.mark.dumps
 def test_dumps_collocates(germaparl):
 
     # subcorpora via s-attribute values
@@ -208,7 +210,6 @@ def test_dumps_collocates(germaparl):
         window=20
     )
     assert len(tables) == len(parties)
-    print(tables['yellow'])
     assert tables['yellow'].index[0] == 'Grad'
 
 
@@ -235,3 +236,8 @@ def test_dumps_collocates_global(germaparl):
     )
     assert len(tables) == len(parties)
     assert tables['yellow'].index[0] == 'Grad'
+
+
+@pytest.mark.benchmark
+def test_perf_dumps(benchmark, germaparl):
+    benchmark.pedantic(test_dumps_collocates, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)

@@ -13,7 +13,7 @@ def test_cqp_version():
 
 
 def test_cqp_kill():
-    n = 100
+    n = 10
     rate = 1000                 # per second
     print()
     print("... spawning several CQP processes ...")

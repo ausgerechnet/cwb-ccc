@@ -40,10 +40,8 @@ class Collocates:
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
         available_attributes = self.corpus.attributes_available['attribute'].values
         if not set(self.p_query).issubset(set(available_attributes)):
-            logger.warning(
-                'specfied p-attribute(s) ("%s") not available\n' % " ".join(self.p_query) +
-                'falling back to primary layer'
-            )
+            logger.warning('specfied p-attribute(s) ("%s") not available' % " ".join(self.p_query))
+            logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
         # collect cpos of matches and context
@@ -77,9 +75,9 @@ class Collocates:
 
         return f
 
-    def show(self, window=5, order='log_likelihood', cut_off=100, ams=None,
-             min_freq=2, frequencies=True, flags=None,
-             marginals='corpus'):
+    def show(self, window=5, order='log_likelihood', cut_off=100,
+             ams=None, min_freq=2, frequencies=True, flags=None,
+             marginals='corpus', show_negative=False):
 
         # consistency check
         if len(self.f1_set) == 0:
@@ -88,6 +86,7 @@ class Collocates:
 
         # get window counts and apply min freq
         f = self.count(window).rename(columns={'freq': 'f'})
+        vocab = len(f)
         f1 = f['f'].sum()
         f = f.loc[f['f'] >= min_freq]
 
@@ -112,16 +111,19 @@ class Collocates:
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
         # create dataframe
-        df = f2.join(f)
+        df = f2[['f2']].join(f[['f']])
         df['f1'] = f1
         df['N'] = N
+        df = df.fillna(0, downcast='infer')
 
         # score
-        collocates = score_counts(df, order, cut_off, flags, ams)
+        collocates = score_counts(df, order=order, cut_off=cut_off,
+                                  flags=flags, ams=ams, vocab=vocab)
 
         if frequencies:
             # throw away anti-collocates by default
-            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+            if not show_negative:
+                collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
             # add node and marginal frequencies
             collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
@@ -172,7 +174,9 @@ def dump2cooc(df_dump, context=None):
         df['end'] = df[['end', 'contextend']].min(axis=1)
 
     logger.info("(1a) create local contexts")
-    df = DataFrame.from_records(df.apply(node2cotext, axis=1).values)
+    df = DataFrame.from_records(
+        node2cotext(df['match'], df['matchend'], df['context'], df['contextend'])
+    )
 
     logger.info("(1b) concatenate local contexts")
     df_infl = DataFrame({

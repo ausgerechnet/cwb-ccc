@@ -5,7 +5,7 @@
 cqp.py: access to CQP
 
 Original Version by Joerg Asmussen (2008)
-Current version by Philipp Heinrich (2020)
+Current version by Philipp Heinrich (2022)
 """
 
 import logging
@@ -78,7 +78,7 @@ class CQP:
                     self.CQPrunning = False
                     break
 
-    def __init__(self, binary="/usr/local/bin/cqp", options='-c', print_version=False):
+    def __init__(self, binary="cqp", options='-c', print_version=False):
         """Class constructor."""
         self.execStart = time.time()
         self.maxProcCycles = 1.0
@@ -134,9 +134,6 @@ class CQP:
         self.error_message = ''  # we store compound error messages as a STRING
         self.errpipe = self.CQP_process.stderr.fileno()
 
-        # Debugging (prints more or less everything on stdout)
-        self.debug = False
-
         # CQP defaults:
         self.Exec('set PrettyPrint off')
         self.execStart = None
@@ -155,14 +152,12 @@ class CQP:
     def __del__(self):
         """Stop running CQP instance."""
         if self.CQPrunning:
-            # print "Deleting CQP with pid", self.CQP_process.pid, "...",
             self.CQPrunning = False
             self.execStart = time.time()
             logger.debug("Shutting down CQP backend ...")
             self.CQP_process.stdin.write('exit;')  # exits CQP backend
             logger.debug("... -- CQP object deleted.")
             self.execStart = None
-            # print "Finished"
 
     def __kill__(self):
         """ like self.__del__, but correct """
@@ -390,12 +385,6 @@ class CQP:
         """Set user-defined error handler."""
         self.error_handler = handler
 
-    def Debug(self, on=False):
-        """Switch debugging output on/off."""
-        prev = self.debug
-        self.debug = on
-        return prev
-
     #########################
     # SOME ALIASES FOR NQRs #
     #########################
@@ -439,6 +428,8 @@ class CQP:
         """
         logger.info('defining NQR "%s" from dump with %d matches' % (name, len(df_dump)))
         self.Undump(name, df_dump)
+        if not self.Ok():
+            logger.error('invalid dump')
 
     def nqr_activate(self, corpus_name, name=None):
         """Activate NQR or whole corpus.
@@ -450,9 +441,13 @@ class CQP:
         if name is not None:
             logger.info('activating NQR "%s:%s"' % (corpus_name, name))
             self.Exec(name)
+
         else:
             logger.info('activating corpus "%s"' % corpus_name)
             self.Exec(corpus_name)
+
+        if not self.Ok():
+            logger.error('invalid corpus or NQR')
 
     def nqr_save(self, corpus_name, name='Last'):
         """Save NQR to disk.
@@ -463,3 +458,5 @@ class CQP:
         """
         logger.info('saving NQR "%s:%s" to disk' % (corpus_name, name))
         self.Exec("save %s;" % name)
+        if not self.Ok():
+            logger.error('invalid corpus or NQR')

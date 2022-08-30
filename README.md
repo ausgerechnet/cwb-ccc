@@ -181,14 +181,12 @@ There are two reasons for defining the context when running a query:
 Notwithstanding (1), the context can also be set after having run the query:
 
 ```python
-dump.set_context(
+dump = dump.set_context(
     context_left=5,
     context_right=10,
     context_break='s'
 )
 ```
-
-Note that this works "inplace".
 
 You can set CQP's matching strategy ("standard", "longest", "shortest", "traditional") via the `match_strategy` parameter.
 
@@ -701,9 +699,6 @@ and
     make coverage
 
 which uses [pytest](https://pytest.org/) to check that all methods work reliably.
-
-Note that the make commands above update the path to the binary data files (line 10 of the [registry file](tests/test-corpora/registry/germaparl1386)) in order to make the tests, since the CWB requires an absolute path here.
-
 
 ## Acknowledgements ##
 

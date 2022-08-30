@@ -9,7 +9,7 @@ from random import sample
 from pandas import DataFrame
 
 # part of module
-from .utils import node2cotext
+from .utils import _node2cotext
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class Concordance:
         row['matchend'] = matchend
 
         # create cotext
-        cotext = node2cotext(row)
+        cotext = _node2cotext(row['match'], row['matchend'], row['context'], row['contextend'])
 
         # lexicalize positions
         attribute_lists = zip(
@@ -184,7 +184,7 @@ class Concordance:
             for a in self.anchors:
                 df[a] = False
                 if row[a] in df.index:
-                    df.at[row[a], a] = True
+                    df.loc[row[a], a] = True
             return df
 
     def dict(self, df, p_show=['word']):
@@ -230,7 +230,8 @@ class Concordance:
         return df
 
     def lines(self, form='simple', p_show=['word'], s_show=[],
-              order='first', cut_off=100, matches=None, slots=None):
+              order='first', cut_off=100, matches=None, slots=None,
+              cwb_ids=False):
         """Retrieve concordance lines from self.df_dump.  Central entry point
         for all methods.  Functionality includes:
 
@@ -292,7 +293,7 @@ class Concordance:
             logger.error('order not implemented, using "random" order')
             order = 'random'
         logger.info("lines: retrieving %d concordance line(s)" % len(matches))
-        df = self.df_dump.loc[matches, :]
+        df = self.df_dump.loc[list(matches), :]
 
         # retrieve p-attributes in respective formatting
         if len(p_show) > 0:
@@ -314,5 +315,7 @@ class Concordance:
                 df[s_att] = tmp[s_att]
             else:               # ID if no annotation
                 df[s_att] = tmp[s_att + "_cwbid"]
+            if cwb_ids:
+                df[s_att + "_cwbid"] = tmp[s_att + "_cwbid"]
 
         return df

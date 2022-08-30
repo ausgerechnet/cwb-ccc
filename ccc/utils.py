@@ -120,6 +120,7 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
     # gather all MWUs
     mwu_queries = list()
+    single_items = list()
     for item in items:
 
         # escape item (optional)
@@ -128,19 +129,24 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
         # split items on white-space
         tokens = item.split(" ")
-        mwu_query = ""
+        if len(tokens) > 1:
+            mwu_query = ""
 
-        # convert to CQP syntax considering p-att and flags
-        for token in tokens:
-            mwu_query += '[{p_query}="{token}"{flags}]'.format(
-                p_query=p_query, token=token, flags=flags
-            )
+            # convert to CQP syntax considering p-att and flags
+            for token in tokens:
+                mwu_query += '[{p_query}="{token}"{flags}]'.format(
+                    p_query=p_query, token=token, flags=flags
+                )
 
-        # add MWU item to list
-        mwu_queries.append("(" + mwu_query + ")")
+            # add MWU item to list
+            mwu_queries.append("(" + mwu_query + ")")
+        else:
+            single_items.append(tokens[0])
 
+    singles_query = "([" + p_query + "=" + '"' + "|".join(single_items) + '"' + flags + "])"
+    queries = mwu_queries + [singles_query]
     # disjunctive join
-    query = ' | '.join(mwu_queries)
+    query = ' | '.join(queries)
 
     # add s_query (optional)
     if s_query is not None:
@@ -197,17 +203,13 @@ def preprocess_query(query):
 #################################
 # working on nodes and contexts #
 #################################
-def node2cotext(row):
-    """ convert one row of df_node to info for df_cooc """
+def _node2cotext(match, matchend, context, contextend):
+    """converts the four cpos-values of nodes into a dict of lists of
+    cpos, match, and offset
 
-    # take values from row
-    match = row['match']
-    matchend = row['matchend']
-    start = row['context']
-    end = row['contextend']
-
+    """
     # get lists
-    cpos_list = list(range(start, end + 1))
+    cpos_list = list(range(context, contextend + 1))
     match_list = [match] * len(cpos_list)
     offset_list = [
         (cpos - match) if cpos < match else
@@ -223,6 +225,9 @@ def node2cotext(row):
     }
 
     return result
+
+
+node2cotext = np.vectorize(_node2cotext)
 
 
 def merge_intervals(inter, start_index=0):

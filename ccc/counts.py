@@ -29,7 +29,7 @@ def count_items(items, names, tuples=True):
     :rtype: FreqFrame
     """
 
-    logger.info("... counting %d items" % len(items))
+    logger.info("counting %d items" % len(items))
     counts = Counter(items)
     df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
 
@@ -97,7 +97,7 @@ def read_freq_list(path, min_freq=2, columns=None):
 
 def cwb_lexdecode(corpus_name, registry_path,
                   p_att='word', cmd='cwb-lexdecode', min_freq=2):
-    """Run cwb-lexdecode: create frequency list of p-attribute
+    """Run cwb-lexdecode: create frequency list of p-attribute.
     CLI: cwb-lexdecode -f -s -P lemma CORPUS_NAME
 
     :param str corpus_name:
@@ -124,7 +124,7 @@ def cwb_lexdecode(corpus_name, registry_path,
 
 def cwb_scan_corpus(corpus_name, registry_path, path=None,
                     p_atts=['word'], cmd='cwb-scan-corpus', min_freq=2):
-    """Run cwb-lexdecode: create frequency list of p-attribute(s) at corpus positions.
+    """Run cwb-scan-corpus: create frequency list of p-attribute(s) at corpus positions.
     CLI: cwb-scan-corpus [-R path] CORPUS_NAME p_atts
 
     :return: counts of the p-attribute values (or their combinations)
@@ -481,7 +481,7 @@ class Counts:
 
 
 def score_counts(df, order='log_likelihood', cut_off=1000,
-                 flags=None, ams=None, digits=6):
+                 flags=None, ams=None, digits=6, vocab=None):
     """score counts in DataFrame.
 
     :param DataFrame df: DataFrame with reasonably-named columns, index 'item'
@@ -497,16 +497,17 @@ def score_counts(df, order='log_likelihood', cut_off=1000,
 
     """
 
-    logger.info('creating table of association measures')
+    logger.info('scoring %d counts' % len(df))
 
     # post-processing: fold items
     df = fold_df(df, flags)
 
-    # calculate association
-    df = measures.score(df, measures=ams, freq=True, digits=digits)
+    # calculate associations
+    df = measures.score(df, measures=ams, freq=True, per_million=True,
+                        digits=digits, boundary='poisson', vocab=vocab)
 
     # sort
-    df = df.sort_values(by=[order, 'item'], ascending=False)
+    df = df.sort_values(by=[order, 'item'], ascending=[False, True])
 
     # apply cut-off
     df = df.head(cut_off) if cut_off is not None else df
