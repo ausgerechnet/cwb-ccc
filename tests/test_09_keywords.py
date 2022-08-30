@@ -103,10 +103,8 @@ def test_keywords(germaparl):
     df = left.join(right).fillna(0, downcast='infer')
     df['N1'] = df['f1'].sum()
     df['N2'] = df['f2'].sum()
-    kw = score_counts(df)
-    kw = kw.sort_values(by='O11', ascending=False)
-
-    assert kw.iloc[0]['O11'] == 1095
+    kw = score_counts(df, order='O11')
+    assert kw.iloc[0]['O11'] == 11469
     assert kw.iloc[0]['conservative_log_ratio'] == 0
 
 

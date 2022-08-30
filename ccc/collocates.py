@@ -75,8 +75,8 @@ class Collocates:
 
         return f
 
-    def show(self, window=5, order='log_likelihood', cut_off=100, ams=None,
-             min_freq=2, frequencies=True, flags=None,
+    def show(self, window=5, order='log_likelihood', cut_off=100,
+             ams=None, min_freq=2, frequencies=True, flags=None,
              marginals='corpus', show_negative=False):
 
         # consistency check
@@ -86,6 +86,7 @@ class Collocates:
 
         # get window counts and apply min freq
         f = self.count(window).rename(columns={'freq': 'f'})
+        vocab = len(f)
         f1 = f['f'].sum()
         f = f.loc[f['f'] >= min_freq]
 
@@ -110,13 +111,14 @@ class Collocates:
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
         # create dataframe
-        df = f2.join(f)
-        df = df.fillna(0)
+        df = f2[['f2']].join(f[['f']])
         df['f1'] = f1
         df['N'] = N
+        df = df.fillna(0, downcast='infer')
 
         # score
-        collocates = score_counts(df, order, cut_off, flags, ams)
+        collocates = score_counts(df, order=order, cut_off=cut_off,
+                                  flags=flags, ams=ams, vocab=vocab)
 
         if frequencies:
             # throw away anti-collocates by default

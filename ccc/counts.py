@@ -502,14 +502,12 @@ def score_counts(df, order='log_likelihood', cut_off=1000,
     # post-processing: fold items
     df = fold_df(df, flags)
 
-    # calculate association
-    df = measures.score(df, measures=ams, freq=True, per_million=True, digits=digits)
-    # TODO assoc-measures 0.2.3:
-    # - vocab=vocab
-    # - boundary='poisson'
+    # calculate associations
+    df = measures.score(df, measures=ams, freq=True, per_million=True,
+                        digits=digits, boundary='poisson', vocab=vocab)
 
     # sort
-    df = df.sort_values(by=[order, 'item'], ascending=False)
+    df = df.sort_values(by=[order, 'item'], ascending=[False, True])
 
     # apply cut-off
     df = df.head(cut_off) if cut_off is not None else df

@@ -43,9 +43,9 @@ class Keywords:
             df_dump, start='match', end='matchend', p_atts=self.p_query, split=True
         )
 
-    def show(self, order='f', cut_off=100, ams=None,
+    def show(self, order='log_likelihood', cut_off=100, ams=None,
              min_freq=2, frequencies=True, flags=None,
-             marginals='corpus'):
+             marginals='corpus', show_negative=False):
 
         # consistency check
         if self.counts.empty:
@@ -54,6 +54,7 @@ class Keywords:
 
         # get subcorpus frequencies und apply min freq
         f = self.counts.rename(columns={'freq': 'f'})
+        vocab = len(f)
         f1 = f['f'].sum()
         f = f.loc[f['f'] >= min_freq]
 
@@ -78,7 +79,13 @@ class Keywords:
         df['N'] = N
 
         # score
-        keywords = score_counts(df, order, cut_off, flags, ams, vocab=f1)
+        keywords = score_counts(df, order=order, cut_off=cut_off,
+                                flags=flags, ams=ams, vocab=vocab)
+
+        if frequencies:
+            # throw away anti-keywords by default
+            if not show_negative:
+                keywords = keywords.loc[keywords['O11'] >= keywords['E11']]
 
         return keywords
 
