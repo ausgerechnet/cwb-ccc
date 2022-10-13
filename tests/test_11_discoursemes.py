@@ -618,6 +618,81 @@ def test_textual_constellation_association(germaparl, discoursemes):
     assert 'candidate' in assoc.columns
 
 
+def test_textual_constellation_association_approximate(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+
+    const = create_constellation(corpus_name,
+                                 # discoursemes
+                                 {},
+                                 discoursemes,
+                                 {},
+                                 # context settings
+                                 s_context,
+                                 context,
+                                 # query settings
+                                 p_query,
+                                 s_query,
+                                 flags,
+                                 escape,
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH,
+                                 approximate=True)
+
+    assoc = const.associations()
+    assert len(assoc) == 6
+    assert 'candidate' in assoc.columns
+
+
+def test_textual_constellation_association_empty(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+    discoursemes2 = discoursemes.copy()
+    discoursemes2['fail'] = ["fail"]
+    discoursemes2['fail2'] = ["fail2"]
+
+    const = create_constellation(corpus_name,
+                                 # discoursemes
+                                 {},
+                                 discoursemes2,
+                                 {},
+                                 # context settings
+                                 s_context,
+                                 context,
+                                 # query settings
+                                 p_query,
+                                 s_query,
+                                 flags,
+                                 escape,
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH,
+                                 approximate=True)
+
+    assoc = const.associations()
+    assert len(assoc) == 6
+    assert 'candidate' in assoc.columns
+
+
 def test_textual_constellation_concordance(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']
