@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def decode(text):
     try:
         text = text.decode('utf-8')
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, AttributeError):
         text = ""
     return text
 
