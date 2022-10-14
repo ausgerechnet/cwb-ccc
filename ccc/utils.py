@@ -348,6 +348,7 @@ def fold_df(df, flags="%cd"):
         return df
 
     df.index = df.index.map(lambda x: fold_item(x, flags))
+    df = df.select_dtypes(include=np.number)
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)
     return df

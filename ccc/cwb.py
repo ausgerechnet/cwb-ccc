@@ -524,7 +524,7 @@ class Corpus:
         try:
             df = read_csv(StringIO(cqp_return), sep="\t", header=None)
             df.columns = ["storage", "corpus:subcorpus", "size"]
-            crpssbcrps = df["corpus:subcorpus"].str.split(":", 1).str
+            crpssbcrps = df["corpus:subcorpus"].str.split(":", n=1).str
             df['corpus'] = crpssbcrps[0]
             df['subcorpus'] = crpssbcrps[1]
             df.drop('corpus:subcorpus', axis=1, inplace=True)
