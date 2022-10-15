@@ -451,6 +451,9 @@ class TextConstellation:
         self.corpus = dump.corpus
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
+        # init discoursemes
+        self.discoursemes = {name: dump}
+
         try:
             self.df = aggregate_matches(dump.df, name)
         except KeyError:        # no matches
@@ -479,6 +482,7 @@ class TextConstellation:
         else:
             df = self.df.join(df, how='outer')
 
+        self.discoursemes[name] = dump
         self.df = df.sort_index()
 
     def breakdown(self, p_atts=['word'], flags=""):

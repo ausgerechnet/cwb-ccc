@@ -730,6 +730,7 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
     assert len(lines) == 2198
 
 
+@pytest.mark.now
 def test_textual_constellation_breakdown(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']
@@ -761,6 +762,4 @@ def test_textual_constellation_breakdown(germaparl, discoursemes):
                                  registry_path=germaparl['registry_path'],
                                  data_path=DATA_PATH)
 
-    # TODO implement
-    with pytest.raises(NotImplementedError):
-        assert const.breakdown()
+    assert len(const.breakdown()) == 5
