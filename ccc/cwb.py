@@ -911,11 +911,16 @@ class Corpus:
         # join to original dataframe
         df_dump = df_dump.join(df, lsuffix='_bak')
         df_dump = df_dump[[col for col in df_dump if not str(col).endswith('_bak')]]
-        df_dump[[
-            s_att + '_span', s_att + '_spanend'
-        ]] = df[[
-            s_att + '_span', s_att + '_spanend'
-        ]].fillna(-1, downcast='infer')
+        if s_att + '_span' in df.columns and s_att + '_spanend' in df.columns:
+            df_dump[[
+                s_att + '_span', s_att + '_spanend'
+            ]] = df[[
+                s_att + '_span', s_att + '_spanend'
+            ]].fillna(-1, downcast='infer')
+        else:
+            df_dump[[
+                s_att + '_span', s_att + '_spanend'
+            ]] = -1
 
         return df_dump
 
