@@ -406,18 +406,16 @@ class Constellation:
         logger.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
             f1_set.update(self.discoursemes[idx].matches())
-
-        # correct df_cooc
         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-        # count once
+        # count node freqs
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
 
+        # determine collocates
         collocates = Collocates(
             corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
             df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
         )
-
         output = dict()
         for window in windows:
             output[window] = collocates.show(
