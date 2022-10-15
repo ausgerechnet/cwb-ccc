@@ -335,6 +335,17 @@ class Constellation:
 
         return df_reduced
 
+    def breakdown(self, p_atts=['word'], flags=""):
+
+        breakdowns = list()
+        for idx, dump in self.discoursemes.items():
+            d = dump.breakdown(p_atts=p_atts, flags=flags)
+            d['discourseme'] = idx
+            breakdowns.append(d)
+        breakdown = concat(breakdowns)
+
+        return breakdown
+
     def concordance(self, window=5,
                     p_show=['word', 'lemma'], s_show=[],
                     order='random', cut_off=100, random_seed=42,
@@ -472,10 +483,16 @@ class TextConstellation:
 
         self.df = df.sort_index()
 
-    def breakdown(self, p_atts=['word']):
+    def breakdown(self, p_atts=['word'], flags=""):
 
-        print(self.df.columns)
-        raise NotImplementedError()
+        breakdowns = list()
+        for idx, dump in self.discoursemes.items():
+            d = dump.breakdown(p_atts=p_atts, flags=flags)
+            d['discourseme'] = idx
+            breakdowns.append(d)
+        breakdown = concat(breakdowns)
+
+        return breakdown
 
     def concordance(self, window=0,
                     p_show=['word', 'lemma'], s_show=[],
