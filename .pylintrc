@@ -17,3 +17,4 @@ disable=too-few-public-methods,
         too-many-instance-attributes,
         logging-not-lazy,
         line-too-long,
+        logging-fstring-interpolation
