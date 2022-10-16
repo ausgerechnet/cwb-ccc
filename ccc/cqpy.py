@@ -1,14 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cqpy.py
 
-""" cqpy.py: read-write support for CQPY query files
+read-write support for CQPY query files
 
 - a CQPY file contains a YAML header and the actual CQP input
 - YAML header *can* be commented
 - query formatting (whitespace incl. linebreaks) is preserved
 
 """
-
 import json
 import logging
 import re
@@ -243,12 +243,12 @@ def run_query(corpus, query,
         # backwards compatability
         for p in ['p_slots', 'p_text']:
             if p in query['display']:
-                # logger.warning("use of '%s' is deprecated" % p)
+                # logger.warning(f"use of '{p}' is deprecated")
                 if query['display'][p] not in p_show:
                     p_show += [query['display'][p]]
 
     # query the corpus
-    dump = corpus.query(
+    dump = corpus.query_cqp(
         cqp_query=cqp,
         context=context,
         context_break=context_break,

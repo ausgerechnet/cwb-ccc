@@ -1,0 +1,445 @@
+---
+title: "cwb-ccc Vignette"
+author: "Philipp Heinrich"
+date: "(October 16, 2022)"
+format:
+  gfm:
+    toc: true
+    df-print: kable
+---
+
+```{r, include=F}
+library(reticulate)
+venv <- system("pipenv --venv", inter = TRUE)
+use_virtualenv(venv, required = TRUE)
+py_config()
+library(tidyverse)
+```
+
+```{python, include=F}
+import sys
+sys.path.append("../")
+```
+
+```{python, include=F}
+def print_md(df, cut_off=5):
+    df = df.copy()
+    # deal with multi-index
+    # if isinstance(df.index, MultiIndex):
+    if df.index.names != [None]:
+        index_names = list(df.index.names)
+        col_names = list(df.columns)
+        df = df.reset_index()
+        df = df[index_names + col_names]
+        for i in index_names:
+            df = df.rename({i: "*" + i + "*"}, axis=1)
+    # escape underscores
+    df = df.replace("_", r"\_", regex=True)
+    df.columns = [c.replace("_", r"\_") if isinstance(c, str) else c for c in df.columns]
+    # apply cut-off
+    vis = False
+    if cut_off is not None and cut_off < len(df):
+        df = df.head(cut_off)
+        vis = True
+    df_str = df.to_markdown(index=False)
+    # visualize cut-off via "..."
+    if vis:
+        df_str = df_str + "\n|" + ("|".join(["..."] * len(df.columns))) + "|"
+    # make it collapsible
+    # output = "<details>\n<summary><code>placeholder</code></summary>\n<p>\n\n" + \
+    #     df_str + "\n\n</p>\n</details>\n<br/>"
+    print(df_str)
+
+```
+
+
+```{python}
+import ccc
+ccc.__version__
+```
+
+## Accessing Corpora
+
+To list all CWB corpora defined in the registry, you can use
+
+```{python}
+from ccc import Corpora
+
+corpora = Corpora(registry_path="/usr/local/share/cwb/registry/")
+```
+
+```python
+corpora.show()  # returns a pd.DataFrame
+print(corpora)  # returns a str
+```
+
+All further methods rely on the `Corpus` class, which establishes the connection to your CWB-indexed corpus. You can activate a corpus with
+
+```{python}
+corpus = corpora.activate(corpus_name="GERMAPARL1386")
+```
+
+or directly use the respective class:
+
+```{python}
+from ccc import Corpus
+
+corpus = Corpus(
+  corpus_name="GERMAPARL1386",
+  registry_path="/usr/local/share/cwb/registry/"
+)
+```
+
+This will raise a `KeyError` if the named corpus is not in the specified registry.
+
+If you are using macros and wordlists, you have to store them in a separate folder (with subfolders "wordlists/" and "macros/"). Specify this folder via `lib_path` when initializing the corpus.
+
+You can use the `cqp_bin` to point the module to a specific version of `cqp` (this is also helpful if `cqp` is not in your `PATH`).
+
+By default, the `data_path` points to "/tmp/ccc-{version}/". Make sure that "/tmp/" exists and appropriate rights are granted. Otherwise, change the parameter when initializing the corpus. Note that each corpus will have its own subdirectory for each library.
+
+If everything is set up correctly, you can list all available attributes of the activated corpus:
+```python
+corpus.attributes_available
+```
+```{python, echo=F}
+#| output: asis
+print_md(corpus.attributes_available, cut_off=None)
+```
+
+## Queries and Dumps
+
+The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
+
+```{python}
+query = r'"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ "\]"'
+dump = corpus.query(query)
+```
+
+The result is a `Dump` object. Its core is a pandas DataFrame (`dump.df`) similar to a CQP dump and multi-indexed by "match" and "matchend" of the query. All entries of the DataFrame, including the index, are integers representing corpus positions:
+
+```python
+dump.df
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.df)
+```
+
+You can provide one or more parameters to define the context around the matches: a parameter `context` specifying the context window (defaults to 20) and a parameter `context_break` naming an s-attribute to limit the context . You can specify asymmetric windows via `context_left` and `context_right`.
+
+When providing an s-attribute limiting the context, the module additionally retrieves the CWB-id of this attribute, the corpus positions of the respective span start and end, as well as the actual context spans:
+
+```{python}
+dump = corpus.query(
+  cqp_query=query,
+  context=20,
+  context_break='s'
+)
+```
+
+```python
+dump.df
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.df)
+```
+
+There are two reasons for defining the context when running a query:
+
+1.  If you provide a `context_break` parameter, the query will be automatically confined to spans delimited by this s-attribute; this is equivalent to formulating a query that ends on a respective "within" clause.
+2.  Subsequent analyses (concordancing, collocation) will all work on the same context.
+
+Notwithstanding (1), the context can also be set after having run the query:
+
+```{python}
+dump = dump.set_context(
+    context_left=5,
+    context_right=10,
+    context_break='s'
+)
+```
+
+You can set CQP's matching strategy ("standard", "longest", "shortest", "traditional") via the `match_strategy` parameter.
+
+By default, the result is cached: the query parameters are used to create an appropriate identifier. This way, the result can be accessed directly by later queries with the same parameters on the same (sub)corpus, without the need for CQP to run again.
+
+We are set up to analyze the query result. Here's the frequency breakdown:
+
+```python
+dump.breakdown()
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.breakdown())
+```
+
+## Concordancing
+
+You can access concordance lines via the `concordance()` method of the dump. This method returns a DataFrame with information about the query matches in context:
+
+```python
+dump.concordance()
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.concordance())
+```
+
+By default, the output is a "simple" format, i.e. a DataFrame indexed by "match" and "matchend" with a column "word" showing the matches in context. You can choose which p-attributes to retrieve via the `p_show` parameter. Similarly, you can retrieve s-attributes (at match-position):
+
+```python
+dump.concordance(p_show=["word", "lemma"], s_show=["text_id"])
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.concordance(p_show=["word", "lemma"], s_show=["text_id"]))
+```
+
+The format can be changed using the `form` parameter. The "kwic" format e.g. returns three columns for each requested p-attribute:
+
+```python
+dump.concordance(form="kwic")
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.concordance(form="kwic"))
+```
+
+If you want to inspect each query result in detail, use `form`="dataframe"; here, every concordance line is verticalized text formated as DataFrame with the *cpos* of each token as index:
+
+```{python}
+lines = dump.concordance(
+    p_show=['word', 'pos', 'lemma'],
+    form='dataframe'
+)
+```
+
+```python
+lines.iloc[0]['dataframe']
+```
+```{python, echo=F}
+#| output: asis
+print_md(lines.iloc[0]['dataframe'], cut_off=None)
+```
+
+Further `form`s are "slots" (see [below](#anchored-queries)) and "dict": In the latter case, every entry in the "dict" column is a dictionary with the following keys:
+
+-   "match" (int): the cpos of the match (serves as an identifier)
+-   "cpos" (list): the cpos of all tokens in the concordance line
+-   "offset" (list): the offset to match/matchend of all tokens
+-   "word" (list): the words of all tokens
+-   "anchors" (dict): a dictionary of {anchor: cpos} (see [below](#anchored-queries))
+
+This format is especially suitable for serialization purposes.
+
+You can decide which and how many concordance lines you want to retrieve by means of the parameters `order` ("first", "last", or "random") and `cut_off`. You can also provide a list of `matches` to get only specific concordance lines.
+
+
+## Anchored Queries
+
+The concordancer detects anchored queries automatically. The following query
+
+```{python}
+dump = corpus.query(
+  cqp_query=r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
+  context=None, 
+  context_break='s', 
+  match_strategy='longest'
+)
+lines = dump.concordance(form='dataframe')
+```
+
+thus returns DataFrames with additional columns for each anchor point:
+
+```python
+lines.iloc[0]['dataframe']
+```
+```{python, echo=F}
+#| output: asis
+print_md(lines.iloc[0]['dataframe'], cut_off=None)
+```
+
+For an analysis of certain spans of your query matches, you can use anchor points to define "slots", i.e. single anchors or spans between anchors that define sub-parts of your matches.  Use the "slots" format to extract these parts from each match:
+
+```{python}
+dump = corpus.query(
+    r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
+    context=0,
+    context_break='s',
+    match_strategy='longest',
+)
+lines = dump.concordance(
+  form='slots', 
+  p_show=['word', 'lemma'],
+  slots={"name": [1, 2], "party": [3, 4]}
+)
+```
+
+```python
+lines
+```
+```{python, echo=F}
+#| output: asis
+print_md(lines)
+```
+
+The module allows for correction of anchor points by integer offsets.  This is especially helpful if the query contains optional parts (defined by `?`, `+` or `*`) – note that this works inplace:
+
+```{python}
+dump.correct_anchors({3: +1, 4: -1})
+lines = dump.concordance(
+  form='slots',
+  slots={"name": [1, 2],
+  "party": [3, 4]}
+)
+```
+
+```python
+lines
+```
+```{python, echo=F}
+#| output: asis
+print_md(lines)
+```
+
+## Collocation Analyses
+After executing a query, you can use `dump.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lexical items (e.g. lemmata) as index and frequency signatures and association measures as columns.
+
+```{python}
+dump = corpus.query(
+    '[lemma="SPD"]', 
+    context=10, 
+    context_break='s'
+)
+```
+
+```python
+dump.collocates()
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.collocates())
+```
+
+By default, collocates are calculated on the "lemma"-layer, assuming that this is an available p-attribute in the corpus. The corresponding parameter is `p_query` (which will fall back to "word" if the specified attribute is not annotated in the corpus). Note that you can also perform collocation analyses on combinations of p-attribute layers, the most prominent use case being POS-disambiguated lemmata:
+
+```python
+dump.collocates(['lemma', 'pos'], order='log_likelihood')
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.collocates(['lemma', 'pos'], order='log_likelihood'))
+```
+
+By default, the dataframe contains the counts, namely
+
+  - observed and expected absolute frequencies (columns O11, ..., E22),
+  - observed and expected relative frequencies (instances per million, IPM), 
+  - marginal frequencies, and 
+  - instances within nodes.
+
+and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`). For notation and further information regarding association measures, see [collocations.de](http://www.collocations.de/AM/index.html).
+
+For improved performance, all hapax legomena in the context are dropped after calculating the context size. You can change this behaviour via the `min_freq` parameter.
+
+The dataframe is sorted by co-occurrence frequency (column "O11"), and only the first 100 most frequently co-occurring collocates are retrieved. You can (and should) change this behaviour via the `order` and `cut_off` parameters.
+
+## Subcorpora
+
+In **cwb-ccc terms**, every instance of a `Dump` is a subcorpus.  There are two possibilities to get a `dump`: either by running a traditional query as outlined [above](#queries-and-dumps); the following query e.g. defines a subcorpus of all sentences that contain "SPD":
+
+```python
+dump = corpus.query('"SPD" expand to s')
+```
+
+Alternatively, you can define subcorpora via values stored in s-attributes.  A subcorpus of all noun phrases (assuming they are indexed as structural attribute `np`) can e.g. be extracted using
+
+```python
+dump = corpus.query(s_query="np")
+```
+
+You can also query the respective annotations:
+
+```python
+dump = corpus.query(s_query="text_party", s_values={"CDU", "CSU"})
+```
+
+will e.g. retrieve all `text` spans with respective constraints on the `party` annotation.
+
+Implementation note: While the CWB does allow storage of arbitrary meta data in s-attributes, it does not index these attributes.  `corpus.query()` thus creates a dataframe with the spans of the s-attribute encoded as matches and caches the result.  Consequently, the first query of an s-attribute will be compartively slow and subsequent queries will be faster.
+
+Note also that the CWB does not allow complex queries on s-attributes.  It is thus reasonable to store meta data in separate spreadsheets or relational databases and link to text spans via simple identifiers.  This way (1) you can work with natural meta data queries and (2) working with a small number of s-attributes also unburdens the cache.
+
+In **CWB terms**, subcorpora are _named query results_ (NQRs), which consist of the corpus positions of match and matchend (and optional anchor points called _anchor_ and _keyword_).  If you give a `name` when using `corpus.query()`, the respective matches of the dump will also be available as NQRs in CQP.
+
+This way you can run queries on NQRs in CQP (a.k.a. *subqueries*).  Compare e.g. the frequency breakdown for a query on the whole corpus
+
+```python
+corpus.query('[lemma="sagen"]').breakdown()
+```
+```{python, echo=F}
+#| output: asis
+print_md(corpus.query('[lemma="sagen"]').breakdown(), cut_off=None)
+```
+
+with the one on a subcorpus:
+
+```{python}
+# define the subcorpus via a query
+tmp_dump = corpus.query(
+    s_query="text_party", 
+    s_values={"CDU", "CSU"}, 
+    name="Union"
+)
+union = corpus.activate_subcorpus("Union")
+print(union.subcorpus)
+```
+
+```python
+union.query('[lemma="sagen"]').breakdown()
+```
+```{python, echo=F}
+#| output: asis
+print_md(union.query('[lemma="sagen"]').breakdown(), cut_off=None)
+```
+
+You can access all available NQRs via
+
+```python
+corpus.show_nqr()
+```
+```{python, echo=F}
+#| output: asis
+print_md(corpus.show_nqr())
+```
+
+## Keyword Analyses
+
+Having created a dump
+```{python}
+dump = corpus.query(s_query="text_party", s_values={"CDU", "CSU"})
+```
+
+you can use its `keywords()` method for retrieving keywords:
+
+```python
+dump.keywords()
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.keywords())
+```
+
+Just as with collocates, the result is a `DataFrame` with lexical items (`p_query` layer) as index and frequency signatures and association measures as columns. And just as with collocates, you can calculate keywords for p-attribute combinations:
+
+```python
+dump.keywords(["lemma", "pos"], order="log_likelihood")
+```
+```{python, echo=F}
+#| output: asis
+print_md(dump.keywords(["lemma", "pos"], order="log_likelihood"))
+```
+
+Implementation note: `dump.keywords()` looks at all unigrams at the corpus positions in match..matchend, and compares the frequencies of their surface realizations with their marginal frequencies.  Similarly, `dump.collocates()` uses the the union of the corpus positions in context..contextend, excluding all corpus positions containted in any match..matchend.

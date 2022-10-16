@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""utils.py
 
+various utilities for the module
+
+"""
 import logging
 import pkgutil
 import re
@@ -25,7 +29,7 @@ def time_it(func):
         result = func(*args, **kwargs)
         end = default_timer()
         name = func.__name__
-        logger.info("%s took %s seconds" % (name, round(end - start, 2)))
+        logger.info(f"{name} took {round(end - start, 2)} seconds")
         return result
     return wrapper
 
@@ -69,14 +73,12 @@ def correct_anchors(df, corrections):
     """
     for correction in corrections:
         if correction in df.columns:
-            logger.info('correcting anchor %d by offset %d' % (
-                correction, corrections[correction]
-            ))
+            logger.info(f'correcting anchor {correction} by offset {corrections[correction]}')
             df[correction] = df[
                 [correction, 'context', 'contextend']
             ].apply(lambda x: apply_correction(x, corrections[correction]), axis=1)
         else:
-            logger.warning('anchor "%s" not in dataframe' % str(correction))
+            logger.warning(f'anchor "{correction}" not in dataframe')
     return df
 
 
@@ -134,9 +136,7 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
             # convert to CQP syntax considering p-att and flags
             for token in tokens:
-                mwu_query += '[{p_query}="{token}"{flags}]'.format(
-                    p_query=p_query, token=token, flags=flags
-                )
+                mwu_query += f'[{p_query}="{token}"{flags}]'
 
             # add MWU item to list
             mwu_queries.append("(" + mwu_query + ")")
@@ -150,9 +150,7 @@ def format_cqp_query(items, p_query='word', s_query=None,
 
     # add s_query (optional)
     if s_query is not None:
-        query = '({query}) within {s_query};'.format(
-            query=query, s_query=s_query
-        )
+        query = f'({query}) within {s_query};'
 
     # return
     return query
@@ -310,9 +308,7 @@ def merge_s_atts(s_query, s_break, s_meta):
     if s_meta is not None and not s_meta.endswith("_id"):
         s_meta = s_meta + "_id"
 
-    logger.info("s_query: %s - s_break: %s - s_meta: %s" % (
-        str(s_query), str(s_break), str(s_meta)
-    ))
+    logger.info(f"s_query: {s_query} - s_break: {s_break} - s_meta: {s_meta}")
     return s_query, s_break, s_meta
 
 
@@ -348,6 +344,7 @@ def fold_df(df, flags="%cd"):
         return df
 
     df.index = df.index.map(lambda x: fold_item(x, flags))
+    df = df.select_dtypes(include=np.number)
     grouped = df.groupby(df.index)
     df = grouped.aggregate(np.sum)
     return df

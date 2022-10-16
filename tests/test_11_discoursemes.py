@@ -1,12 +1,12 @@
-from ccc import Corpus
-from ccc.utils import format_cqp_query
-from ccc.discoursemes import Constellation, create_constellation
-from ccc.discoursemes import TextConstellation
-from .conftest import DATA_PATH
 import pytest
-
 from pandas import DataFrame
 
+from ccc import Corpus
+from ccc.discoursemes import (Constellation, TextConstellation,
+                              create_constellation)
+from ccc.utils import format_cqp_query
+
+from .conftest import DATA_PATH
 
 #######################
 # ccc.discoursemes ####
@@ -618,6 +618,81 @@ def test_textual_constellation_association(germaparl, discoursemes):
     assert 'candidate' in assoc.columns
 
 
+def test_textual_constellation_association_approximate(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+
+    const = create_constellation(corpus_name,
+                                 # discoursemes
+                                 {},
+                                 discoursemes,
+                                 {},
+                                 # context settings
+                                 s_context,
+                                 context,
+                                 # query settings
+                                 p_query,
+                                 s_query,
+                                 flags,
+                                 escape,
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH,
+                                 approximate=True)
+
+    assoc = const.associations()
+    assert len(assoc) == 6
+    assert 'candidate' in assoc.columns
+
+
+def test_textual_constellation_association_empty(germaparl, discoursemes):
+
+    corpus_name = germaparl['corpus_name']
+
+    # parameters
+    parameters = discoursemes.pop('parameters')
+    flags = parameters['flags_query']
+    escape = parameters['escape_query']
+    p_query = parameters['p_query']
+    s_query = parameters['s_query']
+    s_context = parameters['s_context']
+    context = parameters['context']
+    discoursemes2 = discoursemes.copy()
+    discoursemes2['fail'] = ["fail"]
+    discoursemes2['fail2'] = ["fail2"]
+
+    const = create_constellation(corpus_name,
+                                 # discoursemes
+                                 {},
+                                 discoursemes2,
+                                 {},
+                                 # context settings
+                                 s_context,
+                                 context,
+                                 # query settings
+                                 p_query,
+                                 s_query,
+                                 flags,
+                                 escape,
+                                 # CWB setttings
+                                 registry_path=germaparl['registry_path'],
+                                 data_path=DATA_PATH,
+                                 approximate=True)
+
+    assoc = const.associations()
+    assert len(assoc) == 6
+    assert 'candidate' in assoc.columns
+
+
 def test_textual_constellation_concordance(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']
@@ -655,6 +730,7 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
     assert len(lines) == 2198
 
 
+@pytest.mark.now
 def test_textual_constellation_breakdown(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']
@@ -686,6 +762,4 @@ def test_textual_constellation_breakdown(germaparl, discoursemes):
                                  registry_path=germaparl['registry_path'],
                                  data_path=DATA_PATH)
 
-    # TODO implement
-    with pytest.raises(NotImplementedError):
-        assert const.breakdown()
+    assert len(const.breakdown()) == 5

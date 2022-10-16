@@ -1,13 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cqp.py
+
+access to CQP
+
+original version by Joerg Asmussen (2008)
+current version by Philipp Heinrich (2022)
 
 """
-cqp.py: access to CQP
-
-Original Version by Joerg Asmussen (2008)
-Current version by Philipp Heinrich (2022)
-"""
-
 import logging
 import os
 import random
@@ -69,8 +69,7 @@ class CQP:
                 if time.time() - self.execStart > CMAXREQUESTPROCTIME *\
                  self.maxProcCycles:
                     logger.error(
-                        "progress controller identified blocking cqp process id "
-                        "{}".format(self.CQP_process.pid)
+                        f"progress controller identified blocking cqp process id {self.CQP_process.pid}"
                     )
                     # os.kill(self.CQP_process.pid, SIGKILL) - doesn't work!
                     os.popen("kill -9 " + str(self.CQP_process.pid))  # works!
@@ -145,7 +144,7 @@ class CQP:
 
     def SetProcCycles(self, procCycles):
         """Set procCycles."""
-        print("    Setting procCycles to {}".format(procCycles))
+        print(f"    Setting procCycles to {procCycles}")
         self.maxProcCycles = procCycles
         return int(self.maxProcCycles * CMAXREQUESTPROCTIME)
 
@@ -403,14 +402,14 @@ class CQP:
         """
         name = 'Last' if name is None else name
 
-        logger.info('defining NQR "%s" from query' % name)
-        self.Query('%s=%s;' % (name, query))
+        logger.info(f'defining NQR "{name}" from query')
+        self.Query(f'{name}={query};')
 
         if not self.Ok():
-            logger.error('invalid query "%s"' % query)
+            logger.error(f'invalid query "{query}"')
             return DataFrame()
 
-        size = int(self.Exec("size %s" % name))
+        size = int(self.Exec(f"size {name}"))
         if size == 0:
             return DataFrame()
         if return_dump:
@@ -426,7 +425,7 @@ class CQP:
         :param str name: name for NQR
 
         """
-        logger.info('defining NQR "%s" from dump with %d matches' % (name, len(df_dump)))
+        logger.info(f'defining NQR "{name}" from dump with {len(df_dump)} matches')
         self.Undump(name, df_dump)
         if not self.Ok():
             logger.error('invalid dump')
@@ -439,11 +438,11 @@ class CQP:
 
         """
         if name is not None:
-            logger.info('activating NQR "%s:%s"' % (corpus_name, name))
+            logger.info(f'activating NQR "{corpus_name}:{name}"')
             self.Exec(name)
 
         else:
-            logger.info('activating corpus "%s"' % corpus_name)
+            logger.info(f'activating corpus "{corpus_name}"')
             self.Exec(corpus_name)
 
         if not self.Ok():
@@ -456,7 +455,7 @@ class CQP:
         :param str name: nqr to save
 
         """
-        logger.info('saving NQR "%s:%s" to disk' % (corpus_name, name))
-        self.Exec("save %s;" % name)
+        logger.info(f'saving NQR "{corpus_name}:{name}" to disk')
+        self.Exec(f"save {name};")
         if not self.Ok():
             logger.error('invalid corpus or NQR')

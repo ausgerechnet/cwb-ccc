@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""counts.py
 
+methods for counting and scoring items.
+
+"""
 import logging
 import subprocess
 from collections import Counter
@@ -29,7 +33,7 @@ def count_items(items, names, tuples=True):
     :rtype: FreqFrame
     """
 
-    logger.info("counting %d items" % len(items))
+    logger.info(f"counting {len(items)} items")
     counts = Counter(items)
     df_counts = DataFrame.from_dict(counts, orient='index', columns=['freq'])
 
@@ -67,7 +71,7 @@ def read_freq_list(path, min_freq=2, columns=None):
     logger.info('reading frequency list ...')
     df = read_csv(path, sep="\t", header=None, quoting=3,
                   keep_default_na=False)
-    logger.info('reading frequency list ... %d items' % df.shape[0])
+    logger.info(f'reading frequency list ... {df.shape[0]} items')
 
     # get corpus size
     R = df[0].sum()
@@ -75,7 +79,7 @@ def read_freq_list(path, min_freq=2, columns=None):
     # apply frequency threshold
     logger.info('applying frequency threshold ...')
     df = df.loc[df[0] >= min_freq]
-    logger.info('applying frequency threshold ... %d items' % df.shape[0])
+    logger.info(f'applying frequency threshold ... {df.shape[0]} items')
 
     # indexing
     logger.info('combining relevant columns ...')
@@ -239,7 +243,7 @@ class Counts:
         if strategy == 2 and not split:
             logger.warning("dump: cannot use cwb-scan-corpus for MWUs")
             strategy = 1
-        logger.info("dump: strategy %d" % strategy)
+        logger.info(f"dump: strategy {strategy}")
 
         # for working with match, matchend
         df_dump = df_dump.reset_index()
@@ -348,15 +352,13 @@ class Counts:
                     "matches: cannot use cwb-scan-corpus"
                 )
                 strategy = 2
-        logger.info("matches: strategy %s" % strategy)
+        logger.info(f"matches: strategy {strategy}")
 
         if strategy == 1:
             # split NO; flags NO/YES; combo NO
             # generally slow
             logger.info("... cqp is counting")
-            cqp_return = cqp.Exec(
-                'count %s by %s %s;' % (name, p_atts[0], flags)
-            )
+            cqp_return = cqp.Exec(f'count {name} by {p_atts[0]} {flags};')
             df_counts = read_csv(
                 StringIO(cqp_return), sep="\t", header=None,
                 names=["freq", "unknown", p_atts[0]]
@@ -369,9 +371,7 @@ class Counts:
             # split NO/YES; flags NO/YES; combo NO
             # generally faster
             logger.info("... cqp is tabulating")
-            cqp_return = cqp.Exec(
-                'tabulate %s match .. matchend %s %s;' % (name, p_atts[0], flags)
-            )
+            cqp_return = cqp.Exec(f'tabulate {name} match .. matchend {p_atts[0]} {flags};')
             logger.info("... splitting tokens")
             if split:           # split strings into tokens
                 cqp_return = cqp_return.replace(" ", "\n")
@@ -383,7 +383,7 @@ class Counts:
             # generally fastest
             with NamedTemporaryFile(mode="wt") as f:
                 logger.info("... writing dump temporarily to disk")
-                cqp.Exec('dump %s > "%s";' % (name, f.name))
+                cqp.Exec(f'dump {name} > "{f.name}";')
                 df_counts, R = cwb_scan_corpus(
                     self.corpus_name, self.registry_path, f.name, p_atts
                 )
@@ -445,15 +445,15 @@ class Counts:
                 "mwus: cannot combine query when looking at several p-attributes"
             )
             strategy = 2
-        logger.info("mwus: strategy %s" % strategy)
+        logger.info(f"mwus: strategy {strategy}")
 
         # count
         if strategy == 1:
             logger.info("... running each query")
             freqs = list()
             for query in queries:
-                cqp.Exec('%s=%s;' % (name, query))
-                freq = cqp.Exec('size %s;' % name)
+                cqp.Exec(f'{name}={query};')
+                freq = cqp.Exec(f'size {name};')
                 freqs.append(freq)
             df = DataFrame(data=freqs, index=queries, columns=['freq'])
             df.index.name = 'item'
@@ -462,14 +462,14 @@ class Counts:
 
         elif strategy == 2:
             query = "|".join(queries)
-            cqp.Exec('%s=%s;' % (name, query))
+            cqp.Exec(f'{name}={query};')
             df_dump = cqp.Dump(name)
             df = self.dump(df_dump, start='match', end='matchend',
                            p_atts=p_atts, split=False, strategy=1)
 
         elif strategy == 3:
             query = "|".join(queries)
-            cqp.Exec('%s=%s;' % (name, query))
+            cqp.Exec(f'{name}={query};')
             df = self.matches(cqp, name, p_atts=p_atts,
                               split=False, flags=None, strategy=2)
 
@@ -497,7 +497,7 @@ def score_counts(df, order='log_likelihood', cut_off=1000,
 
     """
 
-    logger.info('scoring %d counts' % len(df))
+    logger.info(f'scoring {len(df)} counts')
 
     # post-processing: fold items
     df = fold_df(df, flags)

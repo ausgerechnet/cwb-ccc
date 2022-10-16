@@ -1,7 +1,8 @@
-from ccc import Corpus
-from ccc.keywords import Keywords, keywords
-from ccc.counts import score_counts
 import pytest
+
+from ccc import Corpus
+from ccc.counts import score_counts
+from ccc.keywords import Keywords, keywords
 
 from .conftest import DATA_PATH
 

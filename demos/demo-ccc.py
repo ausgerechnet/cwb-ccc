@@ -1,10 +1,11 @@
-from ccc import Corpus, Corpora
-from pandas import read_csv
 import json
 
-from .conftest import LOCAL
 import pytest
+from pandas import read_csv
 
+from ccc import Corpora, Corpus
+
+from .conftest import LOCAL
 
 corpus = Corpus(
     corpus_name="SZ_2009_14"

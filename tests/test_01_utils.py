@@ -1,10 +1,8 @@
-from ccc.utils import preprocess_query
-from ccc.utils import fold_item
-from ccc.utils import merge_intervals
-from ccc.utils import filter_df
 from ccc import Corpus
+from ccc.utils import filter_df, fold_item, merge_intervals, preprocess_query
 
 from .conftest import DATA_PATH
+
 
 def test_preprocess_query():
     query = (

@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cwb.py
 
+definition of the Corpus and Corpora classes
+
+"""
 import logging
 import os
 from glob import glob
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 def decode(text):
     try:
         text = text.decode('utf-8')
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, AttributeError):
         text = ""
     return text
 
@@ -55,7 +59,7 @@ def start_cqp(cqp_bin, registry_path,
     )
 
     if data_path is not None:
-        cqp.Exec('set DataDirectory "%s"' % data_path)
+        cqp.Exec(f'set DataDirectory "{data_path}"')
 
     if lib_path is not None:
 
@@ -64,20 +68,20 @@ def start_cqp(cqp_bin, registry_path,
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
-            cqp_exec = 'define $%s < "%s";' % (name, abs_path)
+            cqp_exec = f'define ${name} < "{abs_path}";'
             cqp.Exec(cqp_exec)
 
         # macros
         macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
-            cqp_exec = 'define macro < "%s";' % abs_path
+            cqp_exec = f'define macro < "{abs_path}";'
             cqp.Exec(cqp_exec)
         # for wordlists defined in macros, it is necessary to execute the macro once
         macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
+            # NB: this yields !cqp.Ok() if macro is not zero-valent
             cqp.Exec(macro.split("(")[0] + "();")
-        # NB: this yields !cqp.Ok() if macro is not zero-valent
 
     # initialize corpus after macro definition, so execution of macro doesn't spend time
     if corpus_name is not None:
@@ -119,9 +123,9 @@ class Corpora:
         corpora = self.show()
 
         return '\n' + '\n'.join([
-            'registry path: "%s"' % self.registry_path,
-            'cqp binary   : "%s"' % self.cqp_bin,
-            'found %d corpora:' % len(corpora),
+            f'registry path: "{self.registry_path}"',
+            f'cqp binary   : "{self.cqp_bin}"',
+            f'found {len(corpora)} corpora:',
             corpora.to_string(),
         ])
 
@@ -154,7 +158,7 @@ class Corpora:
                 ).attribute('word', 'p')))
             except SystemError:
                 logger.warning(
-                    'corpus "%s" defined in registry but not available' % corpus_name
+                    f'corpus "{corpus_name}" defined in registry but not available'
                 )
 
         # create dataframe
@@ -207,7 +211,7 @@ def init_data_path(data_path, corpus_name, lib_path=None):
     try:
         os.makedirs(data_path, exist_ok=True)
     except PermissionError:
-        logger.error('no write permission at "%s"' % data_path)
+        logger.error(f'no write permission at "{data_path}"')
     else:
         return data_path
 
@@ -276,10 +280,10 @@ class Corpus:
         """
 
         return '\n' + '\n'.join([
-            'ccc.Corpus: "%s"' % self.corpus_name,
-            'size      : %s' % str(self.corpus_size),
-            'data      : %s' % str(self.data_path),
-            'subcorpus : %s' % str(self.subcorpus),
+            f'ccc.Corpus: "{self.corpus_name}"',
+            f'size      : {self.corpus_size}',
+            f'data      : {self.data_path}',
+            f'subcorpus : {self.subcorpus}',
             '\navailable positional and structural attributes:',
             self.attributes_available.to_string(),
         ])
@@ -524,7 +528,7 @@ class Corpus:
         try:
             df = read_csv(StringIO(cqp_return), sep="\t", header=None)
             df.columns = ["storage", "corpus:subcorpus", "size"]
-            crpssbcrps = df["corpus:subcorpus"].str.split(":", 1).str
+            crpssbcrps = df["corpus:subcorpus"].str.split(":", n=1).str
             df['corpus'] = crpssbcrps[0]
             df['subcorpus'] = crpssbcrps[1]
             df.drop('corpus:subcorpus', axis=1, inplace=True)
@@ -550,32 +554,28 @@ class Corpus:
 
         """
 
+        subcorpus = self.copy()
+
         if nqr is not None:
 
+            # create NQR
             if df_dump is not None:
                 cqp = self.start_cqp()
                 cqp.nqr_from_dump(df_dump, nqr)
                 cqp.nqr_save(self.corpus_name, nqr)
                 cqp.__kill__()
-
             if nqr not in self.show_nqr()['subcorpus'].values:
-                # raise an error if subcorpus not available
-                logger.error('subcorpus "%s" not defined)' % nqr)
-                self.activate_subcorpus()
+                logger.error(f'subcorpus "{nqr}" not defined)')
             else:
-                logger.info('switched to subcorpus "%s"' % nqr)
+                logger.info(f'switched to subcorpus "{nqr}"')
 
         else:
-            logger.info('switched to corpus "%s"' % self.corpus_name)
+            logger.info(f'switched to corpus "{self.corpus_name}"')
 
         # activate subcorpus
-        self.subcorpus = nqr
+        subcorpus.subcorpus = nqr
 
-        # TODO: no inplace operation above!
-        corpus_ret = self.copy()
-        corpus_ret.subcorpus = nqr
-
-        return corpus_ret
+        return subcorpus
 
     ##################
     # CREATING DUMPS #
@@ -609,11 +609,11 @@ class Corpus:
         identifier = s_att + "_spans"
         df = self.cache.get(identifier)
         if df is not None:
-            logger.info('using cached version of spans of "%s"' % s_att)
+            logger.info(f'using cached version of spans of "{s_att}"')
             return df
 
         # compute
-        logger.info('creating dataframe of spans of "%s"' % s_att)
+        logger.info(f'creating dataframe of spans of "{s_att}"')
 
         df = DataFrame(list(self.attributes.attribute(s_att, 's')))
 
@@ -621,7 +621,7 @@ class Corpus:
         if annotation:
             annotation = (2 in df.columns)  # just to make sure ...
             if not annotation:
-                logger.info('s-att "%s" does not have any annotation' % s_att)
+                logger.info(f's-att "{s_att}" does not have any annotation')
             else:
                 df[2] = df[2].apply(decode)
 
@@ -671,7 +671,7 @@ class Corpus:
         if self.subcorpus is not None:
             # check subcorpus size to avoid confusion when re-naming
             cqp = self.start_cqp()
-            sbcrpssize = cqp.Exec("size %s" % self.subcorpus)
+            sbcrpssize = cqp.Exec(f"size {self.subcorpus}")
             cqp.__kill__()
         else:
             sbcrpssize = None
@@ -682,16 +682,12 @@ class Corpus:
         # retrieve from cache if possible
         df_dump = self.cache.get(identifier)
         if df_dump is not None:
-            logger.info(
-                'using cached version "%s" of df_dump with %d matches' % (
-                    identifier, len(df_dump)
-                )
-            )
+            logger.info(f'using cached version "{identifier}" of df_dump with {len(df_dump)} matches')
             return df_dump
 
         # init cqp and set matching strategy
         cqp = self.start_cqp()
-        cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
+        cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
 
         # get CWB version
         if cwb_version is None:
@@ -719,7 +715,7 @@ class Corpus:
             match_strategy=match_strategy,
             return_dump=True
         )
-        logger.info("found %d matches" % len(df_dump))
+        logger.info(f"found {len(df_dump)} matches")
 
         # if there's nothing to return ...
         if len(df_dump) == 0:
@@ -732,7 +728,7 @@ class Corpus:
 
             # restrict subsequent queries on initial matches
             if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
-                cqp.Exec("Temp = <<%s/>> ( %s );" % (name, query))
+                cqp.Exec(f"Temp = <<{name}/>> ( {query} );")
             elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
                 cqp.nqr_activate(self.corpus_name, name)
             else:
@@ -740,19 +736,19 @@ class Corpus:
 
             for pair in remaining_anchors:
 
-                logger.info(".. running query for anchor(s) %s" % str(pair))
+                logger.info(f".. running query for anchor(s) {str(pair)}")
                 # set appropriate anchors
-                cqp.Exec('set ant %d;' % pair[0])
+                cqp.Exec(f'set ant {pair[0]};')
                 if len(pair) == 2:
-                    cqp.Exec('set ank %d;' % pair[1])
+                    cqp.Exec(f'set ank {pair[1]};')
                 else:
-                    cqp.Exec('set ank %d;' % 1)
+                    cqp.Exec('set ank 1;')
 
                 # dump new anchors
                 if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
-                    cqp.Query("Temp = <<%s/>> ( %s );" % (name, query))
+                    cqp.Query(f"Temp = <<{name}/>> ( {query} );")
                 elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
-                    cqp.Query('Temp = <match> ( %s );' % query)
+                    cqp.Query(f'Temp = <match> ( {query} );')
                 df = cqp.Dump("Temp")
 
                 # select columns and join to global df
@@ -882,9 +878,7 @@ class Corpus:
             lambda x: self.cpos2sid(x, s_att)
         )
         nr_missing = (df[s_att + '_cwbid'] == -1).sum()
-        logger.info('s-att "%s" exists at %d of %d matches' % (
-            s_att, len(df) - nr_missing, len(df)
-        ))
+        logger.info(f's-att "{s_att}" exists at {len(df)-nr_missing} of {len(df)} matches')
 
         # retrieve where possible
         s_attributes = self.attributes.attribute(s_att, "s")
@@ -898,7 +892,7 @@ class Corpus:
         if annotation:
             annotation = (2 in df.columns)  # just to make sure ...
             if not annotation:
-                logger.info('s-att "%s" does not have any annotation' % s_att)
+                logger.info(f's-att "{s_att}" does not have any annotation')
             else:
                 df[2] = df[2].apply(decode)
 
@@ -911,11 +905,16 @@ class Corpus:
         # join to original dataframe
         df_dump = df_dump.join(df, lsuffix='_bak')
         df_dump = df_dump[[col for col in df_dump if not str(col).endswith('_bak')]]
-        df_dump[[
-            s_att + '_span', s_att + '_spanend'
-        ]] = df[[
-            s_att + '_span', s_att + '_spanend'
-        ]].fillna(-1, downcast='infer')
+        if s_att + '_span' in df.columns and s_att + '_spanend' in df.columns:
+            df_dump[[
+                s_att + '_span', s_att + '_spanend'
+            ]] = df[[
+                s_att + '_span', s_att + '_spanend'
+            ]].fillna(-1, downcast='infer')
+        else:
+            df_dump[[
+                s_att + '_span', s_att + '_spanend'
+            ]] = -1
 
         return df_dump
 
@@ -1042,7 +1041,7 @@ class Corpus:
                 )
             else:
                 values = set(values)
-                logger.info("restricting spans using %d values" % len(values))
+                logger.info(f"restricting spans using {len(values)} values")
                 df_spans = df_spans.loc[df_spans[s_att].isin(values)]
 
         # save as NQR
@@ -1056,9 +1055,9 @@ class Corpus:
         # return proper Dump
         return Dump(self.copy(), df_spans, name_cqp=name)
 
-    def query(self, cqp_query, context=20, context_left=None,
-              context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name=None):
+    def query_cqp(self, cqp_query, context=20, context_left=None,
+                  context_right=None, context_break=None, corrections=dict(),
+                  match_strategy='standard', name=None):
         """Get query result as (context-extended) Dump (with corrected
         anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -1130,3 +1129,34 @@ class Corpus:
             df_dump,
             name_cqp=name
         )
+
+    def query(self, cqp_query=None, context=20, context_left=None,
+              context_right=None, context_break=None,
+              corrections=dict(), s_query=None, s_values=None,
+              match_strategy='standard', name=None):
+        """Query the corpus, get the result as Dump.
+
+        query wrapper
+
+        - cqp-query (with or without s-query = context-break)
+
+        - s-query (with or without s-values)
+
+        - cqp-query + s-query + s-values (not implemented)
+
+        """
+        s_query = context_break if s_query is None else s_query
+
+        if cqp_query is None and s_query is None:
+            raise ValueError("you have to provide cqp_query or s_query")
+
+        if cqp_query is None:
+            return self.query_s_att(s_query, s_values, name)
+
+        elif s_values is None:
+            return self.query_cqp(cqp_query, context, context_left,
+                                  context_right, s_query, corrections,
+                                  match_strategy, name)
+
+        else:
+            raise NotImplementedError()

@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""keywords.py
 
+Keywords class and keywords() method
+
+"""
 # logging
 import logging
 
@@ -112,10 +116,14 @@ def keywords(corpus, corpus_reference, p, p_reference, order='O11',
     df = left.join(right, how='outer')
     df['N1'] = left['f1'].sum()
     df['N2'] = right['f2'].sum()
-    df = df.fillna(0)
+    df = df.fillna(0, downcast='infer')
+
+    # get vocab size and apply freq threshold
+    vocab = len(df)
+    df = df.loc[df['f1'] >= min_freq]
 
     # score counts
     keywords = score_counts(df, order=order, cut_off=cut_off,
-                            flags=flags, ams=ams, digits=4)
+                            flags=flags, ams=ams, digits=4, vocab=vocab)
 
     return keywords

@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""discoursemes.py
 
+mostly support for MMDA frontend
+
+"""
 import logging
 
 # requirements
@@ -173,7 +177,7 @@ def aggregate_matches(df, name, context_col='contextid',
     matches = df.reset_index()
     matches['MATCHES_' + name] = matches[match_cols].values.tolist()
     matches['MATCHES_' + name] = matches['MATCHES_' + name].apply(tuple)
-    matches = matches.groupby('contextid')['MATCHES_' + name].apply(set)
+    matches = matches.groupby('contextid', group_keys=True)['MATCHES_' + name].apply(set)
 
     # combine
     table = counts.join(matches)
@@ -281,10 +285,9 @@ class Constellation:
 
     def __str__(self):
         return (
-            "\n" + "a constellation with %d match indices" % len(self.df) + "\n" +
-            "%d registered discourseme(s) " % len(self.discoursemes) + "\n" +
-            "\n".join(["- '%s' with %d matches" % (d, len(self.discoursemes[d].df))
-                       for d in self.discoursemes])
+            "\n" + f"a constellation with {len(self.df)} match indices" + "\n" +
+            f"{len(self.discoursemes)} registered discourseme(s)" + "\n" +
+            "\n".join([f"- '{d}' with {len(self.discoursemes[d].df)} matches" for d in self.discoursemes])
         )
 
     def __repr__(self):
@@ -302,7 +305,7 @@ class Constellation:
 
         # register discourseme
         if name in self.discoursemes.keys():
-            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            logger.error(f'name "{name}" already taken; cannot register discourseme')
             return
 
         self.discoursemes[name] = dump
@@ -334,6 +337,17 @@ class Constellation:
             df_reduced[name] = df.groupby(level=['match', 'matchend'])[name].apply(set)
 
         return df_reduced
+
+    def breakdown(self, p_atts=['word'], flags=""):
+
+        breakdowns = list()
+        for idx, dump in self.discoursemes.items():
+            d = dump.breakdown(p_atts=p_atts, flags=flags)
+            d['discourseme'] = idx
+            breakdowns.append(d)
+        breakdown = concat(breakdowns)
+
+        return breakdown
 
     def concordance(self, window=5,
                     p_show=['word', 'lemma'], s_show=[],
@@ -395,18 +409,16 @@ class Constellation:
         logger.info('get cpos that are consumed by discoursemes')
         for idx in self.discoursemes.keys():
             f1_set.update(self.discoursemes[idx].matches())
-
-        # correct df_cooc
         df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
-        # count once
+        # count node freqs
         node_freq = self.corpus.counts.cpos(f1_set, p_show)
 
+        # determine collocates
         collocates = Collocates(
             corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
             df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
         )
-
         output = dict()
         for window in windows:
             output[window] = collocates.show(
@@ -442,6 +454,9 @@ class TextConstellation:
         self.corpus = dump.corpus
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
+        # init discoursemes
+        self.discoursemes = {name: dump}
+
         try:
             self.df = aggregate_matches(dump.df, name)
         except KeyError:        # no matches
@@ -454,7 +469,7 @@ class TextConstellation:
 
         # register discourseme
         if name in self.df.columns:
-            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            logger.error(f'name "{name}" already taken; cannot register discourseme')
             return
 
         try:
@@ -470,12 +485,19 @@ class TextConstellation:
         else:
             df = self.df.join(df, how='outer')
 
+        self.discoursemes[name] = dump
         self.df = df.sort_index()
 
-    def breakdown(self, p_atts=['word']):
+    def breakdown(self, p_atts=['word'], flags=""):
 
-        print(self.df.columns)
-        raise NotImplementedError()
+        breakdowns = list()
+        for idx, dump in self.discoursemes.items():
+            d = dump.breakdown(p_atts=p_atts, flags=flags)
+            d['discourseme'] = idx
+            breakdowns.append(d)
+        breakdown = concat(breakdowns)
+
+        return breakdown
 
     def concordance(self, window=0,
                     p_show=['word', 'lemma'], s_show=[],
@@ -635,7 +657,7 @@ def create_constellation(corpus_name,
         topic_query = format_cqp_query(
             topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
         )
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -645,13 +667,14 @@ def create_constellation(corpus_name,
 
         if approximate:
             sub = topic_dump.df.set_index(['context', 'contextend'])
-            corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
+            corpus = corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
+
         # add filter discoursemes
         for disc_name, disc_items in filter_discoursemes.items():
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -667,7 +690,7 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -675,7 +698,7 @@ def create_constellation(corpus_name,
             )
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=False)
-        corpus.activate_subcorpus()
+        corpus = corpus.activate_subcorpus()
 
     # no topic -> TextConstellation()
     else:
@@ -689,7 +712,7 @@ def create_constellation(corpus_name,
         topic_query = format_cqp_query(
             topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
         )
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -702,7 +725,7 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -744,7 +767,7 @@ def create_constellation_query(corpus_name,
         # init with topic
         topic_name = list(topic_discourseme.keys())[0]
         topic_query = topic_discourseme[topic_name]
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -754,7 +777,7 @@ def create_constellation_query(corpus_name,
 
         # add filter discoursemes
         for disc_name, disc_query in filter_discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -764,7 +787,7 @@ def create_constellation_query(corpus_name,
 
         # add additional discoursemes
         for disc_name, disc_query in additional_discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -781,7 +804,7 @@ def create_constellation_query(corpus_name,
         # init with arbitrary topic
         topic_name = list(discoursemes.keys())[0]
         topic_query = discoursemes.pop(topic_name)
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -791,7 +814,7 @@ def create_constellation_query(corpus_name,
 
         # add further discoursemes
         for disc_name, disc_query in discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,

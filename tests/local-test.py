@@ -1,6 +1,8 @@
+from pandas import concat, read_csv
+
 from ccc import Corpus
-from pandas import read_csv, concat
 from ccc.discoursemes import create_constellation
+
 from .conftest import DATA_PATH
 
 

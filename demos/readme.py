@@ -1,9 +1,10 @@
-"""readme.py: test all snippets and create tables for the README.md"""
+"""readme.py: create tables for the README.md"""
 
 import pyperclip
 import sys
 sys.path.append("/home/ausgerechnet/implementation/cwb-ccc/")
 import ccc
+from ccc import Corpus, Corpora
 
 print(ccc.__version__)
 
@@ -46,104 +47,11 @@ def copymd(df, cut_off=5):
     pyperclip.copy(output)
 
 
-from ccc import Corpora
-corpora = Corpora()
-print(corpora)
-corpora.show()  # returns a dataframe
-
-corpus = corpora.activate(corpus_name="GERMAPARL1386")
-# select corpus
-from ccc import Corpus
 corpus = Corpus("GERMAPARL1386")
-# print(corpus)
 copymd(corpus.attributes_available, cut_off=None)
-
-
-# QUERIES AND DUMPS #
-
-query = r'"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ "\]"'
-dump = corpus.query(query)
-copymd(dump.df)
-
-dump = corpus.query(
-    cqp_query=query,
-    context=5,
-    context_break='s'
-)
-
-copymd(dump.df)
-
-dump.set_context(context_left=5, context_right=10, context_break='s')
-
-copymd(dump.breakdown(), cut_off=None)
-
-# CONCORDANCING
-
-lines = dump.concordance()
-copymd(lines)
-
-lines = dump.concordance(p_show=["word", "lemma"], s_show=["text_id"])
-copymd(lines)
-
-lines = dump.concordance(form='kwic', cut_off=5)
-copymd(lines)
-
-lines = dump.concordance(p_show=['word', 'pos', 'lemma'], form='dataframe')
-copymd(lines.iloc[0]['dataframe'], cut_off=None)
-
-# ANCHORED QUERIES #
-
-dump = corpus.query(
-    r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-    context=None, context_break='s', match_strategy='longest',
-)
-
-lines = dump.concordance(form='dataframe')
-copymd(lines.iloc[0]['dataframe'], cut_off=None)
-
-dump = corpus.query(
-    r'@1[pos="NE"]? @2[pos="NE"] @3"\[" ([word="[A-Z0-9]+.?"%d]+ "/"?)+ @4"\]"',
-    context=0, context_break='s', match_strategy='longest',
-)
-lines = dump.concordance(form='slots', p_show=['word', 'lemma'],
-                         slots={"name": [1, 2], "party": [3, 4]})
-copymd(lines)
-
-dump.correct_anchors({3: +1, 4: -1})
-lines = dump.concordance(form='slots', slots={"name": [1, 2], "party": [3, 4]})
-copymd(lines)
-
-
-# COLLOCATES
-dump = corpus.query(
-  '[lemma="SPD"]',
-  context=10, context_break='s'
-)
-
-collocates = dump.collocates()
-copymd(collocates)
-
-
-collocates = dump.collocates(['lemma', 'pos'], order='log_likelihood')
-copymd(collocates)
-
-
-# SUBCORPORA
-dump = corpus.query('"SPD" expand to s')
-dump = corpus.query_s_att("s")
-# dump = corpus.query_s_att("np")
-copymd(corpus.query('[lemma="sagen"]').breakdown(), cut_off=None)
-corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
-corpus.activate_subcorpus("Union")
-copymd(corpus.query('[lemma="sagen"]').breakdown(), cut_off=None)
-corpus.activate_subcorpus()
-print(corpus.subcorpus)
-
-copymd(corpus.show_nqr())
-
-
-# KEYWORDS
-dump = corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
-copymd(dump.keywords(order="log_likelihood"))
-
-copymd(dump.keywords(['lemma', 'pos'], order="log_likelihood"))
+dump = corpus.query('[lemma="Arbeit"]', context_break='s')
+copymd(dump.concordance())
+copymd(dump.concordance(form='kwic', order='random'))
+copymd(dump.collocates())
+dump = corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
+copymd(dump.keywords(order='conservative_log_ratio'))
