@@ -13,6 +13,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install CWB
+      run: |
+        sudo apt-get install libncurses5-dev
+        svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk cwb
+        cd cwb
+        sed -i 's/SITE=beta-install/SITE=standard/' config.mk
+        sudo ./install-scripts/install-linux
+        sudo ldconfig
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
