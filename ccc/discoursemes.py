@@ -173,7 +173,7 @@ def aggregate_matches(df, name, context_col='contextid',
     matches = df.reset_index()
     matches['MATCHES_' + name] = matches[match_cols].values.tolist()
     matches['MATCHES_' + name] = matches['MATCHES_' + name].apply(tuple)
-    matches = matches.groupby('contextid')['MATCHES_' + name].apply(set)
+    matches = matches.groupby('contextid', group_keys=True)['MATCHES_' + name].apply(set)
 
     # combine
     table = counts.join(matches)
