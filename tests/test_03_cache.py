@@ -1,8 +1,10 @@
-from ccc.cache import Cache
-from ccc.cache import generate_idx, generate_library_idx
-from pandas import DataFrame
-from random import randint
 import os
+from random import randint
+
+from pandas import DataFrame
+
+from ccc.cache import Cache, generate_idx, generate_library_idx
+
 from .conftest import DATA_PATH
 
 

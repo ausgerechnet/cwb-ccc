@@ -1,8 +1,8 @@
-from ccc import Corpus
-from ccc.concordances import Concordance
 import pandas as pd
 import pytest
 
+from ccc import Corpus
+from ccc.concordances import Concordance
 
 from .conftest import DATA_PATH
 

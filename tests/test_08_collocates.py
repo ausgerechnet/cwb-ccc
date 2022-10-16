@@ -1,11 +1,11 @@
+import pandas as pd
+import pytest
+
 from ccc import Corpus
 from ccc.collocates import Collocates
 from ccc.keywords import Keywords
 
 from .conftest import DATA_PATH
-
-import pandas as pd
-import pytest
 
 
 def get_corpus(corpus_settings, data_path=DATA_PATH):

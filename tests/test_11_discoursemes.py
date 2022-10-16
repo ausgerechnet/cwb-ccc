@@ -1,12 +1,12 @@
-from ccc import Corpus
-from ccc.utils import format_cqp_query
-from ccc.discoursemes import Constellation, create_constellation
-from ccc.discoursemes import TextConstellation
-from .conftest import DATA_PATH
 import pytest
-
 from pandas import DataFrame
 
+from ccc import Corpus
+from ccc.discoursemes import (Constellation, TextConstellation,
+                              create_constellation)
+from ccc.utils import format_cqp_query
+
+from .conftest import DATA_PATH
 
 #######################
 # ccc.discoursemes ####

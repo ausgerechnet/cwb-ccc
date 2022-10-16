@@ -1,9 +1,12 @@
-from ccc.cwb import Corpus
-from ccc.counts import cwb_scan_corpus, read_freq_list, cwb_lexdecode, score_counts
-from ccc.utils import format_cqp_query
+from tempfile import NamedTemporaryFile
+
 import pandas as pd
 import pytest
-from tempfile import NamedTemporaryFile
+
+from ccc.counts import (cwb_lexdecode, cwb_scan_corpus, read_freq_list,
+                        score_counts)
+from ccc.cwb import Corpus
+from ccc.utils import format_cqp_query
 
 from .conftest import DATA_PATH
 

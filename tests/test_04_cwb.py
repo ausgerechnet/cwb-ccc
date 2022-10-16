@@ -1,7 +1,9 @@
-from ccc import Corpus, Corpora
+from glob import glob
+
 import pandas as pd
 import pytest
-from glob import glob
+
+from ccc import Corpora, Corpus
 
 from .conftest import DATA_PATH
 
@@ -147,8 +149,8 @@ def test_activate_subcorpus(germaparl):
         "[lemma='Horst'] expand to s",
         name='Horst'
     ).df
-    corpus.activate_subcorpus('Horst')
-    df2 = corpus.dump_from_query(
+    horst = corpus.activate_subcorpus('Horst')
+    df2 = horst.dump_from_query(
         "[lemma='Seehofer']"
     )
     assert len(df1) > len(df2)
@@ -171,8 +173,8 @@ def test_deactivate_subcorpus(germaparl):
     )
 
     # activate subcorpus
-    corpus.activate_subcorpus('Sein')
-    df2 = corpus.dump_from_query(
+    sein = corpus.activate_subcorpus('Sein')
+    df2 = sein.dump_from_query(
         '[lemma="die"]',
         germaparl['s_query']
     )
@@ -184,7 +186,14 @@ def test_deactivate_subcorpus(germaparl):
         germaparl['s_query']
     )
 
-    assert len(df1) == len(df3)
+    # deactivate subcorpus
+    corpus.activate_subcorpus()
+    df4 = corpus.dump_from_query(
+        '[lemma="die"]',
+        germaparl['s_query']
+    )
+
+    assert len(df1) == len(df3) == len(df4)
     assert len(df1) > len(df2)
 
 

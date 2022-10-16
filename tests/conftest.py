@@ -1,7 +1,7 @@
 import os
+
 import pytest
 from pandas import read_csv
-
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(DIR_PATH, 'data-dir')

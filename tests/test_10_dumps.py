@@ -1,7 +1,8 @@
+import pytest
+from pandas import DataFrame
+
 from ccc.cwb import Corpus
 from ccc.dumps import Dumps
-from pandas import DataFrame
-import pytest
 
 from .conftest import DATA_PATH
 

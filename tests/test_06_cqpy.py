@@ -1,6 +1,7 @@
-from ccc.cqpy import cqpy_load, cqpy_loads, cqpy_dumps, run_query
-from ccc import Corpus
 import pytest
+
+from ccc import Corpus
+from ccc.cqpy import cqpy_dumps, cqpy_load, cqpy_loads, run_query
 
 from .conftest import DATA_PATH
 

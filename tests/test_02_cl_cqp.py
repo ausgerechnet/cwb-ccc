@@ -1,8 +1,10 @@
-from ccc.cqp import CQP
-from ccc.cl import Corpus
+from time import sleep
 
 from pandas import DataFrame
-from time import sleep
+
+from ccc.cl import Corpus
+from ccc.cqp import CQP
+
 # import pytest
 
 
