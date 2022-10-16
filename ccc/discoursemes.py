@@ -664,7 +664,8 @@ def create_constellation(corpus_name,
 
         if approximate:
             sub = topic_dump.df.set_index(['context', 'contextend'])
-            corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
+            corpus = corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
+
         # add filter discoursemes
         for disc_name, disc_items in filter_discoursemes.items():
             disc_query = format_cqp_query(
@@ -694,7 +695,7 @@ def create_constellation(corpus_name,
             )
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=False)
-        corpus.activate_subcorpus()
+        corpus = corpus.activate_subcorpus()
 
     # no topic -> TextConstellation()
     else:

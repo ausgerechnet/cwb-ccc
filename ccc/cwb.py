@@ -550,18 +550,18 @@ class Corpus:
 
         """
 
+        subcorpus = self.copy()
+
         if nqr is not None:
 
+            # create NQR
             if df_dump is not None:
                 cqp = self.start_cqp()
                 cqp.nqr_from_dump(df_dump, nqr)
                 cqp.nqr_save(self.corpus_name, nqr)
                 cqp.__kill__()
-
             if nqr not in self.show_nqr()['subcorpus'].values:
-                # raise an error if subcorpus not available
                 logger.error('subcorpus "%s" not defined)' % nqr)
-                self.activate_subcorpus()
             else:
                 logger.info('switched to subcorpus "%s"' % nqr)
 
@@ -569,13 +569,9 @@ class Corpus:
             logger.info('switched to corpus "%s"' % self.corpus_name)
 
         # activate subcorpus
-        self.subcorpus = nqr
+        subcorpus.subcorpus = nqr
 
-        # TODO: no inplace operation above!
-        corpus_ret = self.copy()
-        corpus_ret.subcorpus = nqr
-
-        return corpus_ret
+        return subcorpus
 
     ##################
     # CREATING DUMPS #
