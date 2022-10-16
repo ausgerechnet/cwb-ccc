@@ -254,7 +254,7 @@ class Dumps:
         context_break = self.s_att if context_break is None else context_break
 
         # run query once and extend dump
-        dump_glob = self.corpus.query(
+        dump_glob = self.corpus.query_cqp(
             cqp_query,
             context=window,
             context_break=context_break

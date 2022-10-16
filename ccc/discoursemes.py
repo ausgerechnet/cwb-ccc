@@ -654,7 +654,7 @@ def create_constellation(corpus_name,
         topic_query = format_cqp_query(
             topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
         )
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -670,7 +670,7 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -686,7 +686,7 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -708,7 +708,7 @@ def create_constellation(corpus_name,
         topic_query = format_cqp_query(
             topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
         )
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -721,7 +721,7 @@ def create_constellation(corpus_name,
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -763,7 +763,7 @@ def create_constellation_query(corpus_name,
         # init with topic
         topic_name = list(topic_discourseme.keys())[0]
         topic_query = topic_discourseme[topic_name]
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -773,7 +773,7 @@ def create_constellation_query(corpus_name,
 
         # add filter discoursemes
         for disc_name, disc_query in filter_discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -783,7 +783,7 @@ def create_constellation_query(corpus_name,
 
         # add additional discoursemes
         for disc_name, disc_query in additional_discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,
@@ -800,7 +800,7 @@ def create_constellation_query(corpus_name,
         # init with arbitrary topic
         topic_name = list(discoursemes.keys())[0]
         topic_query = discoursemes.pop(topic_name)
-        topic_dump = corpus.query(
+        topic_dump = corpus.query_cqp(
             topic_query,
             context=context,
             context_break=s_context,
@@ -810,7 +810,7 @@ def create_constellation_query(corpus_name,
 
         # add further discoursemes
         for disc_name, disc_query in discoursemes.items():
-            disc_dump = corpus.query(
+            disc_dump = corpus.query_cqp(
                 disc_query,
                 context=None,
                 context_break=s_context,

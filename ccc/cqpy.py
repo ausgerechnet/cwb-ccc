@@ -248,7 +248,7 @@ def run_query(corpus, query,
                     p_show += [query['display'][p]]
 
     # query the corpus
-    dump = corpus.query(
+    dump = corpus.query_cqp(
         cqp_query=cqp,
         context=context,
         context_break=context_break,

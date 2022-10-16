@@ -76,8 +76,8 @@ def start_cqp(cqp_bin, registry_path,
         # for wordlists defined in macros, it is necessary to execute the macro once
         macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
+            # NB: this yields !cqp.Ok() if macro is not zero-valent
             cqp.Exec(macro.split("(")[0] + "();")
-        # NB: this yields !cqp.Ok() if macro is not zero-valent
 
     # initialize corpus after macro definition, so execution of macro doesn't spend time
     if corpus_name is not None:
@@ -1061,9 +1061,9 @@ class Corpus:
         # return proper Dump
         return Dump(self.copy(), df_spans, name_cqp=name)
 
-    def query(self, cqp_query, context=20, context_left=None,
-              context_right=None, context_break=None, corrections=dict(),
-              match_strategy='standard', name=None):
+    def query_cqp(self, cqp_query, context=20, context_left=None,
+                  context_right=None, context_break=None, corrections=dict(),
+                  match_strategy='standard', name=None):
         """Get query result as (context-extended) Dump (with corrected
         anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -1135,3 +1135,34 @@ class Corpus:
             df_dump,
             name_cqp=name
         )
+
+    def query(self, cqp_query=None, context=20, context_left=None,
+              context_right=None, context_break=None,
+              corrections=dict(), s_query=None, s_values=None,
+              match_strategy='standard', name=None):
+        """Query the corpus, get the result as Dump.
+
+        query wrapper
+
+        - cqp-query (with or without s-query = context-break)
+
+        - s-query (with or without s-values)
+
+        - cqp-query + s-query + s-values (not implemented)
+
+        """
+        s_query = context_break if s_query is None else s_query
+
+        if cqp_query is None and s_query is None:
+            raise ValueError("you have to provide cqp_query or s_query")
+
+        if cqp_query is None:
+            return self.query_s_att(s_query, s_values, name)
+
+        elif s_values is None:
+            return self.query_cqp(cqp_query, context, context_left,
+                                  context_right, s_query, corrections,
+                                  match_strategy, name)
+
+        else:
+            raise NotImplementedError()
