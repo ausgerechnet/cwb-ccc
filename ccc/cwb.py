@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cwb.py
 
+definition of the Corpus and Corpora classes
+
+"""
 import logging
 import os
 from glob import glob

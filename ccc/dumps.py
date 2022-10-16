@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""dumps.py
 
+definition of Dump and Dumps classes
+
+"""
 import logging
 
 # requirements

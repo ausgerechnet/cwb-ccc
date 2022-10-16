@@ -1,14 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cqpy.py
 
-""" cqpy.py: read-write support for CQPY query files
+read-write support for CQPY query files
 
 - a CQPY file contains a YAML header and the actual CQP input
 - YAML header *can* be commented
 - query formatting (whitespace incl. linebreaks) is preserved
 
 """
-
 import json
 import logging
 import re

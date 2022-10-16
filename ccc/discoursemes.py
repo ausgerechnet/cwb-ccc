@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""discoursemes.py
 
+mostly support for MMDA frontend
+
+"""
 import logging
 
 # requirements

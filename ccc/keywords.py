@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""keywords.py
 
+Keywords class and keywords() method
+
+"""
 # logging
 import logging
 

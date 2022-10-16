@@ -1,13 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cqp.py
+
+access to CQP
+
+original version by Joerg Asmussen (2008)
+current version by Philipp Heinrich (2022)
 
 """
-cqp.py: access to CQP
-
-Original Version by Joerg Asmussen (2008)
-Current version by Philipp Heinrich (2022)
-"""
-
 import logging
 import os
 import random

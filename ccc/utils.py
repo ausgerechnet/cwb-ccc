@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""utils.py
 
+various utilities for the module
+
+"""
 import logging
 import pkgutil
 import re

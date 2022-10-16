@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""collocates.py
 
+definition of dump2cooc() and the Collocates class.
+
+"""
 import logging
 from itertools import chain
 

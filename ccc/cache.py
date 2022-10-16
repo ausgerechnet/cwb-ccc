@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""cache.py
 
+simple caching using shelve/pickle.
+
+"""
 import logging
 import os
 import shelve

@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""concordances.py
 
+definition of the Concordance class.
+
+"""
 import itertools
 import logging
 from random import sample

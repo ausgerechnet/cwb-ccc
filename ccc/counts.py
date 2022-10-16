@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
+"""counts.py
 
+methods for counting and scoring items.
+
+"""
 import logging
 import subprocess
 from collections import Counter
