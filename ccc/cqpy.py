@@ -243,7 +243,7 @@ def run_query(corpus, query,
         # backwards compatability
         for p in ['p_slots', 'p_text']:
             if p in query['display']:
-                # logger.warning("use of '%s' is deprecated" % p)
+                # logger.warning(f"use of '{p}' is deprecated")
                 if query['display'][p] not in p_show:
                     p_show += [query['display'][p]]
 

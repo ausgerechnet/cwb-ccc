@@ -51,7 +51,7 @@ class Cache:
 
         with shelve.open(self.path) as shelf:
             if key in shelf.keys():
-                logger.info('deleting object "%s" from cache' % key)
+                logger.info(f'deleting object "{key}" from cache')
                 del shelf[key]
 
     def get(self, identifier):
@@ -67,7 +67,7 @@ class Cache:
 
         with shelve.open(self.path) as shelf:
             if key in shelf.keys():
-                logger.info('retrieving object "%s" from cache' % key)
+                logger.info(f'retrieving object "{key}" from cache')
                 return shelf[key]
             else:
                 return None
@@ -84,5 +84,5 @@ class Cache:
             key = generate_idx(identifier)
 
         with shelve.open(self.path) as shelf:
-            logger.info('saving object "%s" to cache' % key)
+            logger.info(f'saving object "{key}" to cache')
             shelf[key] = value

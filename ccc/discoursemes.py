@@ -281,10 +281,9 @@ class Constellation:
 
     def __str__(self):
         return (
-            "\n" + "a constellation with %d match indices" % len(self.df) + "\n" +
-            "%d registered discourseme(s) " % len(self.discoursemes) + "\n" +
-            "\n".join(["- '%s' with %d matches" % (d, len(self.discoursemes[d].df))
-                       for d in self.discoursemes])
+            "\n" + f"a constellation with {len(self.df)} match indices" + "\n" +
+            f"{len(self.discoursemes)} registered discourseme(s)" + "\n" +
+            "\n".join([f"- '{d}' with {len(self.discoursemes[d].df)} matches" for d in self.discoursemes])
         )
 
     def __repr__(self):
@@ -302,7 +301,7 @@ class Constellation:
 
         # register discourseme
         if name in self.discoursemes.keys():
-            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            logger.error(f'name "{name}" already taken; cannot register discourseme')
             return
 
         self.discoursemes[name] = dump
@@ -466,7 +465,7 @@ class TextConstellation:
 
         # register discourseme
         if name in self.df.columns:
-            logger.error('name "%s" already taken; cannot register discourseme' % name)
+            logger.error(f'name "{name}" already taken; cannot register discourseme')
             return
 
         try:

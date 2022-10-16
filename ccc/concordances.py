@@ -292,7 +292,7 @@ class Concordance:
         else:
             logger.error('order not implemented, using "random" order')
             order = 'random'
-        logger.info("lines: retrieving %d concordance line(s)" % len(matches))
+        logger.info(f"lines: retrieving {len(matches)} concordance line(s)")
         df = self.df_dump.loc[list(matches), :]
 
         # retrieve p-attributes in respective formatting

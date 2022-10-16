@@ -30,17 +30,15 @@ class Dump:
 
     def __str__(self):
 
-        desc = ['a ccc.Dump with %d matches' % self.size]
+        desc = [f'a ccc.Dump with {self.size} matches']
         if self.corpus.subcorpus:
             crpssbcrps = self.corpus.corpus_name + ":" + self.corpus.subcorpus
         else:
             crpssbcrps = self.corpus.corpus_name
-        desc.append('- corpus "%s" (%d tokens in whole corpus)' % (
-            crpssbcrps, self.corpus.corpus_size
-        ))
+        desc.append(f'- corpus "{crpssbcrps}" ({self.corpus.corpus_size} tokens in whole corpus)')
         if self.name_cqp is not None:
-            desc.append('- name in cqp: "%s"' % self.name_cqp)
-        desc.append('- columns: %s' % str(list(self.df.columns)))
+            desc.append(f'- name in cqp: "{self.name_cqp}"')
+        desc.append(f'- columns: {list(self.df.columns)}')
         return "\n".join(desc)
 
     def __repr__(self):
@@ -203,7 +201,7 @@ class Dumps:
         df_spans = corpus.dump_from_s_att(s_att)
         dumps = dict()
         for i, s in enumerate(self.s_dict.keys()):
-            logger.info("... subcorpus %d of %d" % (i + 1, len(s_dict)))
+            logger.info(f"... subcorpus {i+1} of {len(s_dict)}")
             df_dump = df_spans.loc[df_spans[s_att].isin(s_dict[s])]
             dumps[s] = Dump(corpus.copy(), df_dump, name_cqp=None)
 
@@ -225,7 +223,7 @@ class Dumps:
         i = 0
         for s in subset:
             i += 1
-            logger.info("... table %d of %d" % (i, len(subset)))
+            logger.info(f"... table {i} of {len(subset)}")
             dump = self.dumps[s]
             tables[s] = dump.keywords(
                 p_query=p_query, order=order, cut_off=cut_off,
@@ -267,7 +265,7 @@ class Dumps:
         i = 0
         for s in subset:
             i += 1
-            logger.info("... table %d of %d" % (i, len(subset)))
+            logger.info(f"... table {i} of {len(subset)}")
 
             # determine reference frequencies
             if isinstance(reference, str):

@@ -49,7 +49,7 @@ class Collocates:
             logger.info('collecting cpos of matches and context')
             self.df_cooc, self.f1_set = dump2cooc(df_dump, self.mws)
             self.node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
-            logger.info('collected %d corpus positions' % len(self.df_cooc))
+            logger.info(f'collected {len(self.df_cooc)} corpus positions')
         else:
             if df_cooc is None or f1_set is None or node_freq is None:
                 logger.error('if no dump is given, you have to provide all frequencies')
@@ -67,7 +67,7 @@ class Collocates:
             window = mws
 
         # slice window
-        logger.info('slicing window %d' % window)
+        logger.info(f'slicing window {window}')
         relevant = self.df_cooc.loc[abs(self.df_cooc['offset']) <= window]
 
         # frequency counts

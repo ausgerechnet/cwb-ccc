@@ -55,7 +55,7 @@ def start_cqp(cqp_bin, registry_path,
     )
 
     if data_path is not None:
-        cqp.Exec('set DataDirectory "%s"' % data_path)
+        cqp.Exec(f'set DataDirectory "{data_path}"')
 
     if lib_path is not None:
 
@@ -64,14 +64,14 @@ def start_cqp(cqp_bin, registry_path,
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
-            cqp_exec = 'define $%s < "%s";' % (name, abs_path)
+            cqp_exec = f'define ${name} < "{abs_path}";'
             cqp.Exec(cqp_exec)
 
         # macros
         macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
-            cqp_exec = 'define macro < "%s";' % abs_path
+            cqp_exec = f'define macro < "{abs_path}";'
             cqp.Exec(cqp_exec)
         # for wordlists defined in macros, it is necessary to execute the macro once
         macros = cqp.Exec("show macro;").split("\n")
@@ -119,9 +119,9 @@ class Corpora:
         corpora = self.show()
 
         return '\n' + '\n'.join([
-            'registry path: "%s"' % self.registry_path,
-            'cqp binary   : "%s"' % self.cqp_bin,
-            'found %d corpora:' % len(corpora),
+            f'registry path: "{self.registry_path}"',
+            f'cqp binary   : "{self.cqp_bin}"',
+            f'found {len(corpora)} corpora:',
             corpora.to_string(),
         ])
 
@@ -154,7 +154,7 @@ class Corpora:
                 ).attribute('word', 'p')))
             except SystemError:
                 logger.warning(
-                    'corpus "%s" defined in registry but not available' % corpus_name
+                    f'corpus "{corpus_name}" defined in registry but not available'
                 )
 
         # create dataframe
@@ -207,7 +207,7 @@ def init_data_path(data_path, corpus_name, lib_path=None):
     try:
         os.makedirs(data_path, exist_ok=True)
     except PermissionError:
-        logger.error('no write permission at "%s"' % data_path)
+        logger.error(f'no write permission at "{data_path}"')
     else:
         return data_path
 
@@ -276,10 +276,10 @@ class Corpus:
         """
 
         return '\n' + '\n'.join([
-            'ccc.Corpus: "%s"' % self.corpus_name,
-            'size      : %s' % str(self.corpus_size),
-            'data      : %s' % str(self.data_path),
-            'subcorpus : %s' % str(self.subcorpus),
+            f'ccc.Corpus: "{self.corpus_name}"',
+            f'size      : {self.corpus_size}',
+            f'data      : {self.data_path}',
+            f'subcorpus : {self.subcorpus}',
             '\navailable positional and structural attributes:',
             self.attributes_available.to_string(),
         ])
@@ -561,12 +561,12 @@ class Corpus:
                 cqp.nqr_save(self.corpus_name, nqr)
                 cqp.__kill__()
             if nqr not in self.show_nqr()['subcorpus'].values:
-                logger.error('subcorpus "%s" not defined)' % nqr)
+                logger.error(f'subcorpus "{nqr}" not defined)')
             else:
-                logger.info('switched to subcorpus "%s"' % nqr)
+                logger.info(f'switched to subcorpus "{nqr}"')
 
         else:
-            logger.info('switched to corpus "%s"' % self.corpus_name)
+            logger.info(f'switched to corpus "{self.corpus_name}"')
 
         # activate subcorpus
         subcorpus.subcorpus = nqr
@@ -605,11 +605,11 @@ class Corpus:
         identifier = s_att + "_spans"
         df = self.cache.get(identifier)
         if df is not None:
-            logger.info('using cached version of spans of "%s"' % s_att)
+            logger.info(f'using cached version of spans of "{s_att}"')
             return df
 
         # compute
-        logger.info('creating dataframe of spans of "%s"' % s_att)
+        logger.info(f'creating dataframe of spans of "{s_att}"')
 
         df = DataFrame(list(self.attributes.attribute(s_att, 's')))
 
@@ -617,7 +617,7 @@ class Corpus:
         if annotation:
             annotation = (2 in df.columns)  # just to make sure ...
             if not annotation:
-                logger.info('s-att "%s" does not have any annotation' % s_att)
+                logger.info(f's-att "{s_att}" does not have any annotation')
             else:
                 df[2] = df[2].apply(decode)
 
@@ -667,7 +667,7 @@ class Corpus:
         if self.subcorpus is not None:
             # check subcorpus size to avoid confusion when re-naming
             cqp = self.start_cqp()
-            sbcrpssize = cqp.Exec("size %s" % self.subcorpus)
+            sbcrpssize = cqp.Exec(f"size {self.subcorpus}")
             cqp.__kill__()
         else:
             sbcrpssize = None
@@ -678,16 +678,12 @@ class Corpus:
         # retrieve from cache if possible
         df_dump = self.cache.get(identifier)
         if df_dump is not None:
-            logger.info(
-                'using cached version "%s" of df_dump with %d matches' % (
-                    identifier, len(df_dump)
-                )
-            )
+            logger.info(f'using cached version "{identifier}" of df_dump with {len(df_dump)} matches')
             return df_dump
 
         # init cqp and set matching strategy
         cqp = self.start_cqp()
-        cqp.Exec('set MatchingStrategy "%s";' % match_strategy)
+        cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
 
         # get CWB version
         if cwb_version is None:
@@ -715,7 +711,7 @@ class Corpus:
             match_strategy=match_strategy,
             return_dump=True
         )
-        logger.info("found %d matches" % len(df_dump))
+        logger.info(f"found {len(df_dump)} matches")
 
         # if there's nothing to return ...
         if len(df_dump) == 0:
@@ -728,7 +724,7 @@ class Corpus:
 
             # restrict subsequent queries on initial matches
             if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
-                cqp.Exec("Temp = <<%s/>> ( %s );" % (name, query))
+                cqp.Exec(f"Temp = <<{name}/>> ( {query} );")
             elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
                 cqp.nqr_activate(self.corpus_name, name)
             else:
@@ -736,19 +732,19 @@ class Corpus:
 
             for pair in remaining_anchors:
 
-                logger.info(".. running query for anchor(s) %s" % str(pair))
+                logger.info(f".. running query for anchor(s) {str(pair)}")
                 # set appropriate anchors
-                cqp.Exec('set ant %d;' % pair[0])
+                cqp.Exec(f'set ant {pair[0]};')
                 if len(pair) == 2:
-                    cqp.Exec('set ank %d;' % pair[1])
+                    cqp.Exec(f'set ank {pair[1]};')
                 else:
-                    cqp.Exec('set ank %d;' % 1)
+                    cqp.Exec('set ank 1;')
 
                 # dump new anchors
                 if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
-                    cqp.Query("Temp = <<%s/>> ( %s );" % (name, query))
+                    cqp.Query(f"Temp = <<{name}/>> ( {query} );")
                 elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
-                    cqp.Query('Temp = <match> ( %s );' % query)
+                    cqp.Query(f'Temp = <match> ( {query} );')
                 df = cqp.Dump("Temp")
 
                 # select columns and join to global df
@@ -878,9 +874,7 @@ class Corpus:
             lambda x: self.cpos2sid(x, s_att)
         )
         nr_missing = (df[s_att + '_cwbid'] == -1).sum()
-        logger.info('s-att "%s" exists at %d of %d matches' % (
-            s_att, len(df) - nr_missing, len(df)
-        ))
+        logger.info(f's-att "{s_att}" exists at {len(df)-nr_missing} of {len(df)} matches')
 
         # retrieve where possible
         s_attributes = self.attributes.attribute(s_att, "s")
@@ -894,7 +888,7 @@ class Corpus:
         if annotation:
             annotation = (2 in df.columns)  # just to make sure ...
             if not annotation:
-                logger.info('s-att "%s" does not have any annotation' % s_att)
+                logger.info(f's-att "{s_att}" does not have any annotation')
             else:
                 df[2] = df[2].apply(decode)
 
@@ -1043,7 +1037,7 @@ class Corpus:
                 )
             else:
                 values = set(values)
-                logger.info("restricting spans using %d values" % len(values))
+                logger.info(f"restricting spans using {len(values)} values")
                 df_spans = df_spans.loc[df_spans[s_att].isin(values)]
 
         # save as NQR
