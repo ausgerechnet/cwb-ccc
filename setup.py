@@ -42,14 +42,20 @@ cwb_libdir = subprocess.run(shlex.split("cwb-config --libdir"), capture_output=T
 cwb_incdir = subprocess.run(shlex.split("cwb-config --incdir"), capture_output=True).stdout.decode().strip()
 # - compiler flags for linking against CL library
 cwb_compiler_flags = subprocess.run(shlex.split("cwb-config -I"), capture_output=True).stdout.decode().strip()
-#  -linker flags for linking against CL library
+# - linker flags for linking against CL library
 cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=True).stdout.decode().strip()
 
 
 ####################################
 # define (and compile) C-extension #
 ####################################
+
+# ensure compatibility with CWB v3.4.36 and below
+if cwb_version.split(".")[0] == 3 and cwb_version.split(".")[1] < 5 and cwb_version.split(".")[2] < 37:
+    cwb_linker_flags = "-L/usr/local/lib -lcl  -lm   -lpcre -lglib-2.0"
+
 libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]
+
 ccc_cl = Extension(
     name="ccc.cl",
     sources=['ccc/cl' + ('.pyx' if USE_CYTHON else '.c')],
