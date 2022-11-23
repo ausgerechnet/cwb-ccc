@@ -83,6 +83,29 @@ def germaparl():
 
 
 @pytest.fixture
+def germaparl_full():
+    """ settings for local germaparl corpus """
+
+    corpus_name = "GERMAPARL-1949-2021"
+    registry_path = "/usr/local/share/cwb/registry"
+    lib_path = None
+
+    context = 50
+    s_context = 'speaker_node'
+
+    s_query = 's'
+
+    return {
+        'registry_path': registry_path,
+        'corpus_name': corpus_name,
+        'context': context,
+        's_context': s_context,
+        's_query': s_query,
+        'lib_path': lib_path,
+    }
+
+
+@pytest.fixture
 def discoursemes():
     """ discoursemes """
 

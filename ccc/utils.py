@@ -13,7 +13,7 @@ from timeit import default_timer
 
 # requirements
 import numpy as np
-from pandas import NA
+from pandas import NA, DataFrame
 from unidecode import unidecode
 
 logger = logging.getLogger(__name__)
@@ -351,6 +351,165 @@ def fold_df(df, flags="%cd"):
 
 
 def filter_df(df, path):
+
     data = pkgutil.get_data(__name__, path)
     items = set(data.decode().split("\n"))
     return df.loc[~df.index.isin(items)]
+
+
+##########################
+# concordance dataframes #
+##########################
+def dump_left_join(df1, df2, name, drop=True, window=None):
+    """join an additional dump df2 to an existing constellation
+
+    :param DataFrame df1: constellation dump === (m, me) ci c ce m_t* me_t* o_t* m_1* me_1* o_1* ... ==
+    :param DataFrame df2: additional dump === (m, me) ci c ce ==
+    :param str name: name for additional discourseme
+    :param bool drop: drop all rows that do not contain all discoursemes within topic context?
+    :return: constellation dump including additional dump  === (m, me) ci c ce m_t me_t o_t m_1 me_1 o_1 ... m_name me_name o_name ==
+    :rtype: DataFrame
+    """
+
+    # merge dumps via contextid ###
+    df1 = df1.reset_index()
+    df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
+    m = df1.merge(df2, on='contextid', how='left')
+
+    # calculate offset ###
+    m['offset_y'] = 0       # init as overlap
+    # y .. x
+    m.loc[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
+    # x .. y
+    m.loc[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
+    # missing y
+    m.loc[m['match_y'].isna(), 'offset_y'] = NA
+
+    # restrict to complete constellation ###
+    if drop:
+        m = m.dropna()
+        # only keep co-occurrences that are within context
+        m = m.loc[(m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])]
+        if window:
+            # only keep co-occurrences that are within window
+            m = m.loc[abs(m['offset_y']) <= window]
+
+    # rename columns ###
+    m = m.rename(columns={'match_x': 'match',
+                          'matchend_x': 'matchend',
+                          'match_y': 'match_' + name,
+                          'matchend_y': 'matchend_' + name,
+                          'offset_y': 'offset_' + name})
+
+    # set index ###
+    m = m.set_index(['match', 'matchend'])
+
+    return m
+
+
+def group_lines(df, names):
+    """
+    convert dataframe:
+    === (m, me) ci c ce m0 m0e o0 m1 me1 o1 m2 me2 o2 ===
+    with duplicate indices to
+    === (m, me) ci c ce m0 m1 m2 ===
+    without duplicate indices
+    where
+    m0 = {(o0, m0, m0e), (o0, m0, m0e), ...}
+    m1 = {(o1, m1, m1e), ...}
+
+    """
+
+    df = df.copy()
+    # TODO: deduplication necessary?
+    df_reduced = df[~df.index.duplicated(keep='first')][['contextid', 'context', 'contextend']]
+    for name in names:
+        columns = [m + "_" + name for m in ['offset', 'match', 'matchend']]
+        df[name] = df[columns].values.tolist()
+        df[name] = df[name].apply(tuple)
+        df = df.drop(columns, axis=1)
+        df_reduced[name] = df.groupby(level=['match', 'matchend'], group_keys=False)[name].apply(set)
+
+    return df_reduced
+
+
+def format_roles(row, names, s_show, window, htmlify_meta=False):
+    """Take a row of a dataframe indexed by match, matchend of the node,
+    columns for each discourseme with sets of tuples indicating discourseme positions,
+    columns for each s in s_show,
+    and a column 'dict' containing the pre-formatted concordance line.
+
+    creates a list (aligned with other lists) of lists of roles; roles are:
+    - 'node' (if cpos in index)
+    - 'out_of_window' (if offset of cpos from node > window)
+    - discourseme names
+
+    :return: concordance line for MMDA frontend
+    :rtype: dict
+
+    """
+
+    # TODO directly create relevant objects, no need for frontend to take care of it
+    # init
+    d = row['dict']
+    roles = list()
+
+    # 'out_of_window' | None | 'node'
+    role = ['out_of_window' if abs(t) > window else None for t in d['offset']]
+    for i in range(d['cpos'].index(row.name[0]), d['cpos'].index(row.name[1]) + 1):
+        role[i] = 'node'
+    roles.append(role)
+
+    # discourseme names
+    for name in names:
+
+        role = [None] * len(d['offset'])
+
+        if not isinstance(row[name], float):
+            for t in row[name]:
+
+                # check match information
+                if len(t) == 2:
+                    # lazy definition without offset
+                    start = 0
+                    end = 1
+                elif len(t) == 3:
+                    # with offset
+                    start = 1
+                    end = 2
+                else:
+                    continue
+
+                # skip NAs
+                if not isinstance(t[start], int):
+                    continue
+
+                # skip the ones too far away
+                try:
+                    start = d['cpos'].index(t[start])
+                    end = d['cpos'].index(t[end]) + 1
+                except ValueError:
+                    continue
+
+                for i in range(start, end):
+                    role[i] = name
+
+        roles.append(role)
+
+    # combine individual roles into one list of lists
+    d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
+
+    # add s-attributes
+    if htmlify_meta:
+        meta = {key: row[key] for key in s_show if not key.startswith("BOOL")}
+        d['meta'] = DataFrame.from_dict(
+            meta, orient='index'
+        ).to_html(bold_rows=False, header=False)
+        for s in s_show:
+            if s.startswith("BOOL"):
+                d[s] = row[s]
+    else:
+        for s in s_show:
+            d[s] = row[s]
+
+    return d

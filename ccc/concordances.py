@@ -7,7 +7,7 @@ definition of the Concordance class.
 """
 import itertools
 import logging
-from random import sample
+from random import sample, seed
 
 # requirements
 from pandas import DataFrame
@@ -287,6 +287,9 @@ class Concordance:
         if (cut_off is None) or (len(matches) < cut_off):
             cut_off = len(matches)
         # order
+        if isinstance(order, int):
+            seed(order)
+            order = 'random'
         if order == 'random':
             matches = sample(list(matches), cut_off)
         elif order == 'first':
