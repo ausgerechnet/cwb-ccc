@@ -9,14 +9,14 @@ import logging
 
 # requirements
 from association_measures.measures import score
-from pandas import NA, DataFrame, concat
+from pandas import DataFrame, concat
 
 # part of module
 from . import Corpus
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
 from .dumps import Dump
-from .utils import format_cqp_query
+from .utils import dump_left_join, format_cqp_query, aggregate_matches, group_lines, format_roles
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 ########################################################
 # (1) FOCUS ON TOPIC: DIRECTED (IE INDEXED) DATAFRAMES #
 ########################################################
-
 # init(dump, name='topic')
 # input : dump.df: === (m, me) ci c ce ==
 # output: self.df: === (m, me) ci c ce m_topic me_topic o_topic ===
@@ -38,27 +37,9 @@ logger = logging.getLogger(__name__)
 # 1202 1202      36     1195     1218     1202   1202     0
 # ...   ...     ...      ...      ...      ...    ...   ...
 
-# #### 1 occurrence
-# ... die [CDU]:m-me+m_t-me_t will eigentlich ...
-
-# #### 2 occurrences
-# ... die [CDU]:m-me+m_t-me_t und [CSU] gehen da ...  0
-# ... die [CDU]:m-me und [CSU]:m_t-me_t gehen da ...  2
-# ... die [CDU]:m_t-me_t und [CSU]:m-me gehen da ... -2
-# ... die [CDU] und [CSU]:m-me+m_t-me_t gehen da ...  0
-
-# #### 3 occurrences
-# ... die [Union]:0+1, d.h. die [CDU] und [CSU] gehen da ...
-# ... die [Union]:0, d.h. die [CDU]:1 und [CSU] gehen da ...
-# ... die [Union]:0, d.h. die [CDU] und [CSU]:1 gehen da ...
-# ... die [Union]:1, d.h. die [CDU]:0 und [CSU] gehen da ...
-# ... die [Union], d.h. die [CDU]:0+1 und [CSU] gehen da ...
-# ... die [Union], d.h. die [CDU]:0 und [CSU]:1 gehen da ...
-# ... die [Union]:1, d.h. die [CDU] und [CSU]:0 gehen da ...
-# ... die [Union], d.h. die [CDU]:1 und [CSU]:0 gehen da ...
-# ... die [Union], d.h. die [CDU] und [CSU]:0+1 gehen da ...
-
+##########################################################
 # add_discourseme(dump, name, drop=True)
+##########################################################
 # input:  === (m, me) ci c ce m_t me_t o_t ==
 #         === (m_d, me_d) ci ==
 # output: === (m, me) ci c ce m_t me_t o_t m_d me_d o_d ==
@@ -71,19 +52,12 @@ logger = logging.getLogger(__name__)
 # 1202 1202      36    1195    1218   1202   1202      0    1205   1205     3
 #  ...  ...     ...     ...     ...    ...    ...    ...     ...    ...   ...
 
-# #### t . d
-# #### d . t
-# ... die [CDU]:0+1 [will]:2 eigentlich ...
-
-# #### t . t . d
-# #### t . d . t
-# #### d . t . t
-# ... die [CDU]:0+1 und [CSU] [will]:2 eigentlich ...
-# ... die [CDU]:0 und [CSU]:1 [will]:2 eigentlich ...
-# ... die [CDU]:1 und [CSU]:0 [will]:2 eigentlich ...
-# ... die [CDU] und [CSU]:0+1 [will]:2 eigentlich ...
-
+##########################################################
 # add_discourseme(dump, name, drop=False)
+##########################################################
+# input:  === (m, me) ci c ce m_t me_t o_t ==
+#         === (m_d, me_d) ci ==
+# output: === (m, me) ci c ce m_t me_t o_t m_d me_d o_d ==
 
 #     (m     me)     ci        c       ce     m_t    me_t      o_t    m_d    me_d    o_d
 #    638    638      18      629      672     638     638        0    636     636     -2
@@ -95,7 +69,9 @@ logger = logging.getLogger(__name__)
 # 149292 149292    7317   149286   149306  149290  149290       -2   <NA>    <NA>   <NA>
 #        149292    7317   149286   149306  149292  149292        0   <NA>    <NA>   <NA>
 
+##########################################################
 # group_lines()
+##########################################################
 # === (m, me) ci c ce m0 m0e o0 m1 me1 o1 m2 me2 o2 ===
 # with duplicate indices to
 # === (m, me) ci c ce d0 d1 d2 ===
@@ -113,158 +89,6 @@ logger = logging.getLogger(__name__)
 class Discourseme:
     def __init__(self):
         pass
-
-
-def constellation_left_join(df1, df2, name, drop=True, window=None):
-    """join an additional dump df2 to an existing constellation
-
-    :param DataFrame df1: constellation dump === (m, me) ci c ce m_t* me_t* o_t* m_1* me_1* o_1* ... ==
-    :param DataFrame df2: additional dump === (m, me) ci c ce ==
-    :param str name: name for additional discourseme
-    :param bool drop: drop all rows that do not contain all discoursemes within topic context?
-    :return: constellation dump including additional dump  === (m, me) ci c ce m_t me_t o_t m_1 me_1 o_1 ... m_name me_name o_name ==
-    :rtype: DataFrame
-    """
-
-    # merge dumps via contextid ###
-    df1 = df1.reset_index()
-    df2 = df2.reset_index()[['contextid', 'match', 'matchend']].astype("Int64")
-    m = df1.merge(df2, on='contextid', how='left')
-
-    # calculate offset ###
-    m['offset_y'] = 0       # init as overlap
-    # y .. x
-    m.loc[m['match_x'] > m['matchend_y'], 'offset_y'] = m['matchend_y'] - m['match_x']
-    # x .. y
-    m.loc[m['matchend_x'] < m['match_y'], 'offset_y'] = m['match_y'] - m['matchend_x']
-    # missing y
-    m.loc[m['match_y'].isna(), 'offset_y'] = NA
-
-    # restrict to complete constellation ###
-    if drop:
-        m = m.dropna()
-        if window is None:
-            # only keep co-occurrences that are within context
-            m = m.loc[
-                (m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])
-            ]
-        else:
-            m = m.loc[abs(m['offset_y']) <= window]
-
-    # rename columns ###
-    m = m.rename(columns={
-        'match_x': 'match',
-        'matchend_x': 'matchend',
-        'match_y': 'match_' + name,
-        'matchend_y': 'matchend_' + name,
-        'offset_y': 'offset_' + name
-    })
-
-    # set index ###
-    m = m.set_index(['match', 'matchend'])
-
-    return m
-
-
-def aggregate_matches(df, name, context_col='contextid',
-                      match_cols=['match', 'matchend']):
-
-    # counts
-    counts = DataFrame(df[context_col].value_counts()).astype("Int64")
-    counts.columns = ['COUNTS_' + name]
-
-    # matches
-    matches = df.reset_index()
-    matches['MATCHES_' + name] = matches[match_cols].values.tolist()
-    matches['MATCHES_' + name] = matches['MATCHES_' + name].apply(tuple)
-    matches = matches.groupby('contextid', group_keys=True)['MATCHES_' + name].apply(set)
-
-    # combine
-    table = counts.join(matches)
-
-    return table
-
-
-def format_roles(row, names, s_show, window, htmlify_meta=False):
-    """Take a row of a dataframe indexed by match, matchend of the node,
-    columns for each discourseme with sets of tuples indicating discourseme positions,
-    columns for each s in s_show,
-    and a column 'dict' containing the pre-formatted concordance line.
-
-    creates a list (aligned with other lists) of lists of roles; roles are:
-    - 'node' (if cpos in index)
-    - 'out_of_window' (if offset of cpos from node > window)
-    - discourseme names
-
-    :return: concordance line for MMDA frontend
-    :rtype: dict
-
-    """
-
-    # TODO directly create relevant objects, no need for frontend to take care of it
-    # init
-    d = row['dict']
-    roles = list()
-
-    # 'out_of_window' | None | 'node'
-    role = ['out_of_window' if abs(t) > window else None for t in d['offset']]
-    for i in range(d['cpos'].index(row.name[0]), d['cpos'].index(row.name[1]) + 1):
-        role[i] = 'node'
-    roles.append(role)
-
-    # discourseme names
-    for name in names:
-
-        role = [None] * len(d['offset'])
-
-        if not isinstance(row[name], float):
-            for t in row[name]:
-
-                # check match information
-                if len(t) == 2:
-                    # lazy definition without offset
-                    start = 0
-                    end = 1
-                elif len(t) == 3:
-                    # with offset
-                    start = 1
-                    end = 2
-                else:
-                    continue
-
-                # skip NAs
-                if not isinstance(t[start], int):
-                    continue
-
-                # skip the ones too far away
-                try:
-                    start = d['cpos'].index(t[start])
-                    end = d['cpos'].index(t[end]) + 1
-                except ValueError:
-                    continue
-
-                for i in range(start, end):
-                    role[i] = name
-
-        roles.append(role)
-
-    # combine individual roles into one list of lists
-    d['role'] = [[a for a in set(r) if a is not None] for r in list(zip(*roles))]
-
-    # add s-attributes
-    if htmlify_meta:
-        meta = {key: row[key] for key in s_show if not key.startswith("BOOL")}
-        d['meta'] = DataFrame.from_dict(
-            meta, orient='index'
-        ).to_html(bold_rows=False, header=False)
-        for s in s_show:
-            if s.startswith("BOOL"):
-                d[s] = row[s]
-    else:
-        for s in s_show:
-            d[s] = row[s]
-
-    return d
 
 
 class Constellation:
@@ -309,34 +133,8 @@ class Constellation:
             return
 
         self.discoursemes[name] = dump
-        self.df = constellation_left_join(self.df, dump.df, name,
-                                          drop=drop, window=window)
-
-    def group_lines(self):
-        """
-        convert dataframe:
-        === (m, me) ci c ce m0 m0e o0 m1 me1 o1 m2 me2 o2 ===
-        with duplicate indices to
-        === (m, me) ci c ce m0 m1 m2 ===
-        without duplicate indices
-        where
-        m0 = {(o0, m0, m0e), (o0, m0, m0e), ...}
-        m1 = {(o1, m1, m1e), ...}
-
-        """
-
-        df = self.df.copy()
-        df_reduced = df[~df.index.duplicated(keep='first')][
-            ['contextid', 'context', 'contextend']
-        ]
-        for name in self.discoursemes.keys():
-            columns = [m + "_" + name for m in ['offset', 'match', 'matchend']]
-            df[name] = df[columns].values.tolist()
-            df[name] = df[name].apply(tuple)
-            df = df.drop(columns, axis=1)
-            df_reduced[name] = df.groupby(level=['match', 'matchend'])[name].apply(set)
-
-        return df_reduced
+        self.df = dump_left_join(self.df, dump.df, name,
+                                 drop=drop, window=window)
 
     def breakdown(self, p_atts=['word'], flags=""):
 
@@ -362,30 +160,11 @@ class Constellation:
         """
 
         # convert dataframe
-        df = self.group_lines()
-
-        # cut off and sampling (done here to be able to use random_seed)
-        cut_off = len(df) if cut_off is None or cut_off > len(df) else cut_off
-        if order == 'random':
-            df = df.sample(cut_off, random_state=random_seed)
-        elif order == 'first':
-            df = df.head(cut_off)
-        elif order == 'last':
-            df = df.head(cut_off)
-        else:
-            raise NotImplementedError
-
-        # retrieve concordance lines
+        hkeys = list(self.discoursemes.keys())
+        df = group_lines(self.df, hkeys)
         conc = Concordance(self.corpus.copy(), df)
-        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show,
-                           order=order, cut_off=cut_off)
-
-        # map roles
-        output = lines.apply(
-            lambda row: format_roles(
-                row, self.discoursemes.keys(), s_show, window, htmlify_meta
-            ), axis=1
-        )
+        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
+        output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
 
         return list(output)
 
@@ -499,79 +278,49 @@ class TextConstellation:
 
         return breakdown
 
-    def concordance(self, window=0,
-                    p_show=['word', 'lemma'], s_show=[],
-                    order='random', cut_off=100, random_seed=42,
-                    htmlify_meta=False, form='list'):
-
-        # cut off and sampling
-        cut_off = len(self.df) if cut_off is None or cut_off > len(self.df) else cut_off
-        if order == 'random':
-            df = self.df.sample(cut_off, random_state=random_seed)
-        elif order == 'first':
-            df = self.df.head(cut_off)
-        elif order == 'last':
-            df = self.df.head(cut_off)
-        else:
-            raise NotImplementedError
+    def concordance(self, window=0, p_show=['word', 'lemma'],
+                    s_show=[], order='random', cut_off=100,
+                    random_seed=42, htmlify_meta=False):
 
         # join context..contextend
         contexts = self.corpus.dump_from_s_att(self.s_context, annotation=False)
         contexts.columns = ['contextid']
         contexts = contexts.reset_index().set_index('contextid')
-        df = df.join(contexts).set_index(['match', 'matchend'])
+        df = self.df.join(contexts)
 
-        # retrieve concordance lines
+        # index by CONTEXT MATCHES
+        df = df.set_index(['match', 'matchend'])
+        names = list(self.discoursemes.keys())
+        names_bool = [n + '_BOOL' for n in names]
+        names_count = [n + '_COUNTS' for n in names]
+        for b, c in zip(names_bool, names_count):
+            df[b] = df[b].fillna(False)
+            df[c] = df[c].fillna(0)
+
+        # ACTUAL CONCORDANCING
         conc = Concordance(self.corpus.copy(), df)
-        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show,
-                           order=order, cut_off=cut_off)
+        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
+        output = lines.apply(lambda row: format_roles(row, names, s_show=names_bool+s_show, window=0, htmlify_meta=True), axis=1)
 
-        # get boolean columns for each discourseme
-        names_bool = list()
-        for name in [c for c in df.columns if c.startswith("COUNTS_")]:
-            name_bool = '_'.join(['BOOL', name.split("COUNTS_")[-1]])
-            names_bool.append(name_bool)
-            lines[name_bool] = (lines[name] > 0)
-            lines[name_bool] = lines[name_bool].fillna(False)
-
-        # format roles
-        match_cols = [c for c in lines.columns if c.startswith("MATCHES_")]
-        match_names = [c.split("MATCHES_")[-1] for c in match_cols]
-        col_mapper = dict(zip(match_cols, match_names))
-        lines = lines.rename(columns=col_mapper)
-
-        if form == 'table':
-            return lines
-        elif form == 'list':
-            output = lines.apply(
-                lambda row: format_roles(
-                    row, match_names, s_show=names_bool+s_show, window=window, htmlify_meta=htmlify_meta
-                ), axis=1
-            )
-            return list(output)
-        else:
-            raise NotImplementedError()
+        return list(output)
 
     def associations(self, ams=None, frequencies=True,
                      min_freq=2, order='log_likelihood',
                      cut_off=None):
 
-        counts = self.df[[c for c in self.df.columns if c.startswith("COUNTS_")]]
-        counts.columns = [c.split("COUNTS_")[-1] for c in counts.columns]
-        cooc = counts > 0
+        counts = self.df[[c for c in self.df.columns if c.endswith("_BOOL")]]
+        counts.columns = [c.split("_BOOL")[0] for c in counts.columns]
+        cooc = counts.fillna(False)
 
         # TODO triangular matrix
         tables = DataFrame()
         for name in counts.columns:
-            table = round(textual_associations(
-                cooc, self.N, name
-            ).reset_index(), 2)
+            table = round(textual_associations(cooc, self.N, name).reset_index(), 2)
             table['node'] = name
             tables = concat([tables, table])
 
         tables = tables[
-            ['node', 'candidate'] +
-            [d for d in tables.columns if d not in ['node', 'candidate']]
+            ['node', 'candidate'] + [d for d in tables.columns if d not in ['node', 'candidate']]
         ]
 
         return tables
