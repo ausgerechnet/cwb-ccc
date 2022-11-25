@@ -23,7 +23,7 @@ from .counts import Counts, cwb_scan_corpus
 from .cqp import CQP
 from .dumps import Dump
 from .utils import (chunk_anchors, correct_anchors, dump_left_join,
-                    format_roles, group_lines, preprocess_query)
+                    format_roles, group_lines, preprocess_query, aggregate_matches)
 from .version import __version__
 
 logger = logging.getLogger(__name__)
@@ -1165,15 +1165,34 @@ class Corpus:
         else:
             raise NotImplementedError()
 
-    def quick_query(self, topic_query, s_context, filter_queries=[], match_strategy='longest'):
+    def quick_query(self, s_context, topic_query="", filter_queries=[], match_strategy='longest'):
         """makes sure query result is defined as subcorpus.
 
-        finds all s_context spans that contain topic_query and all filter_queries
+        without topic query:
+        - finds all s_context spans that contain at least one filter_query
+        with topic query:
+        - finds all s_context spans that contain topic_query and all filter_queries
 
         :return: identifier (name of NQR on disk)
         :rtype: str
 
         """
+
+        if len(topic_query) == 0:
+            identifier = generate_idx([self.subcorpus, filter_queries, s_context, match_strategy], prefix='Query')
+
+            cqp = self.start_cqp()
+            cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
+            size = int(cqp.Exec(f'size {identifier};'))
+
+            if size == 0:
+                disjunction = " | ".join(['(' + q + ')' for q in filter_queries])
+                logger.info(f'disjunction query: {disjunction}')
+                cqp.Query(f'{identifier} = {disjunction} within {s_context} expand to {s_context};')
+                logger.info(f'.. saving {identifier} in CWB binary format')
+                cqp.Exec(f'save {identifier};')
+
+            return identifier
 
         # IDENTIFY
         topic_identifier = generate_idx([self.subcorpus, topic_query, s_context, match_strategy], prefix='Query')
@@ -1223,50 +1242,99 @@ class Corpus:
         :rtype: list(dict)
         """
 
-        # CHECK CQP
-        identifier = self.quick_query(topic_query, s_context, filter_queries.values(), match_strategy)
-        cqp = self.start_cqp()
+        if len(topic_query) == 0:
 
-        # init CONTEXT (TextConstellation)
-        cqp.Exec(f'{identifier};')
-        df_context = cqp.Dump(f'{identifier};')
-        dump_context = Dump(self.copy(), df_context, None)
-        dump_context = dump_context.set_context(window, s_context)
-        df_context = dump_context.df[['contextid', 'context', 'contextend']]
+            queries = {**highlight_queries, **filter_queries}
 
-        # index by TOPIC MATCHES
-        cqp.Exec(f'Temp = {topic_query};')
-        df_query = cqp.Dump('Temp;')
-        dump_query = Dump(self.copy(), df_query, None)
-        dump_query = dump_query.set_context(window, s_context)
-        df_context = dump_left_join(df_context, dump_query.df, 'topic', drop=True, window=window)
-        df_context = df_context.set_index(['match_topic', 'matchend_topic'])
-        df_context.index.names = ['match', 'matchend']
+            # INIT CQP
+            identifier = self.quick_query(s_context, topic_query="", filter_queries=queries.values(), match_strategy=match_strategy)
+            cqp = self.start_cqp()
 
-        # FILTER according to window size
-        for name, query in filter_queries.items():
-            cqp.Exec(f'Temp = {query};')
+            # init CONTEXT (TextConstellation)
+            cqp.Exec(f'cut {identifier} {cut_off};')
+            df_context = cqp.Dump(f'{identifier};')
+            dump_context = Dump(self.copy(), df_context, None)
+            dump_context = dump_context.set_context(context_break=s_context)
+            df_context = dump_context.df[['contextid']]
+            df_context = df_context.reset_index().set_index('contextid')
+
+            # HIGHLIGHT
+            cqp.Exec(f'{identifier};')
+            for name, query in queries.items():
+                cqp.Exec(f'Temp = {query};')
+                df_query = cqp.Dump('Temp;')
+                if len(df_query) > 0:
+                    dump_query = Dump(self.copy(), df_query, None)
+                    dump_query = dump_query.set_context(context_break=s_context)
+                    df_query = dump_query.df[['contextid']]
+                    df_agg = aggregate_matches(df_query, name)
+                    df_context = df_context.join(df_agg)
+                else:
+                    df_context[name] = None
+                    df_context[name + '_BOOL'] = False
+                    df_context[name + '_COUNTS'] = 0
+            cqp.__kill__()
+
+            # index by CONTEXT MATCHES
+            df = df_context.set_index(['match', 'matchend'])
+            names = list(queries.keys())
+            names_bool = [n + '_BOOL' for n in names]
+            names_count = [n + '_COUNTS' for n in names]
+            for b, c in zip(names_bool, names_count):
+                df[b] = df[b].fillna(False)
+                df[c] = df[c].fillna(0)
+
+            # ACTUAL CONCORDANCING
+            conc = Concordance(self.copy(), df)
+            lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
+            output = lines.apply(lambda row: format_roles(row, names, s_show=names_bool+s_show, window=0, htmlify_meta=True), axis=1)
+
+        else:
+
+            # INIT CQP
+            identifier = self.quick_query(s_context, topic_query, filter_queries.values(), match_strategy)
+            cqp = self.start_cqp()
+
+            # init CONTEXT (TextConstellation)
+            cqp.Exec(f'{identifier};')
+            df_context = cqp.Dump(f'{identifier};')
+            dump_context = Dump(self.copy(), df_context, None)
+            dump_context = dump_context.set_context(window, s_context)
+            df_context = dump_context.df[['contextid', 'context', 'contextend']]
+
+            # index by TOPIC MATCHES
+            cqp.Exec(f'Temp = {topic_query};')
             df_query = cqp.Dump('Temp;')
             dump_query = Dump(self.copy(), df_query, None)
             dump_query = dump_query.set_context(window, s_context)
-            df_context = dump_left_join(df_context, dump_query.df, name, drop=True, window=window)
-            df_context = df_context.drop([c + "_" + name for c in ['match', 'matchend', 'offset']], axis=1)
+            df_context = dump_left_join(df_context, dump_query.df, 'topic', drop=True, window=window)
+            df_context = df_context.set_index(['match_topic', 'matchend_topic'])
+            df_context.index.names = ['match', 'matchend']
 
-        # HIGHLIGHT
-        for name, query in highlight_queries.items():
-            cqp.Exec(f'Temp = {query};')
-            df_query = cqp.Dump('Temp;')
-            dump_query = Dump(self.copy(), df_query, None)
-            dump_query = dump_query.set_context(window, s_context)
-            df_context = dump_left_join(df_context, dump_query.df, name, drop=False, window=window)
+            # FILTER according to window size
+            for name, query in filter_queries.items():
+                cqp.Exec(f'Temp = {query};')
+                df_query = cqp.Dump('Temp;')
+                dump_query = Dump(self.copy(), df_query, None)
+                dump_query = dump_query.set_context(window, s_context)
+                df_context = dump_left_join(df_context, dump_query.df, name, drop=True, window=window)
+                df_context = df_context.drop([c + "_" + name for c in ['match', 'matchend', 'offset']], axis=1)
 
-        cqp.__kill__()
+            # HIGHLIGHT
+            for name, query in highlight_queries.items():
+                cqp.Exec(f'Temp = {query};')
+                df_query = cqp.Dump('Temp;')
+                dump_query = Dump(self.copy(), df_query, None)
+                dump_query = dump_query.set_context(window, s_context)
+                df_context = dump_left_join(df_context, dump_query.df, name, drop=False, window=window)
 
-        # ACTUAL CONCORDANCING
-        hkeys = list(highlight_queries.keys())
-        df = group_lines(df_context, hkeys)
-        conc = Concordance(self.copy(), df)
-        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-        output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
+            cqp.__kill__()
+
+            # ACTUAL CONCORDANCING
+            hkeys = list(highlight_queries.keys())
+            df = group_lines(df_context, hkeys)
+            conc = Concordance(self.copy(), df)
+            lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
+            output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
 
         return list(output)

@@ -517,3 +517,44 @@ def test_query_anchor(germaparl):
         corrections={2: 1}
     )
     assert (d.df[2] == d.df['contextend']).all()
+
+
+@pytest.mark.now
+def test_ccc_quick_query(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    topic_query = '[lemma="die"]'
+    s_context = 's'
+    filter_queries = {
+        'CSU': '[lemma="CSU"]',
+        'CDU': '[lemma="CDU"]'
+    }
+
+    identifier = corpus.quick_query(
+        s_context=s_context,
+        topic_query=topic_query,
+        filter_queries=filter_queries.values()
+    )
+
+    assert identifier in corpus.show_nqr()['subcorpus'].values
+
+
+@pytest.mark.now
+def test_ccc_quick_query_2(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    s_context = 's'
+    queries = {
+        'Angela': '[lemma="Angela"]',
+        'CSU': '[lemma="CSU"]',
+        'CDU': '[lemma="CDU"]'
+    }
+
+    identifier = corpus.quick_query(
+        s_context=s_context,
+        filter_queries=queries.values()
+    )
+
+    assert identifier in corpus.show_nqr()['subcorpus'].values

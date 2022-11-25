@@ -433,6 +433,35 @@ def group_lines(df, names):
     return df_reduced
 
 
+def aggregate_matches(df, name, context_col='contextid',
+                      match_cols=['match', 'matchend']):
+    """
+    convert dataframe:
+    === (m, me) ci ===
+    to
+    === (ci) {name} COUNTS_{name} BOOL_{name} ===
+
+    """
+    # counts
+    counts = DataFrame(df[context_col].value_counts()).astype("Int64")
+    counts.columns = [name + '_COUNTS']
+
+    # matches
+    matches = df.reset_index()
+    matches[name] = matches[match_cols].values.tolist()
+    matches[name] = matches[name].apply(tuple)
+    matches = matches.groupby('contextid', group_keys=True)[name].apply(set)
+
+    # combine
+    table = counts.join(matches)
+
+    # bool
+    table[name + '_BOOL'] = table[name + '_COUNTS'] > 0
+    table[name + '_BOOL'] = table[name + '_BOOL'].fillna(False)
+
+    return table
+
+
 def format_roles(row, names, s_show, window, htmlify_meta=False):
     """Take a row of a dataframe indexed by match, matchend of the node,
     columns for each discourseme with sets of tuples indicating discourseme positions,
@@ -501,12 +530,10 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
 
     # add s-attributes
     if htmlify_meta:
-        meta = {key: row[key] for key in s_show if not key.startswith("BOOL")}
-        d['meta'] = DataFrame.from_dict(
-            meta, orient='index'
-        ).to_html(bold_rows=False, header=False)
+        meta = {key: row[key] for key in s_show if not key.endswith("_BOOL")}
+        d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False)
         for s in s_show:
-            if s.startswith("BOOL"):
+            if s.endswith("_BOOL"):
                 d[s] = row[s]
     else:
         for s in s_show:

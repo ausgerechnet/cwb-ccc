@@ -537,7 +537,7 @@ def test_textual_constellation(germaparl, discoursemes):
         s_context=discoursemes['parameters']['s_context']
     )
     assert len(const.df) == 624
-    assert 'MATCHES_topic' in const.df.columns
+    assert 'topic' in const.df.columns
 
 
 def test_textual_constellation_add(germaparl, discoursemes):
@@ -580,7 +580,7 @@ def test_textual_constellation_add(germaparl, discoursemes):
     )
 
     assert len(const.df) == 2156
-    assert 'MATCHES_discourseme' in const.df.columns
+    assert 'discourseme' in const.df.columns
 
 
 def test_textual_constellation_association(germaparl, discoursemes):
@@ -730,7 +730,6 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
     assert len(lines) == 2198
 
 
-@pytest.mark.now
 def test_textual_constellation_breakdown(germaparl, discoursemes):
 
     corpus_name = germaparl['corpus_name']

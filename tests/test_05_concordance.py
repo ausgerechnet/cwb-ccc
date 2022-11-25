@@ -21,6 +21,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 # CONCORDANCE #
 ###############
 @pytest.mark.concordance
+@pytest.mark.now
 def test_ccc_quick_conc(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -39,6 +40,31 @@ def test_ccc_quick_conc(germaparl):
         highlight_queries=highlight_queries,
         window=window,
         s_context=s_context,
+        cut_off=100,
+        order='first'
+    )
+
+    assert len(conc) == 100
+    assert 'cpos' in conc[0]
+
+
+@pytest.mark.concordance
+def test_ccc_quick_conc_2(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    s_context = 's'
+    queries = {
+        'Herr': '[lemma="Herr"]',
+        'CSU': '[lemma="CSU"]',
+        'CDU': '[lemma="CDU"]'
+    }
+
+    conc = corpus.quick_conc(
+        s_context=s_context,
+        topic_query={},
+        window=0,
+        filter_queries=queries,
         cut_off=100,
         order='first'
     )
