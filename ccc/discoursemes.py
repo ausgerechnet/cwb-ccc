@@ -431,8 +431,6 @@ def create_constellation(corpus_name,
             )
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
-            else:
-                raise ValueError()
 
         # add additional discoursemes
         for disc_name, disc_items in additional_discoursemes.items():
@@ -447,6 +445,7 @@ def create_constellation(corpus_name,
             )
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=False)
+
         corpus = corpus.activate_subcorpus()
 
     # no topic -> TextConstellation()

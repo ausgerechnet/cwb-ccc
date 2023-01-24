@@ -117,8 +117,7 @@ def keywords(corpus, corpus_reference, p, p_reference, order='O11',
     df['N1'] = left['f1'].sum()
     df['N2'] = right['f2'].sum()
     df = df.fillna(0, downcast='infer')
-
-    # get vocab size and apply freq threshold
+    logger.info('cut-off')
     vocab = len(df)
     df = df.loc[df['f1'] >= min_freq]
 

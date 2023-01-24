@@ -124,4 +124,4 @@ def test_keywords_func_corpora(germaparl):
 
     corpus = get_corpus(germaparl)
     kw = keywords(corpus, corpus, ['lemma'], ['word'], 'conservative_log_ratio')
-    print(kw)
+    assert kw.index[0] == 'sie'
