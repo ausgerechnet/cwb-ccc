@@ -645,7 +645,7 @@ class Corpus:
 
     def dump_from_query(self, query, s_query=None, anchors=[],
                         match_strategy='standard', name='Last', save=False,
-                        cwb_version=None):
+                        cwb_version=None, raise_error=False):
         """Execute query, get DataFrame of corpus positions (CWB dump).
         Resulting df_dump is indexed by (match, matchend).
 
@@ -718,7 +718,8 @@ class Corpus:
             query=start_query,
             name=name,
             match_strategy=match_strategy,
-            return_dump=True
+            return_dump=True,
+            raise_error=raise_error
         )
         logger.info(f"found {len(df_dump)} matches")
 
@@ -1062,7 +1063,7 @@ class Corpus:
 
     def query_cqp(self, cqp_query, context=20, context_left=None,
                   context_right=None, context_break=None, corrections=dict(),
-                  match_strategy='standard', name=None):
+                  match_strategy='standard', name=None, raise_error=False):
         """Get query result as (context-extended) Dump (with corrected
         anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -1102,7 +1103,8 @@ class Corpus:
             anchors=anchors,
             match_strategy=match_strategy,
             name=name,
-            save=save
+            save=save,
+            raise_error=raise_error
         )
 
         # if dump has been retrieved from cache, NQR might not exist
@@ -1137,7 +1139,7 @@ class Corpus:
     def query(self, cqp_query=None, context=20, context_left=None,
               context_right=None, context_break=None,
               corrections=dict(), s_query=None, s_values=None,
-              match_strategy='standard', name=None):
+              match_strategy='standard', name=None, raise_error=False):
         """Query the corpus, get the result as Dump.
 
         query wrapper
@@ -1160,7 +1162,7 @@ class Corpus:
         elif s_values is None:
             return self.query_cqp(cqp_query, context, context_left,
                                   context_right, s_query, corrections,
-                                  match_strategy, name)
+                                  match_strategy, name, raise_error)
 
         else:
             raise NotImplementedError()
