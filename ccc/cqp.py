@@ -389,7 +389,7 @@ class CQP:
     #########################
     def nqr_from_query(self, query, name='Last',
                        match_strategy='longest', return_dump=True,
-                       raise_error=False):
+                       propagate_error=False):
         """Defines NQR from query, optionally returns dump.
 
         :param str query: valid CQP query
@@ -407,8 +407,8 @@ class CQP:
         self.Query(f'{name}={query};')
 
         if not self.Ok():
-            logger.error(f'invalid query: {query}')
-            raise ValueError(f'invalid query: {query}') if raise_error else DataFrame()
+            logger.error(f'{self.error_message}')
+            return self.error_message if propagate_error else DataFrame()
 
         size = int(self.Exec(f"size {name}"))
         if size == 0:
