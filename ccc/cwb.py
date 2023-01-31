@@ -645,7 +645,7 @@ class Corpus:
 
     def dump_from_query(self, query, s_query=None, anchors=[],
                         match_strategy='standard', name='Last', save=False,
-                        cwb_version=None, raise_error=False):
+                        cwb_version=None, propagate_error=False):
         """Execute query, get DataFrame of corpus positions (CWB dump).
         Resulting df_dump is indexed by (match, matchend).
 
@@ -719,8 +719,11 @@ class Corpus:
             name=name,
             match_strategy=match_strategy,
             return_dump=True,
-            raise_error=raise_error
+            propagate_error=propagate_error
         )
+        if propagate_error and isinstance(df_dump, str):
+            return df_dump
+
         logger.info(f"found {len(df_dump)} matches")
 
         # if there's nothing to return ...
@@ -1063,7 +1066,7 @@ class Corpus:
 
     def query_cqp(self, cqp_query, context=20, context_left=None,
                   context_right=None, context_break=None, corrections=dict(),
-                  match_strategy='standard', name=None, raise_error=False):
+                  match_strategy='standard', name=None, propagate_error=False):
         """Get query result as (context-extended) Dump (with corrected
         anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -1104,8 +1107,11 @@ class Corpus:
             match_strategy=match_strategy,
             name=name,
             save=save,
-            raise_error=raise_error
+            propagate_error=propagate_error
         )
+
+        if propagate_error and isinstance(df_dump, str):
+            return df_dump
 
         # if dump has been retrieved from cache, NQR might not exist
         if save and (self.show_nqr().empty or name not in self.show_nqr()['subcorpus'].values):
@@ -1139,7 +1145,7 @@ class Corpus:
     def query(self, cqp_query=None, context=20, context_left=None,
               context_right=None, context_break=None,
               corrections=dict(), s_query=None, s_values=None,
-              match_strategy='standard', name=None, raise_error=False):
+              match_strategy='standard', name=None, propagate_error=False):
         """Query the corpus, get the result as Dump.
 
         query wrapper
@@ -1162,7 +1168,7 @@ class Corpus:
         elif s_values is None:
             return self.query_cqp(cqp_query, context, context_left,
                                   context_right, s_query, corrections,
-                                  match_strategy, name, raise_error)
+                                  match_strategy, name, propagate_error)
 
         else:
             raise NotImplementedError()
