@@ -155,13 +155,16 @@ class CQP:
             self.execStart = time.time()
             logger.debug("Shutting down CQP backend ...")
             self.CQP_process.stdin.write('exit;')  # exits CQP backend
+            self.CQP_process.stdin.flush()
             logger.debug("... -- CQP object deleted.")
             self.execStart = None
+            del self.CQP_process
 
     def __kill__(self):
         """ like self.__del__, but correct """
         self.Terminate()
-        os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
+        ## -- this should not be needed --
+        # os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
         self.__del__()
 
     def Exec(self, cmd):
