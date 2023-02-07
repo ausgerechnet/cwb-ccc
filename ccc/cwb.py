@@ -1200,6 +1200,8 @@ class Corpus:
                 logger.info(f'.. saving {identifier} in CWB binary format')
                 cqp.Exec(f'save {identifier};')
 
+            cqp.__kill__()
+
             return identifier
 
         # IDENTIFY
