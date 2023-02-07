@@ -156,18 +156,20 @@ class Corpora:
 
         # check availability and corpus sizes
         sizes = list()
+        names = list()
         for corpus_name in corpora:
             try:
                 sizes.append(len(Attributes(
                     corpus_name, registry_dir=self.registry_path
                 ).attribute('word', 'p')))
+                names.append(corpus_name)
             except SystemError:
                 logger.warning(
                     f'corpus "{corpus_name}" defined in registry but not available'
                 )
 
         # create dataframe
-        corpora = DataFrame({'corpus': corpora, 'size': sizes}).set_index('corpus')
+        corpora = DataFrame({'corpus': names, 'size': sizes}).set_index('corpus')
 
         return corpora
 
