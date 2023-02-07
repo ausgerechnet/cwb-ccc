@@ -54,12 +54,14 @@ cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=T
 if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) == 4 and int(cwb_version.split(".")[2]) < 37:
     cwb_linker_flags = "-L/usr/local/lib -lcl  -lm   -lpcre -lglib-2.0"
 libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]
+inc_dirs = [cwb_incdir] + [t[2:] for t in shlex.split(cwb_compiler_flags) if t.startswith("-I")]
+lib_dirs = [cwb_libdir] + [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-L")]
 
 ccc_cl = Extension(
     name="ccc.cl",
     sources=['ccc/cl' + ('.pyx' if USE_CYTHON else '.c')],
-    include_dirs=[cwb_incdir],  # list of directories to search for C/C++ header files
-    library_dirs=[cwb_libdir],  # list of directories to search for C/C++ libraries at link time
+    include_dirs=inc_dirs,  # list of directories to search for C/C++ header files
+    library_dirs=lib_dirs,  # list of directories to search for C/C++ libraries at link time
     libraries=libraries         # list of library names (not filenames or paths) to link against
 )
 
