@@ -152,7 +152,7 @@ class Corpora:
         # get all corpora defined in registry
         cqp = start_cqp(self.cqp_bin, self.registry_path)
         corpora = cqp.Exec("show corpora;").split("\n")
-        cqp.__kill__()
+        cqp.__del__()
 
         # check availability and corpus sizes
         sizes = list()
@@ -309,7 +309,7 @@ class Corpus:
 
         cqp = self.start_cqp()
         defined_macros = cqp.Exec("show macro;").split("\n")
-        cqp.__kill__()
+        cqp.__del__()
 
         return defined_macros
 
@@ -323,7 +323,7 @@ class Corpus:
 
         cqp = self.start_cqp()
         defined_wordlists = cqp.Exec("show var;").split("\n")
-        cqp.__kill__()
+        cqp.__del__()
 
         names = sorted(
             [n.rstrip(" =") for n in defined_wordlists if n.startswith("$") and n.endswith(" =")]
@@ -343,7 +343,7 @@ class Corpus:
         # use CQP's context descriptor
         cqp = self.start_cqp()
         cqp_ret = cqp.Exec('show cd;')
-        cqp.__kill__()
+        cqp.__del__()
 
         # read as dataframe
         attributes = read_csv(
@@ -542,7 +542,7 @@ class Corpus:
             logger.info("no subcorpora defined")
             df = DataFrame()
 
-        cqp.__kill__()
+        cqp.__del__()
         return df
 
     def activate_subcorpus(self, nqr=None, df_dump=None):
@@ -568,7 +568,7 @@ class Corpus:
                 cqp = self.start_cqp()
                 cqp.nqr_from_dump(df_dump, nqr)
                 cqp.nqr_save(self.corpus_name, nqr)
-                cqp.__kill__()
+                cqp.__del__()
             if nqr not in self.show_nqr()['subcorpus'].values:
                 logger.error(f'subcorpus "{nqr}" not defined)')
             else:
@@ -677,7 +677,7 @@ class Corpus:
             # check subcorpus size to avoid confusion when re-naming
             cqp = self.start_cqp()
             sbcrpssize = cqp.Exec(f"size {self.subcorpus}")
-            cqp.__kill__()
+            cqp.__del__()
         else:
             sbcrpssize = None
         identifier = generate_idx([
@@ -728,7 +728,7 @@ class Corpus:
 
         # if there's nothing to return ...
         if len(df_dump) == 0:
-            cqp.__kill__()
+            cqp.__del__()
             return df_dump
 
         df_dump.columns = [0, 1]
@@ -785,7 +785,7 @@ class Corpus:
         if save:
             cqp.nqr_save(self.corpus_name, name)
 
-        cqp.__kill__()
+        cqp.__del__()
 
         return df_dump
 
@@ -1059,7 +1059,7 @@ class Corpus:
             cqp = self.start_cqp()
             cqp.nqr_from_dump(df_spans, name)
             cqp.nqr_save(self.corpus_name, name)
-            cqp.__kill__()
+            cqp.__del__()
 
         # return proper Dump
         return Dump(self.copy(), df_spans, name_cqp=name)
@@ -1119,7 +1119,7 @@ class Corpus:
             cqp = self.start_cqp()
             cqp.nqr_from_dump(df_dump, name)
             cqp.nqr_save(self.corpus_name, name)
-            cqp.__kill__()
+            cqp.__del__()
 
         # empty return?
         if len(df_dump) == 0:
@@ -1200,7 +1200,7 @@ class Corpus:
                 logger.info(f'.. saving {identifier} in CWB binary format')
                 cqp.Exec(f'save {identifier};')
 
-            cqp.__kill__()
+            cqp.__del__()
 
             return identifier
 
@@ -1238,7 +1238,7 @@ class Corpus:
             logger.info(f'.. saving {filter_identifier} in CWB binary format')
             cqp.Exec(f'save {filter_identifier};')
 
-        cqp.__kill__()
+        cqp.__del__()
 
         return filter_identifier
 
@@ -1283,7 +1283,7 @@ class Corpus:
                     df_context[name] = None
                     df_context[name + '_BOOL'] = False
                     df_context[name + '_COUNTS'] = 0
-            cqp.__kill__()
+            cqp.__del__()
 
             # index by CONTEXT MATCHES
             df = df_context.set_index(['match', 'matchend'])
@@ -1338,7 +1338,7 @@ class Corpus:
                 dump_query = dump_query.set_context(window, s_context)
                 df_context = dump_left_join(df_context, dump_query.df, name, drop=False, window=window)
 
-            cqp.__kill__()
+            cqp.__del__()
 
             # ACTUAL CONCORDANCING
             hkeys = list(highlight_queries.keys())
