@@ -67,7 +67,7 @@ def test_cwb_scan_corpus_subcorpora(germaparl):
     # check that results are different
     assert(sum(df2['freq']) != sum(df1['freq']))
 
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.marginals
@@ -167,7 +167,7 @@ def test_count_items(germaparl):
     counts2 = corpus.counts.mwus(cqp, queries)
     assert(list(counts1["freq"]) == list(counts2["freq"]))
 
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.mwus
@@ -187,7 +187,7 @@ def test_count_mwus_3(germaparl):
         strategy=3,
         fill_missing=False
     )
-    cqp.__kill__()
+    cqp.__del__()
 
     assert(counts3['freq']['CSU'] == 635)
 
@@ -226,7 +226,7 @@ def test_count_mwus_strategies(germaparl):
         fill_missing=False
     )
 
-    cqp.__kill__()
+    cqp.__del__()
     assert(counts2.equals(counts3))
     assert(sum(counts1['freq']) == sum(counts2['freq']))
 
@@ -265,7 +265,7 @@ def test_count_items_subcorpora(germaparl):
         fill_missing=False
     )
     assert(counts2.equals(counts3))
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.cwb_counts
@@ -344,7 +344,7 @@ def test_counts_matches_mwu_1(germaparl):
                                strategy=strategy)
     assert("Helmut" in df.index)
 
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.cwb_counts
@@ -372,7 +372,7 @@ def test_counts_matches_mwu_2(germaparl):
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
     assert("Helmut" in df.index)
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.cwb_counts
@@ -394,7 +394,7 @@ def test_counts_matches_mwu_3(germaparl):
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word', 'pos'], split=True,
                                strategy=strategy)
     assert("Helmut NE" in df.index)
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.cwb_counts
@@ -421,7 +421,7 @@ def test_counts_mwus(germaparl):
 
     assert(df['freq']['Horst'] == 55)
 
-    cqp.__kill__()
+    cqp.__del__()
 
 
 @pytest.mark.cwb_counts
@@ -433,7 +433,7 @@ def test_cwb_counts(germaparl):
                             queries)
 
     assert(df['freq'][queries[1]] == 55)
-    cqp.__kill__()
+    cqp.__del__()
 
 
 def test_score_counts(germaparl, empirist):

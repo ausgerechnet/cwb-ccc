@@ -11,11 +11,12 @@ from ccc.cqp import CQP
 def test_cqp_version():
     print()
     print("... you should see your CQP version below ...")
-    CQP(print_version=True)
+    cqp = CQP(print_version=True)
+    cqp.__del__()
 
 
 def test_cqp_kill():
-    n = 10
+    n = 100
     rate = 1000                 # per second
     print()
     print("... spawning several CQP processes ...")
@@ -27,7 +28,7 @@ def test_cqp_kill():
             i + 1, n
             ), end="\r"
         )
-        cqp.__kill__()
+        cqp.__del__()
         sleep(1/rate)
     print()
 
@@ -39,6 +40,7 @@ def test_cqp_query(germaparl):
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
+    cqp.__del__()
 
 
 def test_cqp_dump(germaparl):
@@ -49,6 +51,7 @@ def test_cqp_dump(germaparl):
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
     df = cqp.Dump()
+    cqp.__del__()
     assert(len(df) == 55)
     assert(isinstance(df, DataFrame))
 
@@ -64,6 +67,7 @@ def test_cqp_undump(germaparl):
     cqp.Undump("Test", df)
     assert(int(cqp.Exec("size Test;")) > 0)
     assert(cqp.Exec("size Test;") == str(len(df)))
+    cqp.__del__()
 
 
 def test_cqp_group(germaparl):
@@ -74,6 +78,7 @@ def test_cqp_group(germaparl):
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('[lemma="Horst"] [lemma="Seehofer"]')
     counts = cqp.Group(spec1="match.lemma", spec2="matchend.lemma")
+    cqp.__del__()
     assert(type(counts) == str)
     assert(int(counts.split("\t")[-1]) == 11)
 
@@ -91,7 +96,7 @@ def test_nqr_from_query(germaparl):
         return_dump=False
     )
     assert(int(cqp.Exec('size Seehofer;')) > 0)
-    cqp.__kill__()
+    cqp.__del__()
 
 
 def test_nqr_from_dump(germaparl):
@@ -104,7 +109,7 @@ def test_nqr_from_dump(germaparl):
     df_dump = germaparl['dump']
     cqp.nqr_from_dump(df_dump, name='Seehof')
     assert(int(cqp.Exec('size Seehof;')) > 0)
-    cqp.__kill__()
+    cqp.__del__()
 
 
 def test_cl(germaparl):
@@ -179,4 +184,4 @@ def test_nqr_from_dump_error(germaparl):
     assert cqp.Ok()
     assert int(cqp.Exec('size Valid;')) == 2
 
-    cqp.__kill__()
+    cqp.__del__()

@@ -13,7 +13,6 @@ import os
 import random
 import re
 import select
-import signal
 import subprocess
 import sys
 import threading
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # GLOBAL CONSTANTS OF MODULE:
 CPROGRESSCONTROLCYCLE = 5   # secs between each progress control cycle
-CMAXREQUESTPROCTIME = 500   # max secs for processing a user request
+CMAXREQUESTPROCTIME = 900   # max secs for processing a user request
 
 
 # ERROR MESSAGE TYPES:
@@ -59,22 +58,19 @@ class CQP:
         This method is run as a thread.
         At certain intervals (CPROGRESSCONTROLCYCLE), it controls how long the
         CQP process of the current user has spent on processing this user's
-        latest CQP command. If this time exceeds a certain maximun
+        latest CQP command. If this time exceeds a certain maximum
         (CMAXREQUESTPROCTIME), this method kills the CQP process.
         """
         self.runController = True
         while self.runController:
             time.sleep(CPROGRESSCONTROLCYCLE)
             if self.execStart is not None:
-                if time.time() - self.execStart > CMAXREQUESTPROCTIME *\
-                 self.maxProcCycles:
-                    logger.error(
-                        f"progress controller identified blocking cqp process id {self.CQP_process.pid}"
-                    )
-                    # os.kill(self.CQP_process.pid, SIGKILL) - doesn't work!
-                    os.popen("kill -9 " + str(self.CQP_process.pid))  # works!
-                    logger.error("=> killed!")
+                if time.time() - self.execStart > CMAXREQUESTPROCTIME * self.maxProcCycles:
+                    logger.error(f"progress controller identified blocking cqp process id {self.CQP_process.pid}")
+                    os.popen("kill -9 " + str(self.CQP_process.pid))
                     self.CQPrunning = False
+                    self.execStart = None
+                    logger.error("-- CQP process killed!")
                     break
 
     def __init__(self, binary="cqp", options='-c', print_version=False):
@@ -137,11 +133,6 @@ class CQP:
         self.Exec('set PrettyPrint off')
         self.execStart = None
 
-    def Terminate(self):
-        """Terminate controller thread, must be called before deleting CQP."""
-        self.execStart = None
-        self.runController = False
-
     def SetProcCycles(self, procCycles):
         """Set procCycles."""
         print(f"    Setting procCycles to {procCycles}")
@@ -151,18 +142,15 @@ class CQP:
     def __del__(self):
         """Stop running CQP instance."""
         if self.CQPrunning:
-            self.CQPrunning = False
-            self.execStart = time.time()
             logger.debug("Shutting down CQP backend ...")
-            self.CQP_process.stdin.write('exit;')  # exits CQP backend
-            logger.debug("... -- CQP object deleted.")
+            self.runController = False
+            self.execStart = time.time()
+            self.CQP_process.stdin.write('exit;')
+            self.CQP_process.stdin.flush()
+            del self.CQP_process
+            self.CQPrunning = False
             self.execStart = None
-
-    def __kill__(self):
-        """ like self.__del__, but correct """
-        self.Terminate()
-        os.killpg(os.getpgid(self.CQP_process.pid), signal.SIGTERM)
-        self.__del__()
+            logger.debug("... -- CQP object deleted.")
 
     def Exec(self, cmd):
         """Execute CQP command.
