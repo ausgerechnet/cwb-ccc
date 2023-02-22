@@ -519,7 +519,6 @@ def test_query_anchor(germaparl):
     assert (d.df[2] == d.df['contextend']).all()
 
 
-@pytest.mark.now
 def test_ccc_quick_query(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -540,7 +539,6 @@ def test_ccc_quick_query(germaparl):
     assert identifier in corpus.show_nqr()['subcorpus'].values
 
 
-@pytest.mark.now
 def test_ccc_quick_query_2(germaparl):
 
     corpus = get_corpus(germaparl)
