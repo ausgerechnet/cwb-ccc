@@ -738,7 +738,7 @@ class Corpus:
         if len(remaining_anchors) > 0:
 
             # restrict subsequent queries on initial matches
-            if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
+            if (cwb_version['minor'] >= 5) or (cwb_version['minor'] == 4 and cwb_version['patch'] >= 31):
                 cqp.Exec(f"Temp = <<{name}/>> ( {query} );")
             elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
                 cqp.nqr_activate(self.corpus_name, name)
