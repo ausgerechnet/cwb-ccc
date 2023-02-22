@@ -740,7 +740,7 @@ class Corpus:
             # restrict subsequent queries on initial matches
             if (cwb_version['minor'] >= 5) or (cwb_version['minor'] == 4 and cwb_version['patch'] >= 31):
                 cqp.Exec(f"Temp = <<{name}/>> ( {query} );")
-            elif cwb_version['minor'] >= 4 and cwb_version['patch'] >= 16:
+            elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
                 cqp.nqr_activate(self.corpus_name, name)
             else:
                 raise NotImplementedError("cannot work with several anchors for CWB versions older than 3.4.16")
@@ -756,7 +756,7 @@ class Corpus:
                     cqp.Exec('set ank 1;')
 
                 # dump new anchors
-                if (cwb_version['minor'] == 5) or (cwb_version['minor'] >= 4 and cwb_version['patch'] >= 31):
+                if (cwb_version['minor'] >= 5) or (cwb_version['minor'] == 4 and cwb_version['patch'] >= 31):
                     cqp.Query(f"Temp = <<{name}/>> ( {query} );")
                 elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
                     cqp.Query(f'Temp = <match> ( {query} );')
