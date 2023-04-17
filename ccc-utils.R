@@ -8,6 +8,7 @@ library(anomalize)
 library(gespeR)
 library(irr)
 library(gridExtra)
+library(ggrepel)
 
 # function for formatting concordance lines
 concordance.format <- function(conc, n = 10, tex = F, crop=NULL){
