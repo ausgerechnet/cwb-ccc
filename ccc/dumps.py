@@ -35,8 +35,8 @@ class Dump:
     def __str__(self):
 
         desc = [f'a ccc.Dump with {self.size} matches']
-        if self.corpus.subcorpus:
-            crpssbcrps = self.corpus.corpus_name + ":" + self.corpus.subcorpus
+        if self.corpus.subcorpus_name:
+            crpssbcrps = self.corpus.corpus_name + ":" + self.corpus.subcorpus_name
         else:
             crpssbcrps = self.corpus.corpus_name
         desc.append(f'- corpus "{crpssbcrps}" ({self.corpus.corpus_size} tokens in whole corpus)')

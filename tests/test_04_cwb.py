@@ -556,3 +556,29 @@ def test_ccc_quick_query_2(germaparl):
     )
 
     assert identifier in corpus.show_nqr()['subcorpus'].values
+
+
+# SUBCORPORA
+@pytest.mark.now
+def test_subcorpora(germaparl):
+
+    corpus = get_corpus(germaparl)
+    dump = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+    subcorpus = corpus.subcorpus(dump.df, 'Test')
+
+    # init
+    print(subcorpus)
+    print(subcorpus.df.columns)
+
+    # collocates
+    print(subcorpus.collocates(window=1))
+    subcorpus = subcorpus.set_context(20)
+    print(subcorpus)
+    print(subcorpus.collocates())
+
+    # keywords
+    print(subcorpus.keywords())

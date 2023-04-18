@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """cwb.py
 
-definition of the Corpus and Corpora classes
+definition of the Corpora, Corpus and SubCorpus classes
 
 """
 import logging
@@ -25,6 +25,9 @@ from .dumps import Dump
 from .utils import (chunk_anchors, correct_anchors, dump_left_join,
                     format_roles, group_lines, preprocess_query, aggregate_matches)
 from .version import __version__
+from .collocates import Collocates
+from .keywords import Keywords
+from .utils import fold_df, merge_intervals
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +264,7 @@ class Corpus:
 
         # init (sub-)corpus information
         self.corpus_name = corpus_name
-        self.subcorpus = None
+        self.subcorpus_name = None
 
         # init attributes
         self.attributes = Attributes(self.corpus_name, registry_dir=self.registry_path)
@@ -287,12 +290,8 @@ class Corpus:
         """
 
         return '\n' + '\n'.join([
-            f'ccc.Corpus: "{self.corpus_name}"',
-            f'size      : {self.corpus_size}',
-            f'data      : {self.data_path}',
-            f'subcorpus : {self.subcorpus}',
-            '\navailable positional and structural attributes:',
-            self.attributes_available.to_string(),
+            f'corpus: {self.corpus_name} ({self.corpus_size} tokens)',
+            f'data:   {self.data_path}',
         ])
 
     def __repr__(self):
@@ -373,7 +372,7 @@ class Corpus:
             self.data_path,
             self.corpus_name,
             self.lib_path,
-            self.subcorpus
+            self.subcorpus_name
         )
 
     def copy(self):
@@ -675,15 +674,15 @@ class Corpus:
         """
 
         # identify query
-        if self.subcorpus is not None:
+        if self.subcorpus_name is not None:
             # check subcorpus size to avoid confusion when re-naming
             cqp = self.start_cqp()
-            sbcrpssize = cqp.Exec(f"size {self.subcorpus}")
+            sbcrpssize = cqp.Exec(f"size {self.subcorpus_name}")
             cqp.__del__()
         else:
             sbcrpssize = None
         identifier = generate_idx([
-             query, s_query, anchors, match_strategy, self.subcorpus, sbcrpssize
+             query, s_query, anchors, match_strategy, self.subcorpus_name, sbcrpssize
         ], prefix="df_dump:")
 
         # retrieve from cache if possible
@@ -1064,7 +1063,7 @@ class Corpus:
             cqp.__del__()
 
         # return proper Dump
-        return Dump(self.copy(), df_spans, name_cqp=name)
+        return Dump(self, df_spans, name_cqp=name)
 
     def query_cqp(self, cqp_query, context=20, context_left=None,
                   context_right=None, context_break=None, corrections=dict(),
@@ -1189,7 +1188,7 @@ class Corpus:
         """
 
         if len(topic_query) == 0:
-            identifier = generate_idx([self.subcorpus, filter_queries, s_context, match_strategy], prefix='Query')
+            identifier = generate_idx([self.subcorpus_name, filter_queries, s_context, match_strategy], prefix='Query')
 
             cqp = self.start_cqp()
             cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
@@ -1207,8 +1206,8 @@ class Corpus:
             return identifier
 
         # IDENTIFY
-        topic_identifier = generate_idx([self.subcorpus, topic_query, s_context, match_strategy], prefix='Query')
-        filter_identifier = generate_idx([self.subcorpus, topic_query, s_context, match_strategy, filter_queries], prefix='Query')
+        topic_identifier = generate_idx([self.subcorpus_name, topic_query, s_context, match_strategy], prefix='Query')
+        filter_identifier = generate_idx([self.subcorpus_name, topic_query, s_context, match_strategy, filter_queries], prefix='Query')
 
         # CHECK CQP
         cqp = self.start_cqp()
@@ -1350,3 +1349,172 @@ class Corpus:
             output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
 
         return list(output)
+
+    def subcorpus(self, df_dump, name_cqp):
+
+        return SubCorpus(df_dump, name_cqp, self.corpus_name,
+                         self.lib_path, self.cqp_bin, self.registry_path, self.data_path)
+
+
+class SubCorpus(Corpus):
+
+    def __init__(self, df_dump, subcorpus_name, corpus_name, lib_path, cqp_bin, registry_path, data_path):
+
+        super().__init__(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+
+        # TODO make sure name actually contains the matches given in df
+        # move 'activate_subcorpus' here
+        self.df = df_dump
+        self.subcorpus_name = subcorpus_name
+
+        self._matches = None
+        self._context = None
+
+    def __str__(self):
+
+        return '\n' + '\n'.join([
+            f'corpus:    {self.corpus_name} ({self.corpus_size} tokens)',
+            f'data:      {self.data_path}',
+            f'subcorpus: {self.subcorpus_name} ({len(self.df)} spans)'
+        ]) + '\n'
+
+    def __repr__(self):
+        """Info string.
+
+        """
+        return self.__str__()
+
+    def set_context(self, context=None, context_break=None,
+                    context_left=None, context_right=None):
+        """Set context in the dump.
+
+        """
+        # pre-process context
+        if context_left is None:
+            context_left = context
+        if context_right is None:
+            context_right = context
+
+        # set context
+        df = self.dump2context(
+            self.df, context_left, context_right, context_break
+        )
+
+        return self.subcorpus(df, self.subcorpus_name)
+
+    def correct_anchors(self, corrections):
+        """Correct anchors by integer offsets.
+
+        """
+        self.df = correct_anchors(self.df, corrections)
+
+    def breakdown(self, p_atts=['word'], flags=""):
+        """Frequency breakdown of match..matchend.
+
+        """
+
+        logger.info('creating frequency breakdown')
+        breakdown = self.counts.dump(
+            df_dump=self.df,
+            start='match', end='matchend',
+            p_atts=p_atts, strategy=1
+        )
+
+        breakdown = fold_df(breakdown, flags)
+
+        return breakdown
+
+    def matches(self):
+        """
+        :return: cpos of (match .. matchend) regions
+        :rtype: set
+        """
+        if self._matches is None:
+            f1 = set()
+            for match, matchend in self.df.index:
+                f1.update(range(match, matchend + 1))
+            self._matches = f1
+
+        return self._matches
+
+    def context(self):
+        """
+        :return: cpos of (context .. contextend) regions including matches
+        :rtype: DataFrame
+        """
+        if self._context is None:
+            self._context = DataFrame.from_records(merge_intervals(
+                self.df[['context', 'contextend']].values.tolist()
+            ), columns=['context', 'contextend'])
+
+        return self._context
+
+    def marginals(self, start='match', end='matchend', p_atts=['word']):
+
+        return self.counts.dump(
+            self.df, start=start, end=end, p_atts=p_atts, split=True
+        )
+
+    def concordance(self, form='simple', p_show=['word'], s_show=[],
+                    order='first', cut_off=100, matches=None,
+                    slots=None, cwb_ids=False):
+
+        conc = Concordance(
+            self.copy(),
+            df_dump=self.df
+        )
+
+        return conc.lines(
+            form=form,
+            p_show=p_show,
+            s_show=s_show,
+            order=order,
+            cut_off=cut_off,
+            matches=matches,
+            slots=slots,
+            cwb_ids=cwb_ids
+        )
+
+    def collocates(self, p_query=['lemma'], mws=20, window=5, order='O11',
+                   cut_off=100, ams=None, min_freq=2,
+                   frequencies=True, flags=None, marginals='corpus',
+                   show_negative=False):
+
+        mws = max(mws, window)
+
+        coll = Collocates(
+            self.copy(),
+            df_dump=self.df,
+            p_query=p_query,
+            mws=mws
+        )
+
+        return coll.show(
+            window=window,
+            order=order,
+            cut_off=cut_off,
+            ams=ams,
+            min_freq=min_freq,
+            frequencies=frequencies,
+            flags=flags,
+            marginals=marginals,
+            show_negative=show_negative
+        )
+
+    def keywords(self, p_query=['lemma'], order='O11', cut_off=100,
+                 ams=None, min_freq=2, frequencies=True, flags=None):
+
+        kw = Keywords(
+            self.copy(),
+            self.df,
+            p_query,
+        )
+
+        return kw.show(
+            order=order,
+            cut_off=cut_off,
+            ams=ams,
+            min_freq=min_freq,
+            frequencies=frequencies,
+            flags=flags
+        )
