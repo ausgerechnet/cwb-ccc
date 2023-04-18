@@ -10,6 +10,8 @@ library(irr)
 library(gridExtra)
 library(ggrepel)
 
+options(dplyr.summarise.inform = FALSE)
+
 # function for formatting concordance lines
 concordance.format <- function(conc, n = 10, tex = F, crop=NULL){
   
