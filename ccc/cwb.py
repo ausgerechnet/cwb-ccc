@@ -1312,7 +1312,62 @@ class SubCorpus(Corpus):
 
     def __init__(self, subcorpus_name, df_dump, corpus_name, lib_path, cqp_bin, registry_path, data_path):
         """
-        takes care that (match, matchend)
+        :param str subcorpus_name: name of NQR in CQP
+        :param DataFrame df_dump: a "DumpFrame"
+
+        a "DumpFrame" is a dataframe indexed by (match, matchend),
+        i.e. non-overlapping corpus spans represented by integers,
+        and without missing values.
+
+        CREATION
+
+        dump_from_query:  === (match, matchend), 0*, .., 9* ===
+        - index <int, int> match, matchend: cpos
+        - columns <int> 0*, .., 9*: anchor points (optional; missing = -1)
+
+        dump_from_s_att:  === (match, matchend), $s_cwbid, $s* ===
+        - index <int, int> match, matchend: cpos
+        - column <int> $s_cwbid: id
+        - column <str> $s: annotation (optional)
+
+        TRANSFORMATION (additional columns are preserved)
+
+        dump2patt:        === (match, matchend), $p ===
+        - index <int, int> match, matchend: cpos
+        - column <str> $p: " "-joined tokens (match..matchend or regions of input columns)
+
+        dump2satt:        === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s* ===
+        - index <int, int> match, matchend: cpos
+        - column <int> $s_cwbid: id (missing = -1) of s_att at match cpos
+        - column <int> $s_span: cpos (missing = -1)
+        - column <int> $s_spanend: cpos (missing = -1)
+        - column <str> $s*: annotation (optional)
+
+        dump2context:     === (match, matchend), contextid*, context, contextend
+                                                 $s_cwbid*, $s_span*, $s_spanend* ===
+
+        - index <int, int> match, matchend: cpos
+        - column <int> contextid: of id (optional; duplicate of $s_cwbid)
+        - column <int> context: cpos
+        - column <int> contextend: cpos
+        - column <int> $s_cwbid: id (optional; missing = -1)
+        - column <int> $s_span: cpos (missing = -1)
+        - column <int> $s_spanend: cpos (missing = -1)
+
+        QUERY ALIASES
+
+        query_cqp:        === (match, matchend), 0*, ..., 9*, contextid*, context*, contextend* ===
+        - index <int, int> match, matchend: cpos
+        - columns <int> 0*, .., 9*: anchor points (optional; missing = -1)
+        - column <int> contextid: of id (optional)
+        - column <int> context: cpos (optional)
+        - column <int> contextend: cpos (optional)
+
+        query_s_att:      === (match, matchend), $s_cwbid, $s* ===
+        - index <int, int> match, matchend: cpos
+        - column <int> $s_cwbid: id
+        - column <str> $s: annotation (optional)
+
         """
 
         super().__init__(corpus_name, lib_path, cqp_bin, registry_path, data_path)
@@ -1323,7 +1378,7 @@ class SubCorpus(Corpus):
                 logger.warning('no subcorpus information provided, returning Corpus')
             else:
                 logger.warning('no subcorpus name given, you will not be able to use CQP')
-                # TODO: create identifier, retrieve
+                # TODO: create identifier, define
 
         else:
 
@@ -1343,7 +1398,7 @@ class SubCorpus(Corpus):
     def _assign(self, subcorpus_name, df_dump):
 
         if subcorpus_name in self.show_nqr()['subcorpus'].values:
-            logger.warning(f'overwriting NQR "{subcorpus_name}"')
+            logger.warning(f'NQR "{subcorpus_name}" exists, overwriting')
 
         # create in CQP
         cqp = self.start_cqp()
@@ -1352,9 +1407,9 @@ class SubCorpus(Corpus):
         cqp.__del__()
 
         if subcorpus_name not in self.show_nqr()['subcorpus'].values:
-            logger.error(f'could not define NQR "{subcorpus_name}" from dataframe)')
+            logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe)')
         else:
-            logger.info(f'activated  NQR "{subcorpus_name}"')
+            logger.info(f'assigned NQR "{subcorpus_name}" from dataframe')
 
     def __str__(self):
 
