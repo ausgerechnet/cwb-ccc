@@ -81,8 +81,8 @@ def test_merge_intervals():
 
 def test_filter_df(germaparl):
     c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'], data_path=DATA_PATH)
-    dump = c.query(germaparl['query'])
-    coll = dump.collocates()
+    subcorpus = c.query(germaparl['query'])
+    coll = subcorpus.collocates()
     assert ',' in coll.index
     coll_filtered = filter_df(coll, 'resources/stopwords-de.txt')
     assert ',' not in coll_filtered.index

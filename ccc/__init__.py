@@ -4,5 +4,5 @@
 
 """
 
-from .cwb import Corpora, Corpus
+from .cwb import Corpora, Corpus, SubCorpus
 from .version import __version__

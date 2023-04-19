@@ -12,10 +12,9 @@ from association_measures.measures import score
 from pandas import DataFrame, concat
 
 # part of module
-from . import Corpus
+from . import Corpus, SubCorpus
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
-from .dumps import Dump
 from .utils import dump_left_join, format_cqp_query, aggregate_matches, group_lines, format_roles
 
 logger = logging.getLogger(__name__)
@@ -99,7 +98,7 @@ class Constellation:
         param str name: name of the node
         """
 
-        self.corpus = dump.corpus
+        self.corpus = dump
         # init with given dump
         self.df = dump.df[['contextid', 'context', 'contextend']].astype("Int64")
         # init added discoursemes
@@ -222,7 +221,7 @@ class TextConstellation:
             name = list(dumps.keys())[0]
             dump = dumps.pop(name)
 
-        elif isinstance(dump, Dump):
+        elif isinstance(dump, SubCorpus):
             dumps = {}
 
         else:
@@ -230,7 +229,7 @@ class TextConstellation:
 
         # create
         self.s_context = s_context
-        self.corpus = dump.corpus
+        self.corpus = dump
         self.N = len(self.corpus.attributes.attribute(s_context, 's'))
 
         # init discoursemes
@@ -416,7 +415,7 @@ def create_constellation(corpus_name,
 
         if approximate:
             sub = topic_dump.df.set_index(['context', 'contextend'])
-            corpus = corpus.activate_subcorpus(nqr='TempRestriction', df_dump=sub)
+            corpus = corpus.subcorpus('TempRestriction', df_dump=sub)
 
         # add filter discoursemes
         for disc_name, disc_items in filter_discoursemes.items():
@@ -446,7 +445,7 @@ def create_constellation(corpus_name,
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=False)
 
-        corpus = corpus.activate_subcorpus()
+        corpus = corpus.subcorpus()
 
     # no topic -> TextConstellation()
     else:

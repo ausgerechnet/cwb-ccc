@@ -21,7 +21,6 @@ from .cl import Corpus as Attributes
 from .concordances import Concordance
 from .counts import Counts, cwb_scan_corpus
 from .cqp import CQP
-from .dumps import Dump
 from .utils import (chunk_anchors, correct_anchors, dump_left_join,
                     format_roles, group_lines, preprocess_query, aggregate_matches)
 from .version import __version__
@@ -541,47 +540,10 @@ class Corpus:
             df = df[['corpus', 'subcorpus', 'size', 'storage']]
         except EmptyDataError:
             logger.info("no subcorpora defined")
-            df = DataFrame()
+            df = DataFrame(columns=['corpus', 'subcorpus', 'size', 'storage'])
 
         cqp.__del__()
         return df
-
-    def activate_subcorpus(self, nqr=None, df_dump=None):
-        """Activate a Named Query Result (NQR).
-
-        - If no df_dump is given, this sets self.subcorpus and logs an
-          error if NQR is not defined.
-        - If a df_dump is given, the df_dump will be undumped and named
-          NQR.
-
-        :param str nqr: NQR defined in CQP
-        :param DataFrame df_dump: DataFrame indexed by (match, matchend)
-                                  with optional columns 'target' and 'keyword'
-
-        """
-
-        subcorpus = self.copy()
-
-        if nqr is not None:
-
-            # create NQR
-            if df_dump is not None:
-                cqp = self.start_cqp()
-                cqp.nqr_from_dump(df_dump, nqr)
-                cqp.nqr_save(self.corpus_name, nqr)
-                cqp.__del__()
-            if nqr not in self.show_nqr()['subcorpus'].values:
-                logger.error(f'subcorpus "{nqr}" not defined)')
-            else:
-                logger.info(f'switched to subcorpus "{nqr}"')
-
-        else:
-            logger.info(f'switched to corpus "{self.corpus_name}"')
-
-        # activate subcorpus
-        subcorpus.subcorpus = nqr
-
-        return subcorpus
 
     ##################
     # CREATING DUMPS #
@@ -1062,8 +1024,8 @@ class Corpus:
             cqp.nqr_save(self.corpus_name, name)
             cqp.__del__()
 
-        # return proper Dump
-        return Dump(self, df_spans, name_cqp=name)
+        # return SubCorpus
+        return self.subcorpus(subcorpus_name=name, df_dump=df_spans)
 
     def query_cqp(self, cqp_query, context=20, context_left=None,
                   context_right=None, context_break=None, corrections=dict(),
@@ -1136,12 +1098,8 @@ class Corpus:
             # apply corrections to anchor points
             df_dump = correct_anchors(df_dump, corrections)
 
-        # return proper dump
-        return Dump(
-            self.copy(),
-            df_dump,
-            name_cqp=name
-        )
+        # return SubCorpus
+        return self.subcorpus(subcorpus_name=name, df_dump=df_dump)
 
     def query(self, cqp_query=None, context=20, context_left=None,
               context_right=None, context_break=None,
@@ -1264,9 +1222,8 @@ class Corpus:
             # init CONTEXT (TextConstellation)
             cqp.Exec(f'cut {identifier} {cut_off};')
             df_context = cqp.Dump(f'{identifier};')
-            dump_context = Dump(self.copy(), df_context, None)
-            dump_context = dump_context.set_context(context_break=s_context)
-            df_context = dump_context.df[['contextid']]
+            subcorpus_context = self.subcorpus(None, df_context).set_context(context_break=s_context)
+            df_context = subcorpus_context.df[['contextid']]
             df_context = df_context.reset_index().set_index('contextid')
 
             # HIGHLIGHT
@@ -1275,9 +1232,8 @@ class Corpus:
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
                 if len(df_query) > 0:
-                    dump_query = Dump(self.copy(), df_query, None)
-                    dump_query = dump_query.set_context(context_break=s_context)
-                    df_query = dump_query.df[['contextid']]
+                    subcorpus_query = self.subcorpus(None, df_query).set_context(context_break=s_context)
+                    df_query = subcorpus_query.df[['contextid']]
                     df_agg = aggregate_matches(df_query, name)
                     df_context = df_context.join(df_agg)
                 else:
@@ -1309,16 +1265,14 @@ class Corpus:
             # init CONTEXT (TextConstellation)
             cqp.Exec(f'{identifier};')
             df_context = cqp.Dump(f'{identifier};')
-            dump_context = Dump(self.copy(), df_context, None)
-            dump_context = dump_context.set_context(window, s_context)
-            df_context = dump_context.df[['contextid', 'context', 'contextend']]
+            subcorpus_context = self.subcorpus(None, df_context).set_context(window, s_context)
+            df_context = subcorpus_context.df[['contextid', 'context', 'contextend']]
 
             # index by TOPIC MATCHES
             cqp.Exec(f'Temp = {topic_query};')
             df_query = cqp.Dump('Temp;')
-            dump_query = Dump(self.copy(), df_query, None)
-            dump_query = dump_query.set_context(window, s_context)
-            df_context = dump_left_join(df_context, dump_query.df, 'topic', drop=True, window=window)
+            subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+            df_context = dump_left_join(df_context, subcorpus_query.df, 'topic', drop=True, window=window)
             df_context = df_context.set_index(['match_topic', 'matchend_topic'])
             df_context.index.names = ['match', 'matchend']
 
@@ -1326,18 +1280,16 @@ class Corpus:
             for name, query in filter_queries.items():
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
-                dump_query = Dump(self.copy(), df_query, None)
-                dump_query = dump_query.set_context(window, s_context)
-                df_context = dump_left_join(df_context, dump_query.df, name, drop=True, window=window)
+                subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+                df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=True, window=window)
                 df_context = df_context.drop([c + "_" + name for c in ['match', 'matchend', 'offset']], axis=1)
 
             # HIGHLIGHT
             for name, query in highlight_queries.items():
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
-                dump_query = Dump(self.copy(), df_query, None)
-                dump_query = dump_query.set_context(window, s_context)
-                df_context = dump_left_join(df_context, dump_query.df, name, drop=False, window=window)
+                subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+                df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=False, window=window)
 
             cqp.__del__()
 
@@ -1350,25 +1302,59 @@ class Corpus:
 
         return list(output)
 
-    def subcorpus(self, df_dump, name_cqp):
+    def subcorpus(self, subcorpus_name=None, df_dump=None):
 
-        return SubCorpus(df_dump, name_cqp, self.corpus_name,
+        return SubCorpus(subcorpus_name, df_dump, self.corpus_name,
                          self.lib_path, self.cqp_bin, self.registry_path, self.data_path)
 
 
 class SubCorpus(Corpus):
 
-    def __init__(self, df_dump, subcorpus_name, corpus_name, lib_path, cqp_bin, registry_path, data_path):
+    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_path, cqp_bin, registry_path, data_path):
+        """
+        takes care that (match, matchend)
+        """
 
         super().__init__(corpus_name, lib_path, cqp_bin, registry_path, data_path)
 
-        # TODO make sure name actually contains the matches given in df
-        # move 'activate_subcorpus' here
+        if subcorpus_name is None:
+
+            if df_dump is None:
+                logger.warning('no subcorpus information provided, returning Corpus')
+            else:
+                logger.warning('no subcorpus name given, you will not be able to use CQP')
+                # TODO: create identifier, retrieve
+
+        else:
+
+            if df_dump is None:
+                cqp = self.start_cqp()
+                df_dump = cqp.Dump(subcorpus=subcorpus_name)
+                cqp.__del__()
+            else:
+                self._assign(subcorpus_name, df_dump)
+
         self.df = df_dump
         self.subcorpus_name = subcorpus_name
 
         self._matches = None
         self._context = None
+
+    def _assign(self, subcorpus_name, df_dump):
+
+        if subcorpus_name in self.show_nqr()['subcorpus'].values:
+            logger.warning(f'overwriting NQR "{subcorpus_name}"')
+
+        # create in CQP
+        cqp = self.start_cqp()
+        cqp.nqr_from_dump(df_dump, subcorpus_name)
+        cqp.nqr_save(self.corpus_name, subcorpus_name)
+        cqp.__del__()
+
+        if subcorpus_name not in self.show_nqr()['subcorpus'].values:
+            logger.error(f'could not define NQR "{subcorpus_name}" from dataframe)')
+        else:
+            logger.info(f'activated  NQR "{subcorpus_name}"')
 
     def __str__(self):
 
@@ -1400,7 +1386,7 @@ class SubCorpus(Corpus):
             self.df, context_left, context_right, context_break
         )
 
-        return self.subcorpus(df, self.subcorpus_name)
+        return self.subcorpus(self.subcorpus_name, df)
 
     def correct_anchors(self, corrections):
         """Correct anchors by integer offsets.

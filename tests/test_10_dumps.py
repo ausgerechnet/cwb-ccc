@@ -22,17 +22,17 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 ########
 def test_query(germaparl):
     corpus = get_corpus(germaparl)
-    dump = corpus.query('"SPD"')
-    assert dump.name_cqp == 'Last'
-    assert dump.size == 632
-    assert (dump.df.columns == ['context', 'contextend']).all()
+    subcorpus = corpus.query('"SPD"')
+    assert subcorpus.subcorpus_name == 'Last'
+    assert len(subcorpus.df) == 632
+    assert (subcorpus.df.columns == ['context', 'contextend']).all()
 
 
 def test_query_name(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"', name="SPD")
-    assert dump.name_cqp == "SPD"
-    assert dump.size == 632
+    assert dump.subcorpus_name == "SPD"
+    assert len(dump.df) == 632
     assert (dump.df.columns == ['context', 'contextend']).all()
 
 
@@ -63,12 +63,12 @@ def test_matches(germaparl):
     assert 8193 in matches
 
 
+@pytest.mark.now
 def test_matches_subcorpus(germaparl):
     corpus = get_corpus(germaparl)
     dump_base = corpus.query(r'[pos="NE"]? [pos="NE"] "\[" ".*" "\]"', name="Base")
     tokens_base = len(dump_base.matches())
-    corpus.subcorpus = "Base"
-    dump_neg = corpus.query('[pos="NE"]')
+    dump_neg = dump_base.query('[pos="NE"]')
     tokens_neg = len(dump_neg.matches())
     assert (tokens_base - tokens_neg) == 350
 
@@ -94,8 +94,8 @@ def test_query_s_satt(germaparl):
     corpus = get_corpus(germaparl)
     parties = {"GRUENE", "Bündnis 90/Die Grünen"}
     dump = corpus.query_s_att('text_party', parties)
-    assert dump.name_cqp is None
-    assert dump.size == 87
+    assert dump.subcorpus_name is None
+    assert len(dump.df) == 87
     assert (dump.df.columns == ['text_party_cwbid', 'text_party']).all()
 
 
