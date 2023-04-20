@@ -93,7 +93,7 @@ def test_query_s_satt(germaparl):
     corpus = get_corpus(germaparl)
     parties = {"GRUENE", "Bündnis 90/Die Grünen"}
     dump = corpus.query_s_att('text_party', parties)
-    assert dump.subcorpus_name is None
+    assert dump.subcorpus_name is not None
     assert len(dump.df) == 87
     assert (dump.df.columns == ['text_party_cwbid', 'text_party']).all()
 

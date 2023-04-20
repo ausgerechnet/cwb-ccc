@@ -1313,25 +1313,24 @@ class SubCorpus(Corpus):
 
         super().__init__(corpus_name, lib_path, cqp_bin, registry_path, data_path)
 
-        if subcorpus_name is None:
-
-            if df_dump is None:
-                logger.warning('no subcorpus information provided, returning Corpus')
-            else:
-                logger.warning('no subcorpus name given, you will not be able to use CQP')
-                # TODO: create identifier, define
+        if (subcorpus_name is None and df_dump is None):
+            logger.warning('no subcorpus information provided, returning Corpus')
 
         else:
+            if subcorpus_name is None:  # (and df_dump is not None)
+                subcorpus_name = generate_idx([df_dump], prefix='df_')
+                self._assign(subcorpus_name, df_dump, overwrite)
 
-            if df_dump is None:
+            elif df_dump is None:  # (and subcorpus_name is not None)
                 cqp = self.start_cqp()
                 df_dump = cqp.Dump(subcorpus=subcorpus_name)
                 cqp.__del__()
-            else:
+
+            else:      # (both df_dump and subcorpus_name are defined)
                 self._assign(subcorpus_name, df_dump, overwrite)
 
-        self.df = df_dump
-        self.subcorpus_name = subcorpus_name
+            self.df = df_dump
+            self.subcorpus_name = subcorpus_name
 
     def _assign(self, subcorpus_name, df_dump, overwrite):
 
@@ -1355,7 +1354,7 @@ class SubCorpus(Corpus):
             cqp.__del__()
 
         if subcorpus_name not in self.show_nqr()['subcorpus'].values:
-            logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe)')
+            logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe')
         else:
             logger.info(f'assigned NQR "{subcorpus_name}" from dataframe')
 
