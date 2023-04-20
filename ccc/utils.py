@@ -240,11 +240,20 @@ node2cotext = np.vectorize(_node2cotext)
 
 
 def merge_intervals(inter, start_index=0):
-    """ for merging contexts """
+    """for merging contexts; union of intervals. intervals can have
+    arbitrary overlaps, but must be sorted by left boundaries
+
+    :param list inter: list of intervals (each one a pair of left and right boundary)
+    :param int start_index: for recursive application
+
+    :return: list of merged intervals
+    :rtype: list
+    """
+
     for i in range(start_index, len(inter)-1):
         if inter[i][1] >= inter[i+1][0]:
             new_start = inter[i][0]
-            new_end = inter[i+1][1]
+            new_end = max(inter[i][1], inter[i+1][1])
             inter[i] = [new_start, new_end]
             del inter[i+1]
             return merge_intervals(inter.copy(), start_index=i)
