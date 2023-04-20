@@ -7,7 +7,6 @@ definition of the Corpora, Corpus and SubCorpus classes
 """
 import logging
 import os
-from glob import glob
 from io import StringIO
 
 # requirements
@@ -20,86 +19,16 @@ from .cache import Cache, generate_idx, generate_library_idx
 from .cl import Corpus as Attributes
 from .concordances import Concordance
 from .counts import Counts, cwb_scan_corpus
-from .cqp import CQP
+from .cqp import start_cqp
 from .utils import (chunk_anchors, correct_anchors, dump_left_join,
-                    format_roles, group_lines, preprocess_query, aggregate_matches)
+                    format_roles, group_lines, preprocess_query,
+                    aggregate_matches, decode)
 from .version import __version__
 from .collocates import Collocates
 from .keywords import Keywords
 from .utils import fold_df, merge_intervals
 
 logger = logging.getLogger(__name__)
-
-
-def decode(text):
-    """savely decode a string catching common errors
-
-    """
-    try:
-        text = text.decode('utf-8')
-    except (UnicodeDecodeError, AttributeError):
-        text = ""
-    return text
-
-
-def start_cqp(cqp_bin, registry_path,
-              data_path=None, corpus_name=None,
-              lib_path=None, subcorpus=None):
-    """Start CQP process, activate (sub-)corpus, set paths, and read
-    library (macros and wordlists).
-
-    :param str cqp_bin: /path/to/cqp-binary
-    :param str registry_path: /path/to/cwb/registry/
-    :param str data_path: /path/to/data/and/cache/
-    :param str corpus_name: name of corpus in CWB registry
-    :param str lib_path: /path/to/macros/and/wordlists/
-    :param str subcorpus: name of subcorpus (NQR)
-
-    :return: CQP process
-    :rtype: CQP
-
-    """
-
-    cqp = CQP(
-        binary=cqp_bin,
-        options='-c -r ' + registry_path
-    )
-
-    if data_path is not None:
-        cqp.Exec(f'set DataDirectory "{data_path}"')
-
-    if lib_path is not None:
-
-        # wordlists
-        wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
-        for wordlist in wordlists:
-            name = wordlist.split('/')[-1].split('.')[0]
-            abs_path = os.path.abspath(wordlist)
-            cqp_exec = f'define ${name} < "{abs_path}";'
-            cqp.Exec(cqp_exec)
-
-        # macros
-        macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
-        for macro in macros:
-            abs_path = os.path.abspath(macro)
-            cqp_exec = f'define macro < "{abs_path}";'
-            cqp.Exec(cqp_exec)
-        # for wordlists defined in macros, it is necessary to execute the macro once
-        macros = cqp.Exec("show macro;").split("\n")
-        for macro in macros:
-            # NB: this yields !cqp.Ok() if macro is not zero-valent
-            cqp.Exec(macro.split("(")[0] + "();")
-
-    # initialize corpus after macro definition, so execution of macro doesn't spend time
-    if corpus_name is not None:
-        cqp.Exec(corpus_name)
-    if subcorpus is not None:
-        cqp.Exec(subcorpus)
-
-    if not cqp.Ok():
-        raise NotImplementedError()
-
-    return cqp
 
 
 class Corpora:
@@ -1016,14 +945,6 @@ class Corpus:
                 logger.info(f"restricting spans using {len(values)} values")
                 df_spans = df_spans.loc[df_spans[s_att].isin(values)]
 
-        # save as NQR
-        if name is not None:
-            # undump the dump and save to disk
-            cqp = self.start_cqp()
-            cqp.nqr_from_dump(df_spans, name)
-            cqp.nqr_save(self.corpus_name, name)
-            cqp.__del__()
-
         # return SubCorpus
         return self.subcorpus(subcorpus_name=name, df_dump=df_spans)
 
@@ -1075,14 +996,6 @@ class Corpus:
 
         if propagate_error and isinstance(df_dump, str):
             return df_dump
-
-        # if dump has been retrieved from cache, NQR might not exist
-        if save and (self.show_nqr().empty or name not in self.show_nqr()['subcorpus'].values):
-            # undump the dump and save to disk
-            cqp = self.start_cqp()
-            cqp.nqr_from_dump(df_dump, name)
-            cqp.nqr_save(self.corpus_name, name)
-            cqp.__del__()
 
         # empty return?
         if len(df_dump) == 0:
@@ -1302,15 +1215,16 @@ class Corpus:
 
         return list(output)
 
-    def subcorpus(self, subcorpus_name=None, df_dump=None):
+    def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
 
         return SubCorpus(subcorpus_name, df_dump, self.corpus_name,
-                         self.lib_path, self.cqp_bin, self.registry_path, self.data_path)
+                         self.lib_path, self.cqp_bin, self.registry_path, self.data_path, overwrite)
 
 
 class SubCorpus(Corpus):
 
-    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_path, cqp_bin, registry_path, data_path):
+    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_path,
+                 cqp_bin, registry_path, data_path, overwrite=True):
         """
         :param str subcorpus_name: name of NQR in CQP
         :param DataFrame df_dump: a "DumpFrame"
@@ -1387,24 +1301,31 @@ class SubCorpus(Corpus):
                 df_dump = cqp.Dump(subcorpus=subcorpus_name)
                 cqp.__del__()
             else:
-                self._assign(subcorpus_name, df_dump)
+                self._assign(subcorpus_name, df_dump, overwrite)
 
         self.df = df_dump
         self.subcorpus_name = subcorpus_name
 
-        self._matches = None
-        self._context = None
-
-    def _assign(self, subcorpus_name, df_dump):
+    def _assign(self, subcorpus_name, df_dump, overwrite):
 
         if subcorpus_name in self.show_nqr()['subcorpus'].values:
-            logger.warning(f'NQR "{subcorpus_name}" exists, overwriting')
+            # NQR exists
+            if overwrite:
+                logger.info(f'NQR "{subcorpus_name}" exists, overwriting')
+                # create in CQP
+                cqp = self.start_cqp()
+                cqp.nqr_from_dump(df_dump, subcorpus_name)
+                cqp.nqr_save(self.corpus_name, subcorpus_name)
+                cqp.__del__()
+            else:
+                logger.info(f'NQR "{subcorpus_name}" already exists')
 
-        # create in CQP
-        cqp = self.start_cqp()
-        cqp.nqr_from_dump(df_dump, subcorpus_name)
-        cqp.nqr_save(self.corpus_name, subcorpus_name)
-        cqp.__del__()
+        else:
+            # create in CQP
+            cqp = self.start_cqp()
+            cqp.nqr_from_dump(df_dump, subcorpus_name)
+            cqp.nqr_save(self.corpus_name, subcorpus_name)
+            cqp.__del__()
 
         if subcorpus_name not in self.show_nqr()['subcorpus'].values:
             logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe)')
@@ -1470,31 +1391,45 @@ class SubCorpus(Corpus):
         :return: cpos of (match .. matchend) regions
         :rtype: set
         """
-        if self._matches is None:
+
+        identifier = generate_idx([self.df.reset_index()[['match', 'matchend']]]) + "-matches"
+        f1 = self.cache.get(identifier)
+        if not isinstance(f1, set):
             f1 = set()
             for match, matchend in self.df.index:
                 f1.update(range(match, matchend + 1))
-            self._matches = f1
-
-        return self._matches
+            self.cache.set(identifier, f1)
+        return f1
 
     def context(self):
         """
         :return: cpos of (context .. contextend) regions including matches
         :rtype: DataFrame
         """
-        if self._context is None:
-            self._context = DataFrame.from_records(merge_intervals(
+
+        identifier = generate_idx([self.df[['context', 'contextend']]]) + "-contexts"
+        df = self.cache.get(identifier)
+        if not isinstance(df, DataFrame):
+            df = DataFrame.from_records(merge_intervals(
                 self.df[['context', 'contextend']].values.tolist()
             ), columns=['context', 'contextend'])
-
-        return self._context
+            self.cache.set(identifier, df)
+        return df
 
     def marginals(self, start='match', end='matchend', p_atts=['word']):
+        """
+        :return: counts of (start .. end) regions including matches
+        :rtype: DataFrame
+        """
 
-        return self.counts.dump(
-            self.df, start=start, end=end, p_atts=p_atts, split=True
-        )
+        identifier = generate_idx([self.df.reset_index()[[start, end]], p_atts]) + "-marginals"
+        df = self.cache.get(identifier)
+        if not isinstance(df, DataFrame):
+            df = self.counts.dump(
+                self.df, start=start, end=end, p_atts=p_atts, split=True
+            )
+            self.cache.set(identifier, df)
+        return df
 
     def concordance(self, form='simple', p_show=['word'], s_show=[],
                     order='first', cut_off=100, matches=None,
@@ -1516,19 +1451,14 @@ class SubCorpus(Corpus):
             cwb_ids=cwb_ids
         )
 
-    def collocates(self, p_query=['lemma'], mws=20, window=5, order='O11',
-                   cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, marginals='corpus',
+    def collocates(self, p_query=['lemma'], mws=20, window=5,
+                   order='O11', cut_off=100, ams=None, min_freq=2,
+                   flags=None, marginals='corpus',
                    show_negative=False):
 
         mws = max(mws, window)
 
-        coll = Collocates(
-            self.copy(),
-            df_dump=self.df,
-            p_query=p_query,
-            mws=mws
-        )
+        coll = Collocates(self.copy(), self.df, p_query, mws)
 
         return coll.show(
             window=window,
@@ -1536,26 +1466,23 @@ class SubCorpus(Corpus):
             cut_off=cut_off,
             ams=ams,
             min_freq=min_freq,
-            frequencies=frequencies,
             flags=flags,
             marginals=marginals,
             show_negative=show_negative
         )
 
     def keywords(self, p_query=['lemma'], order='O11', cut_off=100,
-                 ams=None, min_freq=2, frequencies=True, flags=None):
+                 ams=None, min_freq=2, flags=None,
+                 marginals='corpus', show_negative=False):
 
-        kw = Keywords(
-            self.copy(),
-            self.df,
-            p_query,
-        )
+        kw = Keywords(self.copy(), self.df, p_query)
 
         return kw.show(
             order=order,
             cut_off=cut_off,
             ams=ams,
             min_freq=min_freq,
-            frequencies=frequencies,
-            flags=flags
+            flags=flags,
+            marginals=marginals,
+            show_negative=show_negative
         )
