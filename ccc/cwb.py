@@ -200,9 +200,6 @@ class Corpus:
         # get corpus size
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
-        # get available corpus attributes
-        self.attributes_available = self._attributes_available()
-
         # init cache
         self.cache = Cache(os.path.join(self.data_path, "CACHE"))
 
@@ -228,7 +225,7 @@ class Corpus:
         """
         return self.__str__()
 
-    def _macros_available(self):
+    def available_macros(self):
         """Get available macros (either system-defined or via library).
 
         :return: defined macros
@@ -242,7 +239,7 @@ class Corpus:
 
         return defined_macros
 
-    def _wordlists_available(self):
+    def available_wordlists(self):
         """Get available wordlists.
 
         :return: defined wordlists
@@ -260,7 +257,7 @@ class Corpus:
 
         return names
 
-    def _attributes_available(self):
+    def available_attributes(self):
         """Get indexed p- and s-attributes. Will be run once when initializing
         the corpus.
 
@@ -323,7 +320,7 @@ class Corpus:
     # p-attributes #
     ################
     def cpos2patts(self, cpos, p_atts=['word'], ignore=True):
-        """Retrieve p-attributes of corpus position.
+        """Retrieve p-attributes at corpus position.
 
         :param int cpos: corpus position to fill
         :param list p_atts: p-attribute(s) to fill position with
@@ -337,18 +334,30 @@ class Corpus:
         return self.counts._cpos2patts(cpos, p_atts, ignore)
 
     def marginals(self, items=None, p_atts=['word'], flags=0, pattern=False):
+        """Extract marginal frequencies. If no items are given, return
+        frequencies of all items.
+
+        :param list items: items to get marginals for
+        :param str p_att: p-attribute to get frequencies for
+        :param int flags: 1 = %c, 2 = %d, 3 = %cd (will activate wildcards)
+        :param bool pattern: activate wildcards?
+
+        :return: frequencies of the items in the whole corpus indexed by items
+        :rtype: FreqFrame
+
+        """
 
         # allow lazy evocation
         p_atts = [p_atts] if isinstance(p_atts, str) else p_atts
 
         # simple
         if len(p_atts) == 1 and items is not None:
-            return self.marginals_simple(items, p_atts[0], flags, pattern)
+            return self._marginals_simple(items, p_atts[0], flags, pattern)
 
         else:
-            return self.marginals_complex(items, p_atts)
+            return self._marginals_complex(items, p_atts)
 
-    def marginals_simple(self, items, p_att='word', flags=0, pattern=False):
+    def _marginals_simple(self, items, p_att='word', flags=0, pattern=False):
         """Extract marginal frequencies for given unigrams or unigram patterns
         of a single p-attribute.  0 if not in corpus.  For
         combinations of p-attributes, see marginals_complex.
@@ -362,6 +371,9 @@ class Corpus:
         :rtype: FreqFrame
 
         """
+
+        if self.subcorpus_name is not None:
+            logger.warning('retrieving corpus marginals, not subcorpus marginals')
 
         pattern = True if flags > 0 else pattern
         att = self.attributes.attribute(p_att, 'p')
@@ -389,7 +401,7 @@ class Corpus:
 
         return df
 
-    def marginals_complex(self, items, p_atts=['word']):
+    def _marginals_complex(self, items, p_atts=['word']):
         """Extract marginal frequencies for p-attribute combinations,
         e.g. ["lemma", "pos"].  0 if not in corpus.  Marginals are
         retrieved using cwb-scan-corpus, result is cached.
@@ -402,8 +414,11 @@ class Corpus:
 
         """
 
+        if self.subcorpus_name is not None:
+            logger.warning('retrieving corpus marginals, not subcorpus marginals')
+
         # get all marginals for p-att combination
-        identifier = "_".join(p_atts) + "_marginals"
+        identifier = "-".join(p_atts) + "-marginals"
         df = self.cache.get(identifier)
         if df is not None:
             # get from cache if possible
@@ -417,14 +432,13 @@ class Corpus:
 
         if items is not None:
             # preprocess tuples
-            items = [" ".join(i) for i in items] if isinstance(items[0], tuple) \
-                else items
+            items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
             # select relevant rows
             df = df.reindex(items)
             df = df.fillna(0, downcast='infer')
 
         # sort by frequency
-        df.sort_values(by='freq')
+        df = df.sort_values(by=['freq', 'item'], ascending=False)
 
         return df
 
@@ -459,6 +473,7 @@ class Corpus:
         """
         cqp = self.start_cqp()
         cqp_return = cqp.Exec("show named;")
+
         try:
             df = read_csv(StringIO(cqp_return), sep="\t", header=None)
             df.columns = ["storage", "corpus:subcorpus", "size"]
@@ -472,6 +487,7 @@ class Corpus:
             df = DataFrame(columns=['corpus', 'subcorpus', 'size', 'storage'])
 
         cqp.__del__()
+
         return df
 
     ##################
@@ -503,7 +519,7 @@ class Corpus:
         """
 
         # retrieve from cache if possible
-        identifier = s_att + "_spans"
+        identifier = s_att + "-spans"
         df = self.cache.get(identifier)
         if df is not None:
             logger.info(f'using cached version of spans of "{s_att}"')
@@ -1416,19 +1432,30 @@ class SubCorpus(Corpus):
             self.cache.set(identifier, df)
         return df
 
-    def marginals(self, start='match', end='matchend', p_atts=['word']):
+    def marginals(self, items=None, p_atts=['word'], start='match', end='matchend'):
         """
         :return: counts of (start .. end) regions including matches
         :rtype: DataFrame
         """
 
-        identifier = generate_idx([self.df.reset_index()[[start, end]], p_atts]) + "-marginals"
+        identifier = generate_idx([self.df.reset_index()[[start, end]]]) + "-".join(p_atts) + "-marginals"
         df = self.cache.get(identifier)
         if not isinstance(df, DataFrame):
             df = self.counts.dump(
                 self.df, start=start, end=end, p_atts=p_atts, split=True
             )
             self.cache.set(identifier, df)
+
+        if items is not None:
+            # preprocess tuples
+            items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
+            # select relevant rows
+            df = df.reindex(items)
+            df = df.fillna(0, downcast='infer')
+
+        # sort by frequency
+        df = df.sort_values(by=['freq', 'item'], ascending=False)
+
         return df
 
     def concordance(self, form='simple', p_show=['word'], s_show=[],

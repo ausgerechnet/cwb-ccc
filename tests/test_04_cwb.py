@@ -49,7 +49,7 @@ def test_get_corpus(germaparl):
 @pytest.mark.init
 def test_corpus_descriptor(germaparl):
     corpus = get_corpus(germaparl)
-    assert isinstance(corpus.attributes_available, pd.DataFrame)
+    assert isinstance(corpus.available_attributes(), pd.DataFrame)
 
 
 @pytest.mark.init
@@ -65,15 +65,15 @@ def test_data_dir(germaparl):
 @pytest.mark.init
 def test_macros(germaparl):
     corpus = get_corpus(germaparl, lib=False)
-    assert '/np(0)' not in corpus._macros_available()
+    assert '/np(0)' not in corpus.available_macros()
     corpus = get_corpus(germaparl, lib=True)
-    assert '/np(0)' in corpus._macros_available()
+    assert '/np(0)' in corpus.available_macros()
 
 
 @pytest.mark.init
 def test_wordlists(germaparl):
     corpus = get_corpus(germaparl, lib=True)
-    assert "$parties" in corpus._wordlists_available()
+    assert "$parties" in corpus.available_wordlists()
 
 
 #####################################################
@@ -125,7 +125,7 @@ def test_marginals_pattern(germaparl):
 @pytest.mark.marginals
 def test_marginals_complex(germaparl):
     corpus = get_corpus(germaparl)
-    df = corpus.marginals_complex(
+    df = corpus._marginals_complex(
         [("gehen", "VVFIN"), ("Seehofer", "NE"), ("Merkel", "NE")],
         ["lemma", "pos"]
     )
