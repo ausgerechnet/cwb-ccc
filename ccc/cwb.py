@@ -17,16 +17,15 @@ from pandas.errors import EmptyDataError
 # part of module
 from .cache import Cache, generate_idx, generate_library_idx
 from .cl import Corpus as Attributes
+from .collocates import Collocates
 from .concordances import Concordance
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
-from .utils import (chunk_anchors, correct_anchors, dump_left_join,
-                    format_roles, group_lines, preprocess_query,
-                    aggregate_matches, decode, intersect_intervals)
-from .version import __version__
-from .collocates import Collocates
 from .keywords import Keywords
-from .utils import fold_df, merge_intervals
+from .utils import (aggregate_matches, chunk_anchors, correct_anchors, decode,
+                    dump_left_join, fold_df, format_roles, group_lines,
+                    intersect_intervals, merge_intervals, preprocess_query)
+from .version import __version__
 
 logger = logging.getLogger(__name__)
 

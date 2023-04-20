@@ -11,7 +11,6 @@ from pandas import DataFrame
 
 from .collocates import Collocates
 
-
 logger = logging.getLogger(__name__)
 
 

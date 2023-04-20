@@ -15,7 +15,8 @@ from pandas import DataFrame, concat
 from . import Corpus, SubCorpus
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
-from .utils import dump_left_join, format_cqp_query, aggregate_matches, group_lines, format_roles
+from .utils import (aggregate_matches, dump_left_join, format_cqp_query,
+                    format_roles, group_lines)
 
 logger = logging.getLogger(__name__)
 
