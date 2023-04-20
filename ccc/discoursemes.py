@@ -167,10 +167,9 @@ class Constellation:
 
         return list(output)
 
-    def collocates(self, windows=[3, 5, 7],
-                   p_show=['lemma'], flags=None,
-                   ams=None, frequencies=True,
-                   min_freq=2, order='log_likelihood', cut_off=None,
+    def collocates(self, windows=[3, 5, 7], p_show=['lemma'],
+                   flags=None, ams=None, min_freq=2,
+                   order='log_likelihood', cut_off=None,
                    marginals='corpus'):
         """Retrieve collocates for constellation.
 
@@ -194,14 +193,14 @@ class Constellation:
 
         # determine collocates
         collocates = Collocates(
-            corpus=self.corpus, df_dump=None, p_query=p_show, mws=max(windows),
+            corpus=self.corpus.copy(), df_dump=None, p_query=p_show, mws=max(windows),
             df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
         )
         output = dict()
         for window in windows:
             output[window] = collocates.show(
                 window=window, order=order, cut_off=cut_off, ams=ams,
-                min_freq=min_freq, frequencies=frequencies, flags=flags,
+                min_freq=min_freq, flags=flags,
                 marginals=marginals
             )
 
@@ -303,9 +302,8 @@ class TextConstellation:
 
         return list(output)
 
-    def associations(self, ams=None, frequencies=True,
-                     min_freq=2, order='log_likelihood',
-                     cut_off=None):
+    def associations(self, ams=None, min_freq=2,
+                     order='log_likelihood', cut_off=None):
 
         counts = self.df[[c for c in self.df.columns if c.endswith("_BOOL")]]
         counts.columns = [c.split("_BOOL")[0] for c in counts.columns]

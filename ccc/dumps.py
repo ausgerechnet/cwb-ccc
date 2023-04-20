@@ -7,8 +7,10 @@ definition of Dump and Dumps classes
 """
 import logging
 
-# part of module
+from pandas import DataFrame
+
 from .collocates import Collocates
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,36 +39,35 @@ class Dumps:
 
         self.dumps = dumps
 
-    def keywords(self, p_query=['lemma'], order='log_likelihood', cut_off=100,
-                 ams=None, min_freq=2, frequencies=True, flags=None,
-                 subset=None):
+    def keywords(self, p_query=['lemma'], order='log_likelihood',
+                 cut_off=100, ams=None, min_freq=2, flags=None,
+                 subset=None, marginals='corpus', show_negative=False):
         """
         :return: dictionary of {subcorpus_name: table}
         :rtype: dict
         """
+        # TODO: multiproc
 
         subset = list(self.s_dict.keys()) if subset is None else subset
 
         logger.info("computing keyword tables ...")
-        # TODO: multiproc
         tables = dict()
-        i = 0
-        for s in subset:
-            i += 1
-            logger.info(f"... table {i} of {len(subset)}")
+        for i, s in enumerate(subset):
+            logger.info(f"... table {i+1} of {len(subset)}")
             dump = self.dumps[s]
             tables[s] = dump.keywords(
                 p_query=p_query, order=order, cut_off=cut_off,
-                ams=ams, min_freq=min_freq,
-                frequencies=frequencies, flags=flags
+                ams=ams, min_freq=min_freq, flags=flags, marginals=marginals,
+                show_negative=show_negative
             )
 
         return tables
 
     def collocates(self, cqp_query, window=5, p_query=['lemma'],
-                   order='log_likelihood', cut_off=100, ams=None, min_freq=2,
-                   frequencies=True, flags=None, subset=None, context_break=None,
-                   reference='local'):
+                   order='log_likelihood', cut_off=100, ams=None,
+                   min_freq=2, flags=None, subset=None,
+                   context_break=None, marginals='corpus',
+                   show_negative=False):
         """
         reference:
         .. local: window freq. compared to marginals of subcorpus (excl. nodes)
@@ -77,6 +78,7 @@ class Dumps:
         :return: dictionary of {subcorpus_name: table}
         :rtype: dict
         """
+        # TODO: multiproc
 
         subset = list(self.s_dict.keys()) if subset is None else subset
         context_break = self.s_att if context_break is None else context_break
@@ -90,22 +92,25 @@ class Dumps:
         df_glob = self.corpus.dump2satt(dump_glob, self.s_att)
 
         logger.info("computing collocate tables ...")
-        # TODO: multiproc
         tables = dict()
-        i = 0
-        for s in subset:
-            i += 1
-            logger.info(f"... table {i} of {len(subset)}")
+        for i, s in enumerate(subset):
+            logger.info(f"... table {i+1} of {len(subset)}")
 
             # determine reference frequencies
-            if isinstance(reference, str):
-                if reference == 'local':
+            if isinstance(marginals, str):
+                if marginals == 'local':
                     # get local marginals
+                    # THIS is expensive, use subcorpus.marginals instead!
                     marginals = self.corpus.counts.dump(
                         self.dumps[s].df, split=True, p_atts=p_query
                     )
-                elif reference == 'global':
-                    marginals = 'corpus'
+                    # marginals = self.corpus.marginals(p_atts=p_query)
+                elif marginals == 'corpus':
+                    pass
+                else:
+                    raise NotImplementedError()
+            elif not isinstance(marginals, DataFrame):
+                raise NotImplementedError()
 
             # create collocates table
             df_loc = df_glob.loc[
@@ -116,8 +121,7 @@ class Dumps:
             )
             tables[s] = collocates.show(
                 window=window, order=order, cut_off=cut_off,
-                ams=ams, min_freq=min_freq, frequencies=frequencies,
-                flags=flags, marginals=marginals
+                ams=ams, min_freq=min_freq, flags=flags, marginals=marginals
             )
 
         return tables
