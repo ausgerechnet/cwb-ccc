@@ -12,6 +12,7 @@ from itertools import chain
 from pandas import DataFrame
 
 # part of module
+from .cache import generate_idx
 from .counts import score_counts
 from .utils import node2cotext
 
@@ -31,11 +32,7 @@ class Collocates:
             return
 
         # init corpus
-        self.corpus = corpus.copy()
-
-        # # what's in the dump?
-        # self.df_dump = df_dump
-        # self.size = len(df_dump)
+        self.corpus = corpus
 
         # maximum window size (= context)
         self.mws = mws
@@ -50,17 +47,34 @@ class Collocates:
 
         # collect cpos of matches and context
         if df_dump is not None:
-            logger.info('collecting cpos of matches and context')
-            self.df_cooc, self.f1_set = dump2cooc(df_dump, self.mws)
-            self.node_freq = self.corpus.counts.cpos(self.f1_set, self.p_query)
-            logger.info(f'collected {len(self.df_cooc)} corpus positions')
+
+            # get from cache if possible
+            identifier = generate_idx(
+                [df_dump.reset_index()[['match', 'matchend', 'context', 'contextend']], mws, p_query]
+            )
+            f1_set = self.corpus.cache.get(identifier + "-f1_set")
+            df_cooc = self.corpus.cache.get(identifier + "-df_cooc")
+            node_freq = self.corpus.cache.get(identifier + "-node_freq")
+
+            # create and cache otherwise
+            if not isinstance(df_cooc, DataFrame):
+                # create collocation database
+                logger.info('collecting cpos of matches and context')
+                df_cooc, f1_set = dump2cooc(df_dump, self.mws)
+                node_freq = self.corpus.counts.cpos(f1_set, self.p_query)
+                logger.info(f'collected {len(df_cooc)} corpus positions')
+                self.corpus.cache.set(identifier + "-f1_set", f1_set)
+                self.corpus.cache.set(identifier + "-df_cooc", df_cooc)
+                self.corpus.cache.set(identifier + "-node_freq", node_freq)
+
         else:
             if df_cooc is None or f1_set is None or node_freq is None:
                 logger.error('if no dump is given, you have to provide all frequencies')
                 return
-            self.df_cooc = df_cooc
-            self.f1_set = f1_set
-            self.node_freq = node_freq
+
+        self.df_cooc = df_cooc
+        self.f1_set = f1_set
+        self.node_freq = node_freq
 
     def count(self, window):
 
@@ -80,8 +94,8 @@ class Collocates:
         return f
 
     def show(self, window=5, order='log_likelihood', cut_off=100,
-             ams=None, min_freq=2, frequencies=True, flags=None,
-             marginals='corpus', show_negative=False):
+             ams=None, min_freq=2, flags=None, marginals='corpus',
+             show_negative=False):
 
         # consistency check
         if len(self.f1_set) == 0:
@@ -115,7 +129,7 @@ class Collocates:
         f2['f2'] = f2['marginal'] - f2['in_nodes']
 
         # create dataframe
-        df = f2[['f2']].join(f[['f']])
+        df = f[['f']].join(f2[['f2']], how='left')
         df['f1'] = f1
         df['N'] = N
         df = df.fillna(0, downcast='infer')
@@ -124,12 +138,12 @@ class Collocates:
         collocates = score_counts(df, order=order, cut_off=cut_off,
                                   flags=flags, ams=ams, vocab=vocab)
 
-        if frequencies:
-            # throw away anti-collocates by default
-            if not show_negative:
-                collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
-            # add node and marginal frequencies
-            collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
+        # throw away anti-collocates by default
+        if not show_negative:
+            collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
+
+        # add node and marginal frequencies
+        collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
 
         return collocates
 

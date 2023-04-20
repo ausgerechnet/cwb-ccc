@@ -12,26 +12,25 @@ import logging
 from pandas import DataFrame
 
 # part of module
+from .cache import generate_idx
 from .counts import score_counts
 
 logger = logging.getLogger(__name__)
 
 
-# TODO re-write as regular methods
 class Keywords:
     """ keyword analysis """
 
-    def __init__(self, corpus, df_dump, p_query=['lemma']):
-
-        self.corpus = corpus
-
-        # activate dump
-        self.size = len(df_dump)
+    def __init__(self, corpus, df_dump, p_query=['lemma'],
+                 counts=None):
 
         # consistency check
-        if self.size == 0:
-            logger.warning('cannot calculate keywords on 0 regions')
+        if df_dump is not None and len(df_dump) == 0:
+            logger.warning('empty dump')
             return
+
+        # init corpus
+        self.corpus = corpus
 
         # determine layer to work on
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
@@ -42,14 +41,30 @@ class Keywords:
             self.p_query = ['word']
 
         # collect context and save result
-        logger.info('collecting token counts of subcorpus')
-        self.counts = corpus.counts.dump(
-            df_dump, start='match', end='matchend', p_atts=self.p_query, split=True
-        )
+        if df_dump is not None:
+
+            # get from cache if possible
+            identifier = generate_idx([df_dump.reset_index()[['match', 'matchend']], p_query])
+            counts = self.corpus.cache.get(identifier + "-matchcounts")
+
+            # create and cache otherwise
+            if not isinstance(counts, DataFrame):
+                logger.info('collecting token counts of subcorpus')
+                counts = corpus.counts.dump(
+                    df_dump, start='match', end='matchend', p_atts=self.p_query, split=True
+                )
+                self.corpus.cache.set(identifier + "-matchcounts", counts)
+
+        else:
+            if counts is None:
+                logger.error('if no dump is given, you have to provide all counts')
+                return
+
+        self.counts = counts
 
     def show(self, order='log_likelihood', cut_off=100, ams=None,
-             min_freq=2, frequencies=True, flags=None,
-             marginals='corpus', show_negative=False):
+             min_freq=2, flags=None, marginals='corpus',
+             show_negative=False):
 
         # consistency check
         if self.counts.empty:
@@ -77,7 +92,7 @@ class Keywords:
 
         # create dataframe
         f2 = marginals[['freq']].rename(columns={'freq': 'f2'})
-        df = f2.join(f)
+        df = f.join(f2, how='left')
         df = df.fillna(0)
         df['f1'] = f1
         df['N'] = N
@@ -86,16 +101,15 @@ class Keywords:
         keywords = score_counts(df, order=order, cut_off=cut_off,
                                 flags=flags, ams=ams, vocab=vocab)
 
-        if frequencies:
-            # throw away anti-keywords by default
-            if not show_negative:
-                keywords = keywords.loc[keywords['O11'] >= keywords['E11']]
+        # throw away anti-keywords by default
+        if not show_negative:
+            keywords = keywords.loc[keywords['O11'] >= keywords['E11']]
 
         return keywords
 
 
 def keywords(corpus, corpus_reference, p, p_reference, order='O11',
-             cut_off=100, ams=None, min_freq=2, frequencies=True, flags=None):
+             cut_off=100, ams=None, min_freq=2, flags=None):
     """directly extract keywords by comparing two (sub-)corpora
 
     :param ccc.Corpus corpus: target corpus
@@ -105,7 +119,6 @@ def keywords(corpus, corpus_reference, p, p_reference, order='O11',
     :param str order: AM to order
     :param list ams: list of AMs
     :param int min_freq: minimum number of occurrences in target corpus
-    :param bool frequencies: add frequency columns
     :param list flags: '%cd'
 
     """
