@@ -17,6 +17,7 @@ import subprocess
 import sys
 import threading
 import time
+from glob import glob
 from io import StringIO
 from tempfile import NamedTemporaryFile
 
@@ -450,3 +451,63 @@ class CQP:
         self.Exec(f"save {name};")
         if not self.Ok():
             logger.error('invalid corpus or NQR')
+
+
+def start_cqp(cqp_bin, registry_path,
+              data_path=None, corpus_name=None,
+              lib_path=None, subcorpus_name=None):
+    """Start CQP process, activate (sub-)corpus, set paths, and read
+    library (macros and wordlists).
+
+    :param str cqp_bin: /path/to/cqp-binary
+    :param str registry_path: /path/to/cwb/registry/
+    :param str data_path: /path/to/data/and/cache/
+    :param str corpus_name: name of corpus in CWB registry
+    :param str lib_path: /path/to/macros/and/wordlists/
+    :param str subcorpus_name: name of subcorpus (NQR)
+
+    :return: CQP process
+    :rtype: CQP
+
+    """
+
+    cqp = CQP(
+        binary=cqp_bin,
+        options='-c -r ' + registry_path
+    )
+
+    if data_path is not None:
+        cqp.Exec(f'set DataDirectory "{data_path}"')
+
+    if lib_path is not None:
+
+        # wordlists
+        wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
+        for wordlist in wordlists:
+            name = wordlist.split('/')[-1].split('.')[0]
+            abs_path = os.path.abspath(wordlist)
+            cqp_exec = f'define ${name} < "{abs_path}";'
+            cqp.Exec(cqp_exec)
+
+        # macros
+        macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
+        for macro in macros:
+            abs_path = os.path.abspath(macro)
+            cqp_exec = f'define macro < "{abs_path}";'
+            cqp.Exec(cqp_exec)
+        # for wordlists defined in macros, it is necessary to execute the macro once
+        macros = cqp.Exec("show macro;").split("\n")
+        for macro in macros:
+            # NB: this yields !cqp.Ok() if macro is not zero-valent
+            cqp.Exec(macro.split("(")[0] + "();")
+
+    # initialize corpus after macro definition, so execution of macro doesn't spend time
+    if corpus_name is not None:
+        cqp.Exec(corpus_name)
+    if subcorpus_name is not None:
+        cqp.Exec(subcorpus_name)
+
+    if not cqp.Ok():
+        raise NotImplementedError()
+
+    return cqp

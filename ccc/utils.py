@@ -198,6 +198,17 @@ def preprocess_query(query):
     }
 
 
+def decode(text):
+    """savely decode a string catching common errors
+
+    """
+    try:
+        text = text.decode('utf-8')
+    except (UnicodeDecodeError, AttributeError):
+        text = ""
+    return text
+
+
 #################################
 # working on nodes and contexts #
 #################################
