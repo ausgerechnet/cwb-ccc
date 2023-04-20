@@ -624,3 +624,16 @@ def test_subcorpus_marginals(germaparl):
         name='Test'
     )
     assert len(subcorpus.marginals()) == 2
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_query_s_att(germaparl):
+
+    corpus = get_corpus(germaparl)
+    black = corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+    assert "Union" in corpus.show_nqr().values
+    assert isinstance(black, SubCorpus)
+
+    interjection = corpus.query_s_att("p_type", values={"interjection"})
+    black_interjection = black.query_s_att("p_type", values={"interjection"})
+    assert len(black.matches()) > len(interjection.matches()) > len(black_interjection.matches())

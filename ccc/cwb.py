@@ -22,7 +22,7 @@ from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .utils import (chunk_anchors, correct_anchors, dump_left_join,
                     format_roles, group_lines, preprocess_query,
-                    aggregate_matches, decode)
+                    aggregate_matches, decode, intersect_intervals)
 from .version import __version__
 from .collocates import Collocates
 from .keywords import Keywords
@@ -960,6 +960,18 @@ class Corpus:
                 values = set(values)
                 logger.info(f"restricting spans using {len(values)} values")
                 df_spans = df_spans.loc[df_spans[s_att].isin(values)]
+
+        # if this is a subcorpus, only return intersection
+        if self.subcorpus_name is not None:
+            columns_left = list(self.df.columns)
+            columns_right = list(df_spans.columns)
+            intersection = intersect_intervals(
+                self.df.reset_index()[['match', 'matchend'] + columns_left].values.tolist(),
+                df_spans.reset_index()[['match', 'matchend'] + columns_right].values.tolist()
+            )
+            df_spans = DataFrame(intersection)
+            df_spans.columns = ['match', 'matchend'] + columns_left + columns_right
+            df_spans = df_spans.set_index(['match', 'matchend'])
 
         # return SubCorpus
         return self.subcorpus(subcorpus_name=name, df_dump=df_spans)

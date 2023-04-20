@@ -260,6 +260,37 @@ def merge_intervals(inter, start_index=0):
     return inter
 
 
+def intersect_intervals(inter_left, inter_right):
+    """for merging matches; intersection of intervals. intervals can have
+    arbitrary overlaps, but must be sorted by left boundaries.
+
+    :param list inter_left: list of intervals (each one a pair of left and right boundary + ...)
+    :param list inter_right: list of intervals (each one a pair of left and right boundary + ...)
+    """
+
+    i = j = 0                   # indexes of inter_left and inter_right
+    n = len(inter_left)
+    m = len(inter_right)
+
+    intervals = list()          # output variable
+    while i < n and j < m:
+
+        # compare inter_left[i] with inter_right[j]
+        start = max(inter_left[i][0], inter_right[j][0])
+        end = min(inter_left[i][1], inter_right[j][1])
+        if start <= end:
+            intervals.append([start, end] + inter_left[i][2:] + inter_right[j][2:])
+
+        # if inter_left[i]'s right bound is smaller than inter_right[j]'s right bound: increment i
+        if inter_left[i][1] < inter_right[j][1]:
+            i += 1
+        # else increment j
+        else:
+            j += 1
+
+    return intervals
+
+
 def calculate_offset(row):
     """ calculates offset of y to x """
 
