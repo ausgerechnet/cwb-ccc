@@ -24,7 +24,8 @@ def generate_idx(identifiers, prefix='', length=10):
 
 
 def generate_library_idx(lib_path, prefix='', length=10):
-    """generate an ID wordlists and macros (subdirectories of lib_path)
+    """generate an ID for a library,
+    i.e. all files ending on '.txt' in "wordlists" and "macros" of lib_path
 
     """
     wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
@@ -37,7 +38,7 @@ def generate_library_idx(lib_path, prefix='', length=10):
 
 
 class Cache:
-    
+
     def __init__(self, path=None):
 
         self.path = path
@@ -81,7 +82,7 @@ class Cache:
     def set(self, identifier, value):
 
         if self.path is None:
-            logger.info('no cache path')
+            logger.error('no cache path')
             return
 
         if isinstance(identifier, str):
