@@ -19,6 +19,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 
 
 @pytest.mark.default
+@pytest.mark.now
 def test_collo_single(germaparl):
     corpus = get_corpus(germaparl)
     query = ('[word="\\("] [lemma=".*"]+ [word="\\)"]')

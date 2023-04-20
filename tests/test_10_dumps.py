@@ -63,7 +63,6 @@ def test_matches(germaparl):
     assert 8193 in matches
 
 
-@pytest.mark.now
 def test_matches_subcorpus(germaparl):
     corpus = get_corpus(germaparl)
     dump_base = corpus.query(r'[pos="NE"]? [pos="NE"] "\[" ".*" "\]"', name="Base")
@@ -214,6 +213,7 @@ def test_dumps_collocates(germaparl):
     assert tables['yellow'].index[0] == 'Grad'
 
 
+@pytest.mark.dumps
 def test_dumps_collocates_global(germaparl):
 
     # subcorpora via s-attribute values
@@ -233,7 +233,7 @@ def test_dumps_collocates_global(germaparl):
         order='log_ratio',
         context_break='s',
         window=20,
-        reference='global'
+        marginals='corpus'
     )
     assert len(tables) == len(parties)
     assert tables['yellow'].index[0] == 'Grad'
@@ -242,3 +242,28 @@ def test_dumps_collocates_global(germaparl):
 @pytest.mark.benchmark
 def test_perf_dumps(benchmark, germaparl):
     benchmark.pedantic(test_dumps_collocates, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)
+
+
+@pytest.mark.dumps
+def test_dumps_collocates_slow():
+
+    # subcorpora via s-attribute values
+    parties = {
+        # 'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        # 'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        # 'purple': {'PDS'}
+    }
+
+    # collocates
+    corpus = Corpus("GERMAPARL-1949-2021")
+    dumps = Dumps(corpus, parties, s_att='parliamentary_group')
+    tables = dumps.collocates(
+        cqp_query='"Atomkraft"',
+        order='log_ratio',
+        context_break='s',
+        window=20
+    )
+    assert len(tables) == len(parties)
+    # assert tables['yellow'].index[0] == 'Grad'

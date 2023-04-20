@@ -415,7 +415,6 @@ def test_constellation_collocates(germaparl):
     min_freq = 2
     order = 'log_likelihood'
     escape = True
-    frequencies = True
     match_strategy = 'longest'
 
     # preprocess parameters
@@ -441,10 +440,10 @@ def test_constellation_collocates(germaparl):
         DATA_PATH
     )
 
-    collocates = const.collocates(windows=windows,
-                                  p_show=p_show, flags=flags_show,
-                                  ams=ams, frequencies=frequencies, min_freq=min_freq,
-                                  order=order, cut_off=cut_off)
+    collocates = const.collocates(windows=windows, p_show=p_show,
+                                  flags=flags_show, ams=ams,
+                                  min_freq=min_freq, order=order,
+                                  cut_off=cut_off)
 
     assert len(collocates) == 3
 
