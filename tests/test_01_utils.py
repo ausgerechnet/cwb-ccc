@@ -74,7 +74,7 @@ def test_fold_items():
 
 
 def test_filter_df(germaparl):
-    c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'], data_path=DATA_PATH)
+    c = Corpus(germaparl['corpus_name'], registry_dir=germaparl['registry_dir'], data_dir=DATA_PATH)
     subcorpus = c.query(germaparl['query'])
     coll = subcorpus.collocates()
     assert ',' in coll.index

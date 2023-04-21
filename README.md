@@ -44,7 +44,7 @@ To list all available corpora, you can use
 ```python
 from ccc import Corpora
 
-corpora = Corpora(registry_path="/usr/local/share/cwb/registry/")
+corpora = Corpora(registry_dir="/usr/local/share/cwb/registry/")
 ```
 
 All further methods rely on the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
@@ -54,7 +54,7 @@ from ccc import Corpus
 
 corpus = Corpus(
   corpus_name="GERMAPARL1386",
-  registry_path="/usr/local/share/cwb/registry/"
+  registry_dir="/usr/local/share/cwb/registry/"
 )
 ```
 
@@ -62,6 +62,7 @@ This will raise a `KeyError` if the named corpus is not in the specified registr
 
 
 ### Queries and SubCorpora ###
+
 The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
 
 ```python
@@ -116,7 +117,7 @@ By default, this retrieves concordance lines in simple format in the order in wh
 
 ### Collocation Analyses ###
 
-After executing a query, you can use `subcorpus.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
+After executing a query, you can use `subcorpus.collocates()` to extract collocates (see the vignette for parameter settings). The result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
 
 <details>
 <summary><code>subcorpus.collocates()</code></summary>
@@ -225,4 +226,4 @@ You can then simply
 - Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 - The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 - This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
-- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
+- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2024), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).

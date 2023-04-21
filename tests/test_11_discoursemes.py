@@ -40,13 +40,13 @@ from .conftest import DATA_PATH
 #   get_constellation_df
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH):
+def get_corpus(corpus_settings, data_dir=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=corpus_settings.get('lib_dir', None),
+        data_dir=data_dir
     )
 
 
@@ -251,8 +251,8 @@ def test_create_constellation(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     assert len(const.df) == 10
 
@@ -271,8 +271,8 @@ def test_create_constellation(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     assert len(const.df) == 2990
 
@@ -305,8 +305,8 @@ def test_create_textconstellation(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     assert len(const.df) == 2198
 
@@ -341,8 +341,8 @@ def test_constellation_conc(germaparl, discoursemes):
                                  parameters['flags_query'],
                                  parameters['escape_query'],
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     lines = const.concordance(s_show=['text_id'])
 
@@ -379,8 +379,8 @@ def test_constellation_conc_htmlify_meta(germaparl, discoursemes):
                                  parameters['flags_query'],
                                  parameters['escape_query'],
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     lines = const.concordance(s_show=['text_id'], htmlify_meta=True)
 
@@ -408,7 +408,7 @@ def test_constellation_collocates(germaparl):
     additional_discoursemes = {}
     windows = [3, 5, 7]
     cqp_bin = 'cqp'
-    lib_path = None
+    lib_dir = None
     p_show = ['lemma']
     ams = None
     cut_off = 200
@@ -434,9 +434,9 @@ def test_constellation_collocates(germaparl):
         flags_query,
         escape,
         match_strategy,
-        lib_path,
+        lib_dir,
         cqp_bin,
-        germaparl['registry_path'],
+        germaparl['registry_dir'],
         DATA_PATH
     )
 
@@ -609,8 +609,8 @@ def test_textual_constellation_association(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     assoc = const.associations()
     assert len(assoc) == 6
@@ -644,8 +644,8 @@ def test_textual_constellation_association_approximate(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH,
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH,
                                  approximate=True)
 
     assoc = const.associations()
@@ -683,8 +683,8 @@ def test_textual_constellation_association_empty(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH,
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH,
                                  approximate=True)
 
     assoc = const.associations()
@@ -720,8 +720,8 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     # retrieve lines
     lines = const.concordance(cut_off=None)
@@ -757,7 +757,7 @@ def test_textual_constellation_breakdown(germaparl, discoursemes):
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+                                 registry_dir=germaparl['registry_dir'],
+                                 data_dir=DATA_PATH)
 
     assert len(const.breakdown()) == 5

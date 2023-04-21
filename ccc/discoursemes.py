@@ -367,10 +367,10 @@ def create_constellation(corpus_name,
                          escape=True,
                          match_strategy='longest',
                          # CWB settings
-                         lib_path=None,
+                         lib_dir=None,
                          cqp_bin='cqp',
-                         registry_path='/usr/local/share/cwb/registry/',
-                         data_path='/tmp/ccc-data/',
+                         registry_dir='/usr/local/share/cwb/registry/',
+                         data_dir='/tmp/ccc-data/',
                          window=None,
                          approximate=False):
     """simple constellation creator. returns a Constellation() if a
@@ -390,7 +390,7 @@ def create_constellation(corpus_name,
     s_query = s_context if s_query is None else s_query
 
     # init corpus
-    corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+    corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
 
     # topic -> Constellation()
     if len(topic_discourseme) > 0:
@@ -492,17 +492,17 @@ def create_constellation_query(corpus_name,
                                context=20,
                                # CWB settings
                                match_strategy='longest',
-                               lib_path=None,
+                               lib_dir=None,
                                cqp_bin='cqp',
-                               registry_path='/usr/local/share/cwb/registry/',
-                               data_path='/tmp/ccc-data/',
+                               registry_dir='/usr/local/share/cwb/registry/',
+                               data_dir='/tmp/ccc-data/',
                                window=None):
     """same as above, but with pre-formatted CQP queries
 
     """
 
     # init corpus
-    corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+    corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
 
     # topic -> Constellation()
     if len(topic_discourseme) > 0:

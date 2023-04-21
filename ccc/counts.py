@@ -99,13 +99,13 @@ def read_freq_list(path, min_freq=2, columns=None):
     return df, R
 
 
-def cwb_lexdecode(corpus_name, registry_path,
+def cwb_lexdecode(corpus_name, registry_dir,
                   p_att='word', cmd='cwb-lexdecode', min_freq=2):
     """Run cwb-lexdecode: create frequency list of p-attribute.
     CLI: cwb-lexdecode -f -s -P lemma CORPUS_NAME
 
     :param str corpus_name:
-    :param str registry_path:
+    :param str registry_dir:
     :param str p_att:
     :param str cmd: path to binary
     :param int min_freq:
@@ -116,7 +116,7 @@ def cwb_lexdecode(corpus_name, registry_path,
     """
 
     logger.info("running cwb-lexdecode ...")
-    command = [cmd, '-f', '-P', p_att, '-r', registry_path, corpus_name]
+    command = [cmd, '-f', '-P', p_att, '-r', registry_dir, corpus_name]
     lexdecode = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -126,7 +126,7 @@ def cwb_lexdecode(corpus_name, registry_path,
     return df_counts, R
 
 
-def cwb_scan_corpus(corpus_name, registry_path, path=None,
+def cwb_scan_corpus(corpus_name, registry_dir, path=None,
                     p_atts=['word'], cmd='cwb-scan-corpus', min_freq=2):
     """Run cwb-scan-corpus: create frequency list of p-attribute(s) at corpus positions.
     CLI: cwb-scan-corpus [-R path] CORPUS_NAME p_atts
@@ -134,7 +134,7 @@ def cwb_scan_corpus(corpus_name, registry_path, path=None,
     :return: counts of the p-attribute values (or their combinations)
              at the given positions (if any)
     :param str corpus_name:
-    :param str registry_path:
+    :param str registry_dir:
     :param str p_att:
     :param str cmd: path to binary
     :param int min_freq:
@@ -145,7 +145,7 @@ def cwb_scan_corpus(corpus_name, registry_path, path=None,
     """
 
     logger.info("running cwb-scan-corpus ...")
-    command = [cmd, '-r', registry_path]
+    command = [cmd, '-r', registry_dir]
     if path is not None:
         command += ['-R', path]
     command += [corpus_name] + p_atts
@@ -171,13 +171,13 @@ class Counts:
 
     """
     def __init__(self, corpus_name,
-                 registry_path='/usr/local/share/cwb/registry/'):
+                 registry_dir='/usr/local/share/cwb/registry/'):
 
         self.corpus_name = corpus_name
-        self.registry_path = registry_path
+        self.registry_dir = registry_dir
         self.attributes = Crps(
             self.corpus_name,
-            registry_dir=registry_path
+            registry_dir=registry_dir
         )
 
     def _cpos2patts(self, cpos, p_atts=['word'], ignore=True):
@@ -273,7 +273,7 @@ class Counts:
                 logger.info("... writing dump temporarily to disk")
                 df_dump[[start, end]].to_csv(f.name, sep="\t", header=None, index=False)
                 df_counts, R = cwb_scan_corpus(
-                    self.corpus_name, self.registry_path, f.name, p_atts
+                    self.corpus_name, self.registry_dir, f.name, p_atts
                 )
 
         df_counts = df_counts.sort_values(by=['freq', 'item'], ascending=False)
@@ -385,7 +385,7 @@ class Counts:
                 logger.info("... writing dump temporarily to disk")
                 cqp.Exec(f'dump {name} > "{f.name}";')
                 df_counts, R = cwb_scan_corpus(
-                    self.corpus_name, self.registry_path, f.name, p_atts
+                    self.corpus_name, self.registry_dir, f.name, p_atts
                 )
 
         return df_counts

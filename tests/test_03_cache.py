@@ -36,4 +36,4 @@ def test_set_get():
 
 
 def test_generate_library_idx(germaparl):
-    assert isinstance(generate_library_idx(germaparl['lib_path']), str)
+    assert isinstance(generate_library_idx(germaparl['lib_dir']), str)

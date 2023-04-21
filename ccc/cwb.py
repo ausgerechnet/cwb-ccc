@@ -36,15 +36,15 @@ class Corpora:
     """
 
     def __init__(self, cqp_bin='cqp',
-                 registry_path='/usr/local/share/cwb/registry/'):
+                 registry_dir='/usr/local/share/cwb/registry/'):
         """Establish connection to registry and CQP.
 
         :param str cqp_bin: /path/to/cqp-binary
-        :param str registry_path: /path/to/cwb/registry/
+        :param str registry_dir: /path/to/cwb/registry/
 
         """
 
-        self.registry_path = registry_path
+        self.registry_dir = registry_dir
         self.cqp_bin = cqp_bin
 
     def __str__(self):
@@ -58,8 +58,8 @@ class Corpora:
         corpora = self.show()
 
         return '\n' + '\n'.join([
-            f'registry path: "{self.registry_path}"',
-            f'cqp binary   : "{self.cqp_bin}"',
+            f'registry directory: "{self.registry_dir}"',
+            f'cqp binary:         "{self.cqp_bin}"',
             f'found {len(corpora)} corpora:',
             corpora.to_string(),
         ])
@@ -80,7 +80,7 @@ class Corpora:
         """
 
         # get all corpora defined in registry
-        cqp = start_cqp(self.cqp_bin, self.registry_path)
+        cqp = start_cqp(self.cqp_bin, self.registry_dir)
         corpora = cqp.Exec("show corpora;").split("\n")
         cqp.__del__()
 
@@ -90,7 +90,7 @@ class Corpora:
         for corpus_name in corpora:
             try:
                 sizes.append(len(Attributes(
-                    corpus_name, registry_dir=self.registry_path
+                    corpus_name, registry_dir=self.registry_dir
                 ).attribute('word', 'p')))
                 names.append(corpus_name)
             except SystemError:
@@ -103,13 +103,13 @@ class Corpora:
 
         return corpora
 
-    def activate(self, corpus_name,
-                 lib_path=None, data_path=None):
+    def corpus(self, corpus_name,
+               lib_dir=None, data_dir=None):
         """Activate a corpus.
 
         :param str corpus_name: name of corpus in CWB registry
-        :param str lib_path: /path/to/macros/and/wordlists/
-        :param str data_path: /path/to/data/and/cache/
+        :param str lib_dir: /path/to/macros/and/wordlists/
+        :param str data_dir: /path/to/data/and/cache/
 
         :return: corpus
         :rtype: Corpus
@@ -117,40 +117,40 @@ class Corpora:
         """
 
         return Corpus(corpus_name,
-                      lib_path=lib_path,
+                      lib_dir=lib_dir,
                       cqp_bin=self.cqp_bin,
-                      registry_path=self.registry_path,
-                      data_path=data_path)
+                      registry_dir=self.registry_dir,
+                      data_dir=data_dir)
 
 
-def init_data_path(data_path, corpus_name, lib_path=None):
+def init_data_dir(data_dir, corpus_name, lib_dir=None):
     """ get a data directory / ensure that the given one complies with schema
 
     """
 
-    if data_path is None:
-        data_path = os.path.join("/tmp", "ccc-" + str(__version__))
-    if not isinstance(data_path, str):
-        raise ValueError("parameter data_path must be str")
+    if data_dir is None:
+        data_dir = os.path.join("/tmp", "ccc-" + str(__version__))
+    if not isinstance(data_dir, str):
+        raise ValueError("parameter data_dir must be str")
 
     # generate library idx to invalidate cache when updated
-    if lib_path is not None:
-        lib_idx = generate_library_idx(lib_path, 'lib-', 7)
+    if lib_dir is not None:
+        lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
     else:
         lib_idx = "lib-vanilla"
 
     # each corpus has its separate directory for each library
     subdir = corpus_name + "-" + lib_idx
-    if not data_path.endswith(subdir):
-        data_path = os.path.join(data_path, subdir)
+    if not data_dir.endswith(subdir):
+        data_dir = os.path.join(data_dir, subdir)
 
     # create directory
     try:
-        os.makedirs(data_path, exist_ok=True)
+        os.makedirs(data_dir, exist_ok=True)
     except PermissionError:
-        logger.error(f'no write permission at "{data_path}"')
+        logger.error(f'no write permission at "{data_dir}"')
     else:
-        return data_path
+        return data_dir
 
 
 class Corpus:
@@ -158,52 +158,52 @@ class Corpus:
 
     """
 
-    def __init__(self, corpus_name, lib_path=None, cqp_bin='cqp',
-                 registry_path='/usr/local/share/cwb/registry/',
-                 data_path=None):
+    def __init__(self, corpus_name, lib_dir=None, cqp_bin='cqp',
+                 registry_dir='/usr/local/share/cwb/registry/',
+                 data_dir=None):
         """Establish connection to CQP and corpus attributes, set paths, read
         library.
 
         Raises KeyError if corpus not in registry.
 
         data directory contains subdirectories for each corpus and
-        each library (/<data-path>/<corpus>-<lib-idx>/CACHE)
+        each library (/<data-dir>/<corpus>-<lib-idx>/CACHE)
         - marginals_complex
         - dump_from_s_att
         - dump_from_query
 
         :param str corpus_name: name of corpus in CWB registry
-        :param str lib_path: /path/to/macros/and/wordlists/
+        :param str lib_dir: /path/to/macros/and/wordlists/
         :param str cqp_bin: /path/to/cqp-binary
-        :param str registry_path: /path/to/cwb/registry/
-        :param str data_path: /path/to/data/and/cache/
+        :param str registry_dir: /path/to/cwb/registry/
+        :param str data_dir: /path/to/data/and/cache/
 
         """
 
-        # preprocess data path
-        data_path = init_data_path(data_path, corpus_name, lib_path)
+        # preprocess data dir
+        data_dir = init_data_dir(data_dir, corpus_name, lib_dir)
 
         # save paths
-        self.data_path = data_path
-        self.registry_path = registry_path
+        self.data_dir = data_dir
+        self.registry_dir = registry_dir
         self.cqp_bin = cqp_bin
-        self.lib_path = lib_path
+        self.lib_dir = lib_dir
 
         # init (sub-)corpus information
         self.corpus_name = corpus_name
         self.subcorpus_name = None
 
         # init attributes
-        self.attributes = Attributes(self.corpus_name, registry_dir=self.registry_path)
+        self.attributes = Attributes(self.corpus_name, registry_dir=self.registry_dir)
 
         # get corpus size
         self.corpus_size = len(self.attributes.attribute('word', 'p'))
 
         # init cache
-        self.cache = Cache(os.path.join(self.data_path, "CACHE"))
+        self.cache = Cache(os.path.join(self.data_dir, "CACHE"))
 
         # init counts
-        self.counts = Counts(self.corpus_name, self.registry_path)
+        self.counts = Counts(self.corpus_name, self.registry_dir)
 
     def __str__(self):
         """Method for printing.
@@ -215,7 +215,7 @@ class Corpus:
 
         return '\n' + '\n'.join([
             f'corpus: {self.corpus_name} ({self.corpus_size} tokens)',
-            f'data:   {self.data_path}',
+            f'data:   {self.data_dir}',
         ])
 
     def __repr__(self):
@@ -292,10 +292,10 @@ class Corpus:
 
         return start_cqp(
             self.cqp_bin,
-            self.registry_path,
-            self.data_path,
+            self.registry_dir,
+            self.data_dir,
             self.corpus_name,
-            self.lib_path,
+            self.lib_dir,
             self.subcorpus_name
         )
 
@@ -309,10 +309,10 @@ class Corpus:
 
         return Corpus(
             self.corpus_name,
-            self.lib_path,
+            self.lib_dir,
             self.cqp_bin,
-            self.registry_path,
-            self.data_path
+            self.registry_dir,
+            self.data_dir
         )
 
     ################
@@ -425,7 +425,7 @@ class Corpus:
         else:
             # calculate all marginals for p-att combination
             df, R = cwb_scan_corpus(
-                self.corpus_name, self.registry_path, p_atts=p_atts, min_freq=0
+                self.corpus_name, self.registry_dir, p_atts=p_atts, min_freq=0
             )
             self.cache.set(identifier, df)
 
@@ -1245,13 +1245,13 @@ class Corpus:
     def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
 
         return SubCorpus(subcorpus_name, df_dump, self.corpus_name,
-                         self.lib_path, self.cqp_bin, self.registry_path, self.data_path, overwrite)
+                         self.lib_dir, self.cqp_bin, self.registry_dir, self.data_dir, overwrite)
 
 
 class SubCorpus(Corpus):
 
-    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_path,
-                 cqp_bin, registry_path, data_path, overwrite=True):
+    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_dir,
+                 cqp_bin, registry_dir, data_dir, overwrite=True):
         """
         :param str subcorpus_name: name of NQR in CQP
         :param DataFrame df_dump: a "DumpFrame"
@@ -1262,31 +1262,29 @@ class SubCorpus(Corpus):
 
         CREATION
 
-        dump_from_query:  === (match, matchend), 0*, .., 9* ===
+        dump_from_query:
         - index <int, int> match, matchend: cpos
         - columns <int> 0*, .., 9*: anchor points (optional; missing = -1)
 
-        dump_from_s_att:  === (match, matchend), $s_cwbid, $s* ===
+        dump_from_s_att:
         - index <int, int> match, matchend: cpos
         - column <int> $s_cwbid: id
         - column <str> $s: annotation (optional)
 
         TRANSFORMATION (additional columns are preserved)
 
-        dump2patt:        === (match, matchend), $p ===
+        dump2patt:
         - index <int, int> match, matchend: cpos
         - column <str> $p: " "-joined tokens (match..matchend or regions of input columns)
 
-        dump2satt:        === (match, matchend), $s_cwbid, $s_span, $s_spanend, $s* ===
+        dump2satt:
         - index <int, int> match, matchend: cpos
         - column <int> $s_cwbid: id (missing = -1) of s_att at match cpos
         - column <int> $s_span: cpos (missing = -1)
         - column <int> $s_spanend: cpos (missing = -1)
         - column <str> $s*: annotation (optional)
 
-        dump2context:     === (match, matchend), contextid*, context, contextend
-                                                 $s_cwbid*, $s_span*, $s_spanend* ===
-
+        dump2context:
         - index <int, int> match, matchend: cpos
         - column <int> contextid: of id (optional; duplicate of $s_cwbid)
         - column <int> context: cpos
@@ -1297,21 +1295,21 @@ class SubCorpus(Corpus):
 
         QUERY ALIASES
 
-        query_cqp:        === (match, matchend), 0*, ..., 9*, contextid*, context*, contextend* ===
+        query_cqp:
         - index <int, int> match, matchend: cpos
         - columns <int> 0*, .., 9*: anchor points (optional; missing = -1)
         - column <int> contextid: of id (optional)
         - column <int> context: cpos (optional)
         - column <int> contextend: cpos (optional)
 
-        query_s_att:      === (match, matchend), $s_cwbid, $s* ===
+        query_s_att:
         - index <int, int> match, matchend: cpos
         - column <int> $s_cwbid: id
         - column <str> $s: annotation (optional)
 
         """
 
-        super().__init__(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+        super().__init__(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
 
         if (subcorpus_name is None and df_dump is None):
             logger.warning('no subcorpus information provided, returning Corpus')
@@ -1326,7 +1324,7 @@ class SubCorpus(Corpus):
                 df_dump = cqp.Dump(subcorpus=subcorpus_name)
                 cqp.__del__()
 
-            else:      # (both df_dump and subcorpus_name are defined)
+            else:      # (both df_dump and subcorpus_name are given)
                 self._assign(subcorpus_name, df_dump, overwrite)
 
             self.df = df_dump
@@ -1362,7 +1360,7 @@ class SubCorpus(Corpus):
 
         return '\n' + '\n'.join([
             f'corpus:    {self.corpus_name} ({self.corpus_size} tokens)',
-            f'data:      {self.data_path}',
+            f'data:      {self.data_dir}',
             f'subcorpus: {self.subcorpus_name} ({len(self.df)} spans)'
         ]) + '\n'
 

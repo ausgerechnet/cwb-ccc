@@ -11,13 +11,13 @@ from ccc.utils import format_cqp_query
 from .conftest import DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH):
+def get_corpus(corpus_settings, data_dir=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=corpus_settings.get('lib_dir', None),
+        data_dir=data_dir
     )
 
 
@@ -27,7 +27,7 @@ def test_lexdecode_and_read(germaparl):
     df1, R1 = read_freq_list(germaparl['freq_list'],
                              columns=['lemma'])
     df2, R2 = cwb_lexdecode(germaparl['corpus_name'],
-                            germaparl['registry_path'],
+                            germaparl['registry_dir'],
                             'lemma')
 
     assert(R1 == R2)
@@ -47,7 +47,7 @@ def test_cwb_scan_corpus_subcorpora(germaparl):
     with NamedTemporaryFile(mode="wt") as f:
         cqp.Exec('dump Tmp > "%s"' % f.name)
         df1, R1 = cwb_scan_corpus(germaparl['corpus_name'],
-                                  germaparl['registry_path'],
+                                  germaparl['registry_dir'],
                                   f.name)
 
     # activate a sub-corpus
@@ -61,7 +61,7 @@ def test_cwb_scan_corpus_subcorpora(germaparl):
     with NamedTemporaryFile(mode="wt") as f:
         cqp.Exec('dump Tmp > "%s"' % f.name)
         df2, R2 = cwb_scan_corpus(germaparl['corpus_name'],
-                                  germaparl['registry_path'],
+                                  germaparl['registry_dir'],
                                   f.name)
 
     # check that results are different
@@ -76,11 +76,11 @@ def test_cwb_scan_corpus_marginal(germaparl):
 
     df1, R1 = cwb_scan_corpus(
         germaparl['corpus_name'],
-        germaparl['registry_path']
+        germaparl['registry_dir']
     )
     df2, R2 = cwb_scan_corpus(
         germaparl['corpus_name'],
-        germaparl['registry_path'],
+        germaparl['registry_dir'],
         p_atts=['lemma', 'pos']
     )
     assert(df1.index.name == 'item')

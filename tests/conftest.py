@@ -41,8 +41,8 @@ def germaparl():
     """ settings for small germaparl testing corpus """
 
     corpus_name = 'GERMAPARL1386'
-    registry_path = os.path.join(DIR_PATH, "corpora", "registry")
-    lib_path = os.path.join(DIR_PATH, "corpora", "library")
+    registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
+    lib_dir = os.path.join(DIR_PATH, "corpora", "library")
     freq_list = os.path.join(DIR_PATH, "corpora", "counts",
                              "germaparl1386-lemma-freq.tsv")
     dump_path = os.path.join(DIR_PATH, "corpora", "counts",
@@ -65,7 +65,7 @@ def germaparl():
     query_lib = '/np[] [lemma="zeigen"]'
 
     return {
-        'registry_path': registry_path,
+        'registry_dir': registry_dir,
         'corpus_name': corpus_name,
         'context': context,
         's_context': s_context,
@@ -77,7 +77,7 @@ def germaparl():
         'query_full': query_within,
         'dump': seehofer_dump,
         'freq_list': freq_list,
-        'lib_path': lib_path,
+        'lib_dir': lib_dir,
         'query_lib': query_lib
     }
 
@@ -87,8 +87,8 @@ def germaparl_full():
     """ settings for local germaparl corpus """
 
     corpus_name = "GERMAPARL-1949-2021"
-    registry_path = "/usr/local/share/cwb/registry"
-    lib_path = None
+    registry_dir = "/usr/local/share/cwb/registry"
+    lib_dir = None
 
     context = 50
     s_context = 'speaker_node'
@@ -96,12 +96,12 @@ def germaparl_full():
     s_query = 's'
 
     return {
-        'registry_path': registry_path,
+        'registry_dir': registry_dir,
         'corpus_name': corpus_name,
         'context': context,
         's_context': s_context,
         's_query': s_query,
-        'lib_path': lib_path,
+        'lib_dir': lib_dir,
     }
 
 

@@ -5,7 +5,7 @@
 access to CQP
 
 original version by Joerg Asmussen (2008)
-current version by Philipp Heinrich (2022)
+current version by Philipp Heinrich (2023)
 
 """
 import logging
@@ -453,17 +453,17 @@ class CQP:
             logger.error('invalid corpus or NQR')
 
 
-def start_cqp(cqp_bin, registry_path,
-              data_path=None, corpus_name=None,
-              lib_path=None, subcorpus_name=None):
-    """Start CQP process, activate (sub-)corpus, set paths, and read
-    library (macros and wordlists).
+def start_cqp(cqp_bin, registry_dir,
+              data_dir=None, corpus_name=None,
+              lib_dir=None, subcorpus_name=None):
+    """Start CQP process, activate (sub-)corpus, set directory paths, and
+    read library (macros and wordlists).
 
     :param str cqp_bin: /path/to/cqp-binary
-    :param str registry_path: /path/to/cwb/registry/
-    :param str data_path: /path/to/data/and/cache/
+    :param str registry_dir: /path/to/cwb/registry/
+    :param str data_dir: /path/to/data/and/cache/
     :param str corpus_name: name of corpus in CWB registry
-    :param str lib_path: /path/to/macros/and/wordlists/
+    :param str lib_dir: /path/to/macros/and/wordlists/
     :param str subcorpus_name: name of subcorpus (NQR)
 
     :return: CQP process
@@ -473,16 +473,16 @@ def start_cqp(cqp_bin, registry_path,
 
     cqp = CQP(
         binary=cqp_bin,
-        options='-c -r ' + registry_path
+        options='-c -r ' + registry_dir
     )
 
-    if data_path is not None:
-        cqp.Exec(f'set DataDirectory "{data_path}"')
+    if data_dir is not None:
+        cqp.Exec(f'set DataDirectory "{data_dir}"')
 
-    if lib_path is not None:
+    if lib_dir is not None:
 
         # wordlists
-        wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
+        wordlists = glob(os.path.join(lib_dir, 'wordlists', '*.txt'))
         for wordlist in wordlists:
             name = wordlist.split('/')[-1].split('.')[0]
             abs_path = os.path.abspath(wordlist)
@@ -490,7 +490,7 @@ def start_cqp(cqp_bin, registry_path,
             cqp.Exec(cqp_exec)
 
         # macros
-        macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
+        macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
         for macro in macros:
             abs_path = os.path.abspath(macro)
             cqp_exec = f'define macro < "{abs_path}";'

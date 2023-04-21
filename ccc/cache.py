@@ -23,13 +23,13 @@ def generate_idx(identifiers, prefix='', length=10):
     return prefix + identifier[:length]
 
 
-def generate_library_idx(lib_path, prefix='', length=10):
+def generate_library_idx(lib_dir, prefix='', length=10):
     """generate an ID for a library,
-    i.e. all files ending on '.txt' in "wordlists" and "macros" of lib_path
+    i.e. all files ending on '.txt' in "wordlists" and "macros" of lib_dir
 
     """
-    wordlists = glob(os.path.join(lib_path, 'wordlists', '*.txt'))
-    macros = glob(os.path.join(lib_path, 'macros', '*.txt'))
+    wordlists = glob(os.path.join(lib_dir, 'wordlists', '*.txt'))
+    macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
     paths = macros + wordlists
     identifiers = [
         generate_idx(open(p, 'rt', encoding='utf-8')) for p in sorted(paths)

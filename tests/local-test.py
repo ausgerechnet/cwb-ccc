@@ -2,6 +2,7 @@ from pandas import concat, read_csv
 
 from ccc import Corpus
 from ccc.discoursemes import create_constellation
+from ccc.dumps import Dumps
 
 from .conftest import DATA_PATH
 
@@ -149,7 +150,7 @@ def test_constellation_concordance():
                                  flags,
                                  escape,
                                  # CWB setttings
-                                 data_path=DATA_PATH,
+                                 data_dir=DATA_PATH,
                                  approximate=True)
 
     # retrieve lines
@@ -167,3 +168,27 @@ def test_constellation_concordance():
         cut_off=cut_off
     )
     print(collocates)
+
+
+def test_dumps_collocates_slow():
+
+    # subcorpora via s-attribute values
+    parties = {
+        # 'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        # 'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        # 'purple': {'PDS'}
+    }
+
+    # collocates
+    corpus = Corpus("GERMAPARL-1949-2021")
+    dumps = Dumps(corpus, parties, s_att='parliamentary_group')
+    tables = dumps.collocates(
+        cqp_query='"Atomkraft"',
+        order='log_ratio',
+        context_break='s',
+        window=20
+    )
+    assert len(tables) == len(parties)
+    # assert tables['yellow'].index[0] == 'Grad'

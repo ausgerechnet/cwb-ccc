@@ -8,18 +8,18 @@ from ccc import Corpora, Corpus, SubCorpus
 from .conftest import DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH, lib=True):
+def get_corpus(corpus_settings, data_dir=DATA_PATH, lib=True):
 
     if lib:
-        lib_path = corpus_settings.get('lib_path', None)
+        lib_dir = corpus_settings.get('lib_dir', None)
     else:
-        lib_path = None
+        lib_dir = None
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=lib_path,
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=lib_dir,
+        data_dir=data_dir
     )
 
 
@@ -29,7 +29,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH, lib=True):
 
 @pytest.mark.init
 def test_corpora(germaparl):
-    corpora = Corpora(registry_path=germaparl['registry_path'])
+    corpora = Corpora(registry_dir=germaparl['registry_dir'])
     assert type(corpora.show()) == pd.DataFrame
     assert "GERMAPARL1386" in corpora.show().index
 
@@ -54,7 +54,7 @@ def test_corpus_descriptor(germaparl):
 
 @pytest.mark.init
 def test_data_dir(germaparl):
-    get_corpus(germaparl, lib=False, data_path=None)
+    get_corpus(germaparl, lib=False, data_dir=None)
     paths = glob("/tmp/ccc-*")
     assert len(paths) >= 1
 
