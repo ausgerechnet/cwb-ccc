@@ -3,8 +3,11 @@ from pandas import concat, read_csv
 from ccc import Corpus
 from ccc.discoursemes import create_constellation
 from ccc.dumps import Dumps
+from ccc.keywords import keywords
 
 from .conftest import DATA_PATH
+
+import pytest
 
 
 #########
@@ -192,3 +195,10 @@ def test_dumps_collocates_slow():
     )
     assert len(tables) == len(parties)
     # assert tables['yellow'].index[0] == 'Grad'
+
+
+@pytest.mark.now
+def test_keywords():
+    germaparl = Corpus("GERMAPARL-1949-2021")
+    sz = Corpus("SZ-2009-2014")
+    print(keywords(germaparl, sz, cut_off=None))

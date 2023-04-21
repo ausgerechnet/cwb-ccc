@@ -108,14 +108,15 @@ class Keywords:
         return keywords
 
 
-def keywords(corpus, corpus_reference, p, p_reference, order='O11',
-             cut_off=100, ams=None, min_freq=2, flags=None):
+def keywords(corpus, corpus_reference, p=['lemma'],
+             p_reference=['lemma'], order='O11', cut_off=100,
+             ams=None, min_freq=2, flags=None):
     """directly extract keywords by comparing two (sub-)corpora
 
     :param ccc.Corpus corpus: target corpus
     :param ccc.Corpus corpus_reference: reference corpus
-    :param str p: p-att
-    :param str p_reference: p-att
+    :param list p: p-att (str possible)
+    :param list p_reference: p-att (str possible)
     :param str order: AM to order
     :param list ams: list of AMs
     :param int min_freq: minimum number of occurrences in target corpus
@@ -123,19 +124,31 @@ def keywords(corpus, corpus_reference, p, p_reference, order='O11',
 
     """
 
-    # get and merge both dataframes of counts
-    left = corpus.marginals(p_atts=p)[['freq']].rename(columns={'freq': 'f1'})
-    right = corpus_reference.marginals(p_atts=p_reference)[['freq']].rename(columns={'freq': 'f2'})
-    df = left.join(right, how='outer')
-    df['N1'] = left['f1'].sum()
-    df['N2'] = right['f2'].sum()
-    df = df.fillna(0, downcast='infer')
-    logger.info('cut-off')
-    vocab = len(df)
-    df = df.loc[df['f1'] >= min_freq]
+    # get from cache if possible
+    identifier = generate_idx([corpus.__str__(), corpus_reference.__str__(),
+                               p, p_reference, order, cut_off, ams, min_freq, flags], prefix='kw-')
+    keywords = corpus.cache.get(identifier)
 
-    # score counts
-    keywords = score_counts(df, order=order, cut_off=cut_off,
-                            flags=flags, ams=ams, digits=4, vocab=vocab)
+    if keywords is None:
+        # get and merge both dataframes of counts
+        logger.info('starting keyword analysis')
+        target = corpus.marginals(p_atts=p)[['freq']].rename(columns={'freq': 'f1'})
+        reference = corpus_reference.marginals(p_atts=p_reference)[['freq']].rename(columns={'freq': 'f2'})
+
+        logger.info('-- combining frequency lists')
+        df = target.join(reference, how='outer')
+        df['N1'] = target['f1'].sum()
+        df['N2'] = reference['f2'].sum()
+        df = df.fillna(0, downcast='infer')
+
+        logger.info('-- cut-off')
+        vocab = len(df)
+        df = df.loc[df['f1'] >= min_freq]
+
+        # score counts
+        keywords = score_counts(df, order=order, cut_off=cut_off,
+                                flags=flags, ams=ams, digits=4, vocab=vocab)
+        logger.info('-- done with keyword analysis')
+        corpus.cache.set(identifier, keywords)
 
     return keywords
