@@ -197,8 +197,23 @@ def test_dumps_collocates_slow():
     # assert tables['yellow'].index[0] == 'Grad'
 
 
-@pytest.mark.now
 def test_keywords():
     germaparl = Corpus("GERMAPARL-1949-2021")
     sz = Corpus("SZ-2009-2014")
     print(keywords(germaparl, sz, cut_off=None))
+
+
+@pytest.mark.now
+def test_keywords_NA():
+
+    corpus = Corpus("GERMAPARL-1949-2021")
+    parties = {
+        'green': {"GRUENE", "Bündnis 90/Die Grünen"},
+        'red': {'SPD'},
+        'black': {'CDU', 'CSU'},
+        'yellow': {'FDP'},
+        'purple': {'PDS'}
+    }
+    factions = Dumps(corpus, s_dict=parties, s_att='parliamentary_group')
+    collocates = factions.collocates(cqp_query='[lemma="Klimawandel"]', cut_off=None)
+    print(collocates)

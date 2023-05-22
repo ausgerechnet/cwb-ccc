@@ -180,12 +180,12 @@ def test_dumps_keywords(germaparl):
     # keywords
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.keywords(order='log_ratio')
-    assert tables['green'].index[0] == "Oppositionsfraktion"
-    assert tables['red'].index[0] == "Bereicherung"
-    assert tables['black'].index[0] == "Abgabenquote"
-    assert tables['yellow'].index[0] == "Wirtschafts-"
-    assert tables['purple'].index[0] == "ÖPNV-Gesetz"
+    table = dumps.keywords(order='log_ratio')
+    assert table.loc['green'].index[0] == "Oppositionsfraktion"
+    assert table.loc['red'].index[0] == "Bereicherung"
+    assert table.loc['black'].index[0] == "Abgabenquote"
+    assert table.loc['yellow'].index[0] == "Wirtschafts-"
+    assert table.loc['purple'].index[0] == "ÖPNV-Gesetz"
 
 
 @pytest.mark.dumps
@@ -203,14 +203,14 @@ def test_dumps_collocates(germaparl):
     # collocates
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.collocates(
+    table = dumps.collocates(
         cqp_query='"Wirtschaft"',
         order='log_ratio',
         context_break='s',
         window=20
     )
-    assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Grad'
+    assert len(set(table.index.get_level_values('subcorpus'))) == len(parties)
+    assert table.loc['yellow'].index[0] == 'Grad'
 
 
 @pytest.mark.dumps
@@ -228,18 +228,17 @@ def test_dumps_collocates_global(germaparl):
     # collocates
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.collocates(
+    table = dumps.collocates(
         cqp_query='"Wirtschaft"',
         order='log_ratio',
         context_break='s',
         window=20,
         marginals='corpus'
     )
-    assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Grad'
+    assert len(set(table.index.get_level_values('subcorpus'))) == len(parties)
+    assert table.loc['yellow'].index[0] == 'Grad'
 
 
 @pytest.mark.benchmark
 def test_perf_dumps(benchmark, germaparl):
     benchmark.pedantic(test_dumps_collocates, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)
-

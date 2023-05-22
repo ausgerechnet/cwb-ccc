@@ -7,7 +7,7 @@ definition of Dump and Dumps classes
 """
 import logging
 
-from pandas import DataFrame
+from pandas import DataFrame, concat
 
 from .collocates import Collocates
 
@@ -50,17 +50,22 @@ class Dumps:
         subset = list(self.s_dict.keys()) if subset is None else subset
 
         logger.info("computing keyword tables ...")
-        tables = dict()
+        tables = list()
         for i, s in enumerate(subset):
             logger.info(f"... table {i+1} of {len(subset)}")
             dump = self.dumps[s]
-            tables[s] = dump.keywords(
+            table = dump.keywords(
                 p_query=p_query, order=order, cut_off=cut_off,
                 ams=ams, min_freq=min_freq, flags=flags, marginals=marginals,
                 show_negative=show_negative
             )
+            if len(table) > 0:
+                table['subcorpus'] = s
+                tables.append(table.reset_index())
 
-        return tables
+        df = concat(tables).reset_index(drop=True).set_index(['subcorpus', 'item'])
+
+        return df
 
     def collocates(self, cqp_query, window=5, p_query=['lemma'],
                    order='log_likelihood', cut_off=100, ams=None,
@@ -91,7 +96,7 @@ class Dumps:
         df_glob = self.corpus.dump2satt(dump_glob, self.s_att)
 
         logger.info("computing collocate tables ...")
-        tables = dict()
+        tables = list()
         for i, s in enumerate(subset):
             logger.info(f"... table {i+1} of {len(subset)}")
 
@@ -118,9 +123,14 @@ class Dumps:
             collocates = Collocates(
                 self.corpus, df_loc, p_query=p_query, mws=window
             )
-            tables[s] = collocates.show(
+            table = collocates.show(
                 window=window, order=order, cut_off=cut_off,
                 ams=ams, min_freq=min_freq, flags=flags, marginals=marginals
             )
+            if len(table) > 0:
+                table['subcorpus'] = s
+                tables.append(table.reset_index())
 
-        return tables
+        df = concat(tables).reset_index(drop=True).set_index(['subcorpus', 'item'])
+
+        return df
