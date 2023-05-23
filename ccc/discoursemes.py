@@ -311,11 +311,13 @@ class TextConstellation:
         cooc = counts.fillna(False)
 
         # TODO triangular matrix
-        tables = DataFrame()
+        tables = list()
         for name in counts.columns:
+            # TODO super slow for pandas 2.0, but why?
             table = round(textual_associations(cooc, self.N, name).reset_index(), 2)
             table['node'] = name
-            tables = concat([tables, table])
+            tables.append(table)
+        tables = concat(tables)
 
         tables = tables[
             ['node', 'candidate'] + [d for d in tables.columns if d not in ['node', 'candidate']]
