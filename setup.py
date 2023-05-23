@@ -97,7 +97,7 @@ setup(
     install_requires=[
         "wheel>=0.37.1",
         "association-measures>=0.2.6",
-        "pandas>=1.1.5",
+        "pandas>=1.1.5,<2.0",
         "numexpr>=2.7.1",
         "Bottleneck>=1.3.4",
         "unidecode>=1.3.4",
