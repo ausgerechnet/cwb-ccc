@@ -203,7 +203,6 @@ def test_keywords():
     print(keywords(germaparl, sz, cut_off=None))
 
 
-@pytest.mark.now
 def test_keywords_NA():
 
     corpus = Corpus("GERMAPARL-1949-2021")
@@ -217,3 +216,33 @@ def test_keywords_NA():
     factions = Dumps(corpus, s_dict=parties, s_att='parliamentary_group')
     collocates = factions.collocates(cqp_query='[lemma="Klimawandel"]', cut_off=None)
     print(collocates)
+
+
+@pytest.mark.now
+def test_associations_slow():
+
+    from pandas import read_csv
+    from collections import defaultdict
+
+    discoursemes = read_csv("/home/ausgerechnet/repositories/thesis/discoursemes/climate-change.tsv",
+                            sep="\t")
+    cc_collocates = read_csv("/home/ausgerechnet/repositories/thesis/discoursemes/cc-collocates-clr50.tsv",
+                             sep="\t")
+    cc_discoursemes = defaultdict(list)
+    cc_discoursemes['climate change'] = discoursemes.loc[discoursemes['name'] == 'Klimawandel']['query'].to_list()
+
+    for d in cc_collocates.to_dict('records'):
+        cc_discoursemes[d['class']].append(d['item'])
+
+    const = create_constellation(
+        corpus_name='GERMAPARL-1949-2021',
+        topic_discourseme={},
+        filter_discoursemes={},
+        additional_discoursemes=cc_discoursemes,
+        s_context='s',
+        p_query='lemma',
+        s_query='s',
+        escape=False
+    )
+
+    const.associations()
