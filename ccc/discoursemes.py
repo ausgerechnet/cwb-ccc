@@ -299,7 +299,9 @@ class TextConstellation:
         # ACTUAL CONCORDANCING
         conc = Concordance(self.corpus.copy(), df)
         lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-        output = lines.apply(lambda row: format_roles(row, names, s_show=names_bool+s_show, window=0, htmlify_meta=True), axis=1)
+        output = lines.apply(lambda row: format_roles(
+            row, names, s_show=names_bool+s_show, window=0, htmlify_meta=htmlify_meta
+        ), axis=1)
 
         return list(output)
 
