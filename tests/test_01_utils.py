@@ -1,5 +1,6 @@
 from ccc import Corpus
-from ccc.utils import filter_df, fold_item, merge_intervals, preprocess_query, intersect_intervals
+from ccc.utils import (filter_df, fold_item, intersect_intervals,
+                       merge_intervals, preprocess_query)
 
 from .conftest import DATA_PATH
 

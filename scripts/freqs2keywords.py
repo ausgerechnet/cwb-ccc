@@ -1,6 +1,7 @@
-from pandas import read_csv, to_numeric
-from association_measures import measures, frequencies
 from argparse import ArgumentParser
+
+from association_measures import frequencies, measures
+from pandas import read_csv, to_numeric
 
 
 def calculate_keywords(df1, df2, C1, C2, lonely=True, how='first'):

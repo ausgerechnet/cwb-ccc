@@ -1,3 +1,4 @@
+import pytest
 from pandas import concat, read_csv
 
 from ccc import Corpus
@@ -6,8 +7,6 @@ from ccc.dumps import Dumps
 from ccc.keywords import keywords
 
 from .conftest import DATA_PATH
-
-import pytest
 
 
 #########
@@ -221,8 +220,9 @@ def test_keywords_NA():
 @pytest.mark.now
 def test_associations_slow():
 
-    from pandas import read_csv
     from collections import defaultdict
+
+    from pandas import read_csv
 
     discoursemes = read_csv("/home/ausgerechnet/repositories/thesis/discoursemes/climate-change.tsv",
                             sep="\t")

@@ -1,9 +1,9 @@
-import json
 import gzip
+import json
 from glob import glob
-from pandas import read_csv, DataFrame
 
 from cutils.times import Progress
+from pandas import DataFrame, read_csv
 
 
 def get_meta(path_meta):

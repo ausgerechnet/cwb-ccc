@@ -1,9 +1,10 @@
 import gzip
 import os
+from argparse import ArgumentParser
+from collections import defaultdict
+
 from cutils.times import Progress
 from cutils.vrt import meta2dict
-from collections import defaultdict
-from argparse import ArgumentParser
 
 
 def create_file(path_in, corpus_name, registry_dir, registry_name, data, p_att, s_att):
