@@ -352,10 +352,6 @@ def textual_associations(cooc, N, column):
     return contingencies
 
 
-########################################################
-# CONSTELLATION CREATION FROM DISCOURSEMES AND QUERIES
-# TODO parallelize
-########################################################
 def create_constellation(corpus_name,
                          # discoursemes
                          topic_discourseme,
@@ -364,19 +360,20 @@ def create_constellation(corpus_name,
                          # context settings
                          s_context,
                          context=20,
-                         # query settings
-                         p_query='word',
-                         s_query=None,
-                         flags='%cd',
-                         escape=True,
-                         match_strategy='longest',
+                         window=None,
+                         approximate=False,
                          # CWB settings
+                         match_strategy='longest',
                          lib_dir=None,
                          cqp_bin='cqp',
                          registry_dir='/usr/local/share/cwb/registry/',
-                         data_dir='/tmp/ccc-data/',
-                         window=None,
-                         approximate=False):
+                         data_dir=None,
+                         # for creating from items rather than queries
+                         querify=True,
+                         p_query='word',
+                         s_query=None,
+                         flags='%cd',
+                         escape=True):
     """simple constellation creator. returns a Constellation() if a
     topic_discourseme is given, otherwise a TextConstellation(). Note
     that for TextConstellations, there is no difference between
@@ -389,121 +386,36 @@ def create_constellation(corpus_name,
 
     """
 
-    # pre-process parameters
-    s_context = s_query if not s_context else s_context
-    s_query = s_context if s_query is None else s_query
+    # translate items into queries?
+    if querify:
 
-    # init corpus
-    corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
+        # copy so local changes don't affect input
+        topic_discourseme = topic_discourseme.copy()
+        filter_discoursemes = filter_discoursemes.copy()
+        additional_discoursemes = additional_discoursemes.copy()
 
-    # topic -> Constellation()
-    if len(topic_discourseme) > 0:
+        # pre-process parameters
+        s_context = s_query if not s_context else s_context
+        s_query = s_context if s_query is None else s_query
 
-        if len(topic_discourseme) > 1:
-            raise ValueError("only one topic discourseme can be given")
+        # create queries
+        for disc_name, disc_items in topic_discourseme.items():
+            disc_query = format_cqp_query(
+                disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
+            )
+            topic_discourseme[disc_name] = disc_query
 
-        # init with topic
-        topic_name = list(topic_discourseme.keys())[0]
-        topic_items = topic_discourseme[topic_name]
-        topic_query = format_cqp_query(
-            topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
-        )
-        topic_dump = corpus.query_cqp(
-            topic_query,
-            context=context,
-            context_break=s_context,
-            match_strategy=match_strategy
-        )
-        const = Constellation(topic_dump, topic_name)
-
-        if approximate:
-            sub = topic_dump.df.set_index(['context', 'contextend'])
-            corpus = corpus.subcorpus('TempRestriction', df_dump=sub)
-
-        # add filter discoursemes
         for disc_name, disc_items in filter_discoursemes.items():
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query_cqp(
-                disc_query,
-                context=None,
-                context_break=s_context,
-                match_strategy=match_strategy
-            )
-            if len(disc_dump.df) > 0:
-                const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
+            filter_discoursemes[disc_name] = disc_query
 
-        # add additional discoursemes
         for disc_name, disc_items in additional_discoursemes.items():
             disc_query = format_cqp_query(
                 disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
             )
-            disc_dump = corpus.query_cqp(
-                disc_query,
-                context=None,
-                context_break=s_context,
-                match_strategy=match_strategy
-            )
-            if len(disc_dump.df) > 0:
-                const.add_discourseme(disc_dump, disc_name, drop=False)
-
-        corpus = corpus.subcorpus()
-
-    # no topic -> TextConstellation()
-    else:
-
-        # no filter implemented: all discoursemes are equal
-        discoursemes = {**filter_discoursemes, **additional_discoursemes}
-
-        # init with arbitrary topic
-        topic_name = list(discoursemes.keys())[0]
-        topic_items = discoursemes.pop(topic_name)
-        topic_query = format_cqp_query(
-            topic_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
-        )
-        topic_dump = corpus.query_cqp(
-            topic_query,
-            context=context,
-            context_break=s_context,
-            match_strategy=match_strategy
-        )
-        const = TextConstellation(topic_dump, s_context, topic_name)
-
-        # add further discoursemes
-        for disc_name, disc_items in discoursemes.items():
-            disc_query = format_cqp_query(
-                disc_items, p_query=p_query, s_query=s_query, flags=flags, escape=escape
-            )
-            disc_dump = corpus.query_cqp(
-                disc_query,
-                context=None,
-                context_break=s_context,
-                match_strategy=match_strategy
-            )
-            const.add_discourseme(disc_dump, disc_name)
-
-    return const
-
-
-def create_constellation_query(corpus_name,
-                               # discoursemes
-                               topic_discourseme,
-                               filter_discoursemes,
-                               additional_discoursemes,
-                               # context settings
-                               s_context,
-                               context=20,
-                               # CWB settings
-                               match_strategy='longest',
-                               lib_dir=None,
-                               cqp_bin='cqp',
-                               registry_dir='/usr/local/share/cwb/registry/',
-                               data_dir='/tmp/ccc-data/',
-                               window=None):
-    """same as above, but with pre-formatted CQP queries
-
-    """
+            additional_discoursemes[disc_name] = disc_query
 
     # init corpus
     corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
@@ -525,6 +437,10 @@ def create_constellation_query(corpus_name,
         )
         const = Constellation(topic_dump, topic_name)
 
+        if approximate:
+            sub = topic_dump.df.set_index(['context', 'contextend'])
+            corpus = corpus.subcorpus('TempRestriction', df_dump=sub)
+
         # add filter discoursemes
         for disc_name, disc_query in filter_discoursemes.items():
             disc_dump = corpus.query_cqp(
@@ -533,7 +449,8 @@ def create_constellation_query(corpus_name,
                 context_break=s_context,
                 match_strategy=match_strategy
             )
-            const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
+            if len(disc_dump.df) > 0:
+                const.add_discourseme(disc_dump, disc_name, drop=True, window=window)
 
         # add additional discoursemes
         for disc_name, disc_query in additional_discoursemes.items():
@@ -543,7 +460,10 @@ def create_constellation_query(corpus_name,
                 context_break=s_context,
                 match_strategy=match_strategy
             )
-            const.add_discourseme(disc_dump, disc_name, drop=False)
+            if len(disc_dump.df) > 0:
+                const.add_discourseme(disc_dump, disc_name, drop=False)
+
+            corpus = corpus.subcorpus()
 
     # no topic -> TextConstellation()
     else:
