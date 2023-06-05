@@ -95,7 +95,7 @@ class CQP:
 
         # init progress controller
         progressthread = threading.Thread(target=self._progressController, args=())
-        progressthread.setDaemon(True)
+        progressthread.daemon = True
         progressthread.start()
 
         # "cqp -c" should print version on startup:

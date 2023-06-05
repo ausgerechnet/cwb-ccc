@@ -21,7 +21,7 @@ def test_set_get_empty():
 def test_set_get():
 
     cache = Cache(os.path.join(DATA_PATH, 'test-cache'))
-    parameters = {'query': "test", 's_break': "test", 'key': randint(0, 9e+9)}
+    parameters = {'query': "test", 's_break': "test", 'key': randint(0, 9 * 10^9)}
     dump = DataFrame()
     r = cache.get(parameters.values())
     assert(r is None)
