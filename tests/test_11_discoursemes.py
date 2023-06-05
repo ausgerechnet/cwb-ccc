@@ -526,6 +526,7 @@ def test_constellation_coll(germaparl, discoursemes):
 ##########################
 # TEXTUAL CONSTELLATIONS #
 ##########################
+@pytest.mark.now
 def test_textual_constellation(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -549,6 +550,8 @@ def test_textual_constellation(germaparl, discoursemes):
     )
     assert len(const.df) == 624
     assert 'topic' in const.df.columns
+
+    print(const.df)
 
 
 def test_textual_constellation_add(germaparl, discoursemes):

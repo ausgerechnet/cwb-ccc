@@ -471,9 +471,10 @@ def group_lines(df, names):
 
     """
 
-    df = df.copy()
     # TODO: deduplication necessary?
+    df = df.copy()
     df_reduced = df[~df.index.duplicated(keep='first')][['contextid', 'context', 'contextend']]
+
     for name in names:
         columns = [m + "_" + name for m in ['offset', 'match', 'matchend']]
         df[name] = df[columns].values.tolist()
@@ -490,12 +491,15 @@ def aggregate_matches(df, name, context_col='contextid',
     convert dataframe:
     === (m, me) ci ===
     to
-    === (ci) {name} COUNTS_{name} BOOL_{name} ===
+    === (ci) {name} {name}_COUNTS {name}_BOOL ===
 
     """
+
     # counts
     counts = DataFrame(df[context_col].value_counts()).astype("Int64")
     counts.columns = [name + '_COUNTS']
+    counts.index.name = context_col
+    counts = counts.sort_values(by=context_col)
 
     # matches
     matches = df.reset_index()
@@ -507,8 +511,7 @@ def aggregate_matches(df, name, context_col='contextid',
     table = counts.join(matches)
 
     # bool
-    table[name + '_BOOL'] = table[name + '_COUNTS'] > 0
-    table[name + '_BOOL'] = table[name + '_BOOL'].fillna(False)
+    table[name + '_BOOL'] = (table[name + '_COUNTS'] > 0).fillna(False)
 
     return table
 

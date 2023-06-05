@@ -80,14 +80,128 @@ logger = logging.getLogger(__name__)
 # d1 = {(o1, m1, m1e), ...}
 # ...
 
-##########################################################
-# (2) OUTER JOIN ON CONTEXTID: FULL TEXTUAL COOCCURRENCE #
-##########################################################
+#####################################################
+# (2) OUTER JOIN ON CONTEXTID: TEXTUAL COOCCURRENCE #
+#####################################################
+
+#           d_COUNTS                                                  d      d_BOOL
+# context_id
+# 1061             8  {(33025, 33025), (33027, 33027), (32998, 32998...        True
+# 545              4  {(16933, 16933), (16935, 16935), (16919, 16919...        True
+# 6815             4  {(132976, 132976), (132969, 132969), (132978, ...        True
+# 6548             4  {(123407, 123407), (123394, 123394), (123409, ...        True
+# 6986             4  {(139381, 139381), (139383, 139383), (139396, ...        True
+# ...            ...                                                ...         ...
+# 2259             1                                   {(79339, 79339)}        True
+# 1158             1                                   {(36252, 36252)}        True
+# 2201             1                                   {(77579, 77579)}        True
+# 6636             1                                 {(126185, 126185)}        True
+# 1529             1                                   {(51388, 51388)}        True
 
 
-# TODO discourseme definition: items, queries, corpora
-class Discourseme:
-    def __init__(self):
+class Discourseme():
+
+    def __init__(self, cwb_id, name, df):
+        """
+        :param str name: name of the discourseme
+        :param DataFrame df:
+        """
+        pass
+
+    def breakdown(self, p_atts):
+        pass
+
+    def concordance(self, context, p_atts, form):
+        pass
+
+    def meta(self, s_atts):
+        pass
+
+    def collocates(self, context, form):
+        pass
+
+
+class Constellation_:
+
+    # sqlite database
+    cwb_id = ""
+    name = ""
+    match = 0
+    matchend = 1
+
+    def add_discourseme(self, name, df):
+        pass
+
+    def breakdown(self, p_atts=['lemma'], flags='', form='dataframe'):
+        pass
+
+    def concordance(self, names=None, p_atts=['word'], s_atts=[],
+                    s_context=None, context_left=10, context_right=10,
+                    order='random', random_seed=42, number=100,
+                    form='dataframe'):
+        """
+        filtered by names (None=all)
+        kwic-focus on match, matchend of each name
+        other discoursemes are highlighted
+        """
+        pass
+
+    def meta(self, s_att, pos='match', form='dataframe'):
+        """
+        dataframe: s_att_value, frequency, ipm
+        """
+
+        # # init corpus
+        # corpus = Corpus(corpus_name, lib_path, cqp_bin, registry_path, data_path)
+
+        # # init discourseme constellation
+        # topic_query = format_cqp_query(topic_items,
+        #                                p_query=p_query, s_query=s_query,
+        #                                flags=flags_query, escape=escape)
+        # dump = corpus.query(topic_query, context=None)
+        # # get meta data
+        # meta = dump.concordance(
+        #     s_show=s_show, form='simple', order=order, cut_off=cut_off
+        # )
+
+        # # tabulate
+        # output = list()
+        # for s in s_show:
+
+        #     # tabulate number of tokens
+        #     # TODO: no need to calculate for each text_x, text_y, etc.
+        #     lengths = corpus.query_s_att(s)
+        #     lengths = lengths.df.reset_index()
+        #     lengths['nr_tokens'] = lengths['matchend'] - lengths['match'] + 1
+
+        #     # absolute frequency in each subcorpus
+        #     m = meta[s].value_counts()
+
+        #     if len(m) < 100:
+        #         m = m.to_frame()
+        #         m.columns = ['frequency']
+        #         ell = lengths.groupby(s)[['nr_tokens']].agg(sum)
+        #         ell = ell.join(m, how='outer')
+        #         ell = ell.fillna(0, downcast='infer')
+        #         ell['IPM'] = round(ell['frequency'] / ell['nr_tokens'] * 10**6, 2)
+        #         ell.index.name = s
+        #         ell = ell.reset_index()
+        #         output.append(ell.to_html(index=False, bold_rows=False))
+
+        pass
+
+    def collocates(self, window=5, p_atts=['lemma'], flags='',
+                   ams=None, order='log_likelihood', cut_off=None, form='dataframe',
+                   reference=None):
+        """
+        if reference is None: reference are marginals
+        """
+        pass
+
+    def associations(self, reference=None):
+        """
+        if reference is None: reference are marginals
+        """
         pass
 
 
@@ -463,8 +577,6 @@ def create_constellation(corpus_name,
             if len(disc_dump.df) > 0:
                 const.add_discourseme(disc_dump, disc_name, drop=False)
 
-            corpus = corpus.subcorpus()
-
     # no topic -> TextConstellation()
     else:
 
@@ -490,6 +602,9 @@ def create_constellation(corpus_name,
                 context_break=s_context,
                 match_strategy=match_strategy
             )
-            const.add_discourseme(disc_dump, disc_name)
+            if len(disc_dump.df) > 0:
+                const.add_discourseme(disc_dump, disc_name)
 
     return const
+
+
