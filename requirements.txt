@@ -34,7 +34,7 @@ platformdirs==2.6.2 ; python_version >= '3.7'
 pluggy==1.0.0 ; python_version >= '3.6'
 py-cpuinfo==9.0.0
 pycparser==2.21
-pygments==2.14.0 ; python_version >= '3.6'
+pygments==2.15.0 ; python_version >= '3.6'
 pylint==2.13.9
 pyperclip==1.8.2
 pytest==7.2.0
