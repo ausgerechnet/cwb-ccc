@@ -264,7 +264,7 @@ class Constellation:
     def concordance(self, window=5,
                     p_show=['word', 'lemma'], s_show=[],
                     order='random', cut_off=100, random_seed=42,
-                    htmlify_meta=False):
+                    htmlify_meta=False, cwb_ids=True, form='dict'):
         """Retrieve concordance lines for constellation.
 
         :param int window: cpos further away from node will be marked 'out_of_window'
@@ -277,10 +277,12 @@ class Constellation:
         hkeys = list(self.discoursemes.keys())
         df = group_lines(self.df, hkeys)
         conc = Concordance(self.corpus.copy(), df)
-        lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-        output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
+        lines = conc.lines(form=form, p_show=p_show, s_show=s_show, order=order, cut_off=cut_off, cwb_ids=cwb_ids)
 
-        return list(output)
+        if form == 'dict':
+            lines = list(lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=htmlify_meta), axis=1))
+
+        return lines
 
     def collocates(self, windows=[3, 5, 7], p_show=['lemma'],
                    flags=None, ams=None, min_freq=2,
@@ -294,7 +296,10 @@ class Constellation:
         :rtype: list of DataFrames
         """
 
+        # TODO: cache df_cooc
+
         # get relevant contexts
+        print('create cooc matrix')
         df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
         df_cooc, f1_set = dump2cooc(df_dump)
 
