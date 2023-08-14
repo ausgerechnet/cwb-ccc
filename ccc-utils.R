@@ -13,12 +13,12 @@ library(ggrepel)
 options(dplyr.summarise.inform = FALSE)
 
 # function for formatting concordance lines
-concordance.format <- function(conc, n = 10, crop=NULL){
+concordance.format <- function(conc, n = 10, crop=NULL, columns = c("left_word", "node_word", "right_word")){
   conc %>%
     head(n) %>%
-    select(c("left_word", "node_word", "right_word")) %>%
+    select(columns) %>%
     kbl(booktabs = T, align = c("rcl"), longtable = T,
-        col.names = c("left context", "node", "right context"),
+        # col.names = c("left context", "node", "right context"),
         table.attr = "style = \"color: white; background-color: black;\"") %>%
     row_spec(0, bold = T) %>%
     column_spec(c(1, 3), width = "6cm") %>%
