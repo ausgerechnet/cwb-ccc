@@ -1151,6 +1151,18 @@ class Corpus:
         :rtype: list(dict)
         """
 
+        logger.info('quick concordancing should be quick')
+        logger.info('.. START')
+
+        if order == 'first':
+            cqp_order = ""
+
+        elif isinstance(order, int):
+            cqp_order = f'randomize {order}'
+
+        else:
+            raise ValueError
+
         if len(topic_query) == 0:
 
             queries = {**highlight_queries, **filter_queries}
@@ -1160,6 +1172,7 @@ class Corpus:
             cqp = self.start_cqp()
 
             # init CONTEXT (TextConstellation)
+            cqp.Exec(f'sort {identifier} {cqp_order};')
             cqp.Exec(f'cut {identifier} {cut_off};')
             df_context = cqp.Dump(f'{identifier};')
             subcorpus_context = self.subcorpus(None, df_context).set_context(context_break=s_context)
@@ -1199,16 +1212,22 @@ class Corpus:
         else:
 
             # INIT CQP
+            logger.info('.. INIT')
             identifier = self.quick_query(s_context, topic_query, filter_queries.values(), match_strategy)
             cqp = self.start_cqp()
 
-            # init CONTEXT (TextConstellation)
+            # set CONTEXT (TextConstellation)
+            logger.info('.. SET')
             cqp.Exec(f'{identifier};')
+            if len(filter_queries) == 0:
+                cqp.Exec(f'sort {identifier} {cqp_order};')
+                cqp.Exec(f'cut {identifier} {cut_off};')
             df_context = cqp.Dump(f'{identifier};')
             subcorpus_context = self.subcorpus(None, df_context).set_context(window, s_context)
             df_context = subcorpus_context.df[['contextid', 'context', 'contextend']]
 
             # index by TOPIC MATCHES
+            logger.info('.. INDEX')
             cqp.Exec(f'Temp = {topic_query};')
             df_query = cqp.Dump('Temp;')
             subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
@@ -1216,7 +1235,8 @@ class Corpus:
             df_context = df_context.set_index(['match_topic', 'matchend_topic'])
             df_context.index.names = ['match', 'matchend']
 
-            # FILTER according to window size
+            # filter according to WINDOW size
+            logger.info('.. FILTER')
             for name, query in filter_queries.items():
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
@@ -1224,7 +1244,8 @@ class Corpus:
                 df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=True, window=window)
                 df_context = df_context.drop([c + "_" + name for c in ['match', 'matchend', 'offset']], axis=1)
 
-            # HIGHLIGHT
+            # highlight
+            logger.info('.. HIGHLIGHT')
             for name, query in highlight_queries.items():
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
@@ -1233,13 +1254,15 @@ class Corpus:
 
             cqp.__del__()
 
-            # ACTUAL CONCORDANCING
+            # formatting
+            logger.info('.. FORMAT')
             hkeys = list(highlight_queries.keys())
             df = group_lines(df_context, hkeys)
             conc = Concordance(self.copy(), df)
             lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
             output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
 
+        logger.info('.. FINISH')
         return list(output)
 
     def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
