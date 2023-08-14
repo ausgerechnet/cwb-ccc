@@ -41,11 +41,11 @@ class Collocates:
         self.p_query = [p_query] if isinstance(p_query, str) else p_query
         available_attributes = self.corpus.available_attributes()['attribute'].values
         if not set(self.p_query).issubset(set(available_attributes)):
-            logger.warning('specfied p-attribute(s) ("%s") not available' % " ".join(self.p_query))
+            logger.warning('specified p-attribute(s) ("%s") not available' % " ".join(self.p_query))
             logger.warning('falling back to primary layer')
             self.p_query = ['word']
 
-        # collect cpos of matches and context
+        # get df_cooc, f1_set, node_freq
         if df_dump is not None:
 
             # get from cache if possible
@@ -59,6 +59,7 @@ class Collocates:
             # create and cache otherwise
             if not isinstance(df_cooc, DataFrame):
                 # create collocation database
+                print('create')
                 logger.info('collecting cpos of matches and context')
                 df_cooc, f1_set = dump2cooc(df_dump, self.mws)
                 node_freq = self.corpus.counts.cpos(f1_set, self.p_query)
@@ -67,11 +68,13 @@ class Collocates:
                 self.corpus.cache.set(identifier + "-df_cooc", df_cooc)
                 self.corpus.cache.set(identifier + "-node_freq", node_freq)
 
-        else:
-            if df_cooc is None or f1_set is None or node_freq is None:
-                logger.error('if no dump is given, you have to provide all frequencies')
-                return
+        elif df_cooc is None or f1_set is None or node_freq is None:
+            logger.error('if no dump is given, you have to provide all frequencies')
+            return
 
+        self.identifier = generate_idx(
+            [df_cooc.head(min(100, len(df_cooc))).reset_index(), f1_set, node_freq]
+        )
         self.df_cooc = df_cooc
         self.f1_set = f1_set
         self.node_freq = node_freq
@@ -102,48 +105,68 @@ class Collocates:
             logger.error("nothing to show")
             return DataFrame()
 
-        # get window counts and apply min freq
-        f = self.count(window).rename(columns={'freq': 'f'})
-        vocab = len(f)
-        f1 = f['f'].sum()
-        f = f.loc[f['f'] >= min_freq]
+        identifier = generate_idx(
+            [self.identifier, window, ams, min_freq, marginals]
+        )
 
-        # get reference frequencies
-        if isinstance(marginals, str):
-            if marginals == 'corpus':
-                N = self.corpus.corpus_size - len(self.f1_set)
-                marginals = self.corpus.marginals(f.index, self.p_query)
+        collocates = self.corpus.cache.get(identifier)
+
+        if not isinstance(collocates, DataFrame):
+
+            # get window counts and apply min freq
+            print('counting')
+            f = self.count(window).rename(columns={'freq': 'f'})
+            vocab = len(f)
+            f1 = f['f'].sum()
+            f = f.loc[f['f'] >= min_freq]
+
+            # get reference frequencies
+            print('reference')
+            if isinstance(marginals, str):
+                if marginals == 'corpus':
+                    N = self.corpus.corpus_size - len(self.f1_set)
+                    marginals = self.corpus.marginals(f.index, self.p_query)
+                else:
+                    raise NotImplementedError
+            elif isinstance(marginals, DataFrame):
+                # DataFrame must contain a column 'freq'
+                N = marginals['freq'].sum()
             else:
                 raise NotImplementedError
-        elif isinstance(marginals, DataFrame):
-            # DataFrame must contain a column 'freq'
-            N = marginals['freq'].sum()
-        else:
-            raise NotImplementedError
 
-        # f2 = marginals - node frequencies
-        f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
-            self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
-        )
-        f2 = f2.fillna(0, downcast='infer')
-        f2['f2'] = f2['marginal'] - f2['in_nodes']
+            # f2 = marginals - node frequencies
+            print('calculating')
+            f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
+                self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
+            )
+            f2 = f2.fillna(0, downcast='infer')
+            f2['f2'] = f2['marginal'] - f2['in_nodes']
 
-        # create dataframe
-        df = f[['f']].join(f2[['f2']], how='left')
-        df['f1'] = f1
-        df['N'] = N
-        df = df.fillna(0, downcast='infer')
+            # create dataframe
+            df = f[['f']].join(f2[['f2']], how='left')
+            df['f1'] = f1
+            df['N'] = N
+            df = df.fillna(0, downcast='infer')
 
-        # score
-        collocates = score_counts(df, order=order, cut_off=cut_off,
-                                  flags=flags, ams=ams, vocab=vocab)
+            # score
+            collocates = score_counts(df, order=order, cut_off=None,
+                                      flags=flags, ams=ams, vocab=vocab)
+
+            # add node and marginal frequencies
+            collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
+
+            # put in cache
+            self.corpus.cache.set(identifier, collocates)
 
         # throw away anti-collocates by default
         if not show_negative:
             collocates = collocates.loc[collocates['O11'] >= collocates['E11']]
 
-        # add node and marginal frequencies
-        collocates = collocates.join(f2[['in_nodes', 'marginal']], how='left')
+        # sort
+        collocates = collocates.sort_values(by=[order, 'item'], ascending=[False, True])
+
+        # apply cut-off
+        collocates = collocates.head(cut_off) if cut_off is not None else collocates
 
         return collocates
 
