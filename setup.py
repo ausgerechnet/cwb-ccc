@@ -96,7 +96,7 @@ setup(
     python_requires='>=3.7.2',
     install_requires=[
         "wheel>=0.41.1,<0.42",
-        "association-measures>=0.2.6,0.3",
+        "association-measures>=0.2.6,<0.3",
         "pandas>=1.3.5,<2.0",
         "numexpr>=2.8.5,<3.0",
         "Bottleneck>=1.3.7,<2.0",
