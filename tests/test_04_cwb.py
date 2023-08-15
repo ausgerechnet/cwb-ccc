@@ -3,23 +3,23 @@ from glob import glob
 import pandas as pd
 import pytest
 
-from ccc import Corpora, Corpus
+from ccc import Corpora, Corpus, SubCorpus
 
 from .conftest import DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH, lib=True):
+def get_corpus(corpus_settings, data_dir=DATA_PATH, lib=True):
 
     if lib:
-        lib_path = corpus_settings.get('lib_path', None)
+        lib_dir = corpus_settings.get('lib_dir', None)
     else:
-        lib_path = None
+        lib_dir = None
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=lib_path,
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=lib_dir,
+        data_dir=data_dir
     )
 
 
@@ -29,7 +29,7 @@ def get_corpus(corpus_settings, data_path=DATA_PATH, lib=True):
 
 @pytest.mark.init
 def test_corpora(germaparl):
-    corpora = Corpora(registry_path=germaparl['registry_path'])
+    corpora = Corpora(registry_dir=germaparl['registry_dir'])
     assert type(corpora.show()) == pd.DataFrame
     assert "GERMAPARL1386" in corpora.show().index
 
@@ -49,12 +49,12 @@ def test_get_corpus(germaparl):
 @pytest.mark.init
 def test_corpus_descriptor(germaparl):
     corpus = get_corpus(germaparl)
-    assert isinstance(corpus.attributes_available, pd.DataFrame)
+    assert isinstance(corpus.available_attributes(), pd.DataFrame)
 
 
 @pytest.mark.init
 def test_data_dir(germaparl):
-    get_corpus(germaparl, lib=False, data_path=None)
+    get_corpus(germaparl, lib=False, data_dir=None)
     paths = glob("/tmp/ccc-*")
     assert len(paths) >= 1
 
@@ -65,15 +65,15 @@ def test_data_dir(germaparl):
 @pytest.mark.init
 def test_macros(germaparl):
     corpus = get_corpus(germaparl, lib=False)
-    assert '/np(0)' not in corpus._macros_available()
+    assert '/np(0)' not in corpus.available_macros()
     corpus = get_corpus(germaparl, lib=True)
-    assert '/np(0)' in corpus._macros_available()
+    assert '/np(0)' in corpus.available_macros()
 
 
 @pytest.mark.init
 def test_wordlists(germaparl):
     corpus = get_corpus(germaparl, lib=True)
-    assert "$parties" in corpus._wordlists_available()
+    assert "$parties" in corpus.available_wordlists()
 
 
 #####################################################
@@ -125,100 +125,12 @@ def test_marginals_pattern(germaparl):
 @pytest.mark.marginals
 def test_marginals_complex(germaparl):
     corpus = get_corpus(germaparl)
-    df = corpus.marginals_complex(
+    df = corpus._marginals_complex(
         [("gehen", "VVFIN"), ("Seehofer", "NE"), ("Merkel", "NE")],
         ["lemma", "pos"]
     )
     assert len(df) == 3
     assert df['freq']['gehen VVFIN'] == 186
-
-
-#####################################################
-# SUBCORPORA ########################################
-#####################################################
-
-@pytest.mark.subcorpus
-def test_activate_subcorpus(germaparl):
-
-    corpus = get_corpus(germaparl)
-
-    df1 = corpus.dump_from_query(
-        "[lemma='Seehofer']"
-    )
-    corpus.query(
-        "[lemma='Horst'] expand to s",
-        name='Horst'
-    ).df
-    horst = corpus.activate_subcorpus('Horst')
-    df2 = horst.dump_from_query(
-        "[lemma='Seehofer']"
-    )
-    assert len(df1) > len(df2)
-
-
-@pytest.mark.subcorpus
-def test_deactivate_subcorpus(germaparl):
-
-    corpus = get_corpus(germaparl)
-
-    df1 = corpus.dump_from_query(
-        '[lemma="die"]',
-        germaparl['s_query']
-    )
-
-    # define subcorpus
-    corpus.query(
-        cqp_query="[lemma='sein'] expand to s",
-        name='Sein'
-    )
-
-    # activate subcorpus
-    sein = corpus.activate_subcorpus('Sein')
-    df2 = sein.dump_from_query(
-        '[lemma="die"]',
-        germaparl['s_query']
-    )
-
-    # deactivate subcorpus
-    corpus.activate_subcorpus()
-    df3 = corpus.dump_from_query(
-        '[lemma="die"]',
-        germaparl['s_query']
-    )
-
-    # deactivate subcorpus
-    corpus.activate_subcorpus()
-    df4 = corpus.dump_from_query(
-        '[lemma="die"]',
-        germaparl['s_query']
-    )
-
-    assert len(df1) == len(df3) == len(df4)
-    assert len(df1) > len(df2)
-
-
-@pytest.mark.subcorpus
-def test_create_cached_nqr(germaparl):
-
-    # problem: if a query runs once without having been given a name,
-    # the CQP dump (NQR) is not saved to disk
-    # if the same query runs again *with a name*, it should be saved to disk
-
-    corpus = get_corpus(germaparl)
-    corpus.query('[lemma="jetzt"]')
-    # assert "Jetzt" not in corpus.show_nqr().values
-    corpus.query('[lemma="jetzt"]', name='Jetzt')
-    assert "Jetzt" in corpus.show_nqr().values
-    corpus.activate_subcorpus("Jetzt")
-
-
-@pytest.mark.subcorpus
-def test_nqr_from_s_att(germaparl):
-
-    corpus = get_corpus(germaparl)
-    corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
-    assert "Union" in corpus.show_nqr().values
-    corpus.activate_subcorpus("Union")
 
 
 ################################################
@@ -556,3 +468,172 @@ def test_ccc_quick_query_2(germaparl):
     )
 
     assert identifier in corpus.show_nqr()['subcorpus'].values
+
+
+#####################################################
+# SUBCORPORA ########################################
+#####################################################
+
+@pytest.mark.subcorpus
+def test_activate_subcorpus(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    df1 = corpus.dump_from_query(
+        "[lemma='Seehofer']"
+    )
+    corpus.query(
+        "[lemma='Horst'] expand to s",
+        name='Horst'
+    ).df
+
+    horst = corpus.subcorpus('Horst')
+    df2 = horst.dump_from_query(
+        "[lemma='Seehofer']"
+    )
+    assert len(df1) > len(df2)
+
+
+@pytest.mark.subcorpus
+def test_deactivate_subcorpus(germaparl):
+
+    corpus = get_corpus(germaparl)
+    # query corpus
+    df1 = corpus.dump_from_query(
+        '[lemma="die"]',
+        germaparl['s_query']
+    )
+
+    # query subcorpus
+    sein = corpus.query(
+        cqp_query="[lemma='sein'] expand to s",
+        name='Sein'
+    )
+    df2 = sein.dump_from_query(
+        '[lemma="die"]',
+        germaparl['s_query']
+    )
+
+    # query corpus
+    df3 = corpus.dump_from_query(
+        '[lemma="die"]',
+        germaparl['s_query']
+    )
+
+    assert len(df1) == len(df3)
+    assert len(df1) > len(df2)
+
+
+@pytest.mark.subcorpus
+def test_create_cached_nqr(germaparl):
+
+    # problem: if a query runs once without having been given a name,
+    # the CQP dump (NQR) is not saved to disk
+    # if the same query runs again *with a name*, it should be saved to disk
+
+    corpus = get_corpus(germaparl)
+
+    subcorpus = corpus.query('[lemma="jetzt"]')
+    assert isinstance(subcorpus, SubCorpus)
+    # assert "Jetzt" not in corpus.show_nqr().values
+
+    subcorpus = corpus.query('[lemma="jetzt"]', name='Jetzt')
+    assert isinstance(subcorpus, SubCorpus)
+    # assert "Jetzt" in corpus.show_nqr().values
+
+
+@pytest.mark.subcorpus
+def test_nqr_from_s_att(germaparl):
+
+    corpus = get_corpus(germaparl)
+    corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+    assert "Union" in corpus.show_nqr().values
+    assert isinstance(corpus.subcorpus("Union"), SubCorpus)
+
+
+@pytest.mark.subcorpus
+def test_subcorpus(germaparl):
+
+    corpus = get_corpus(germaparl)
+    subcorpus = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+
+    # init
+    assert isinstance(subcorpus, SubCorpus)
+    assert len(subcorpus.df) == 2880
+    assert all(elem in subcorpus.df.columns for elem in
+               ["s_cwbid", "s_span", "s_spanend", "contextid", "context", "contextend"])
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_keywords(germaparl):
+
+    corpus = get_corpus(germaparl)
+    subcorpus = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+
+    # keywords
+    assert len(subcorpus.keywords()) == 1
+    assert "und" in subcorpus.keywords().index
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_collocates(germaparl):
+
+    corpus = get_corpus(germaparl)
+    subcorpus = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+    assert len(subcorpus.collocates(window=1)) == 100
+    assert len(subcorpus.collocates(window=10)) == 100
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_context(germaparl):
+
+    corpus = get_corpus(germaparl)
+    subcorpus = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+    assert len(subcorpus.collocates(window=10)) == 100
+    assert len(subcorpus.collocates(window=20)) == 100
+    # collocates
+    subcorpus = subcorpus.set_context(20)
+    assert len(subcorpus.collocates()) == 100
+    assert len(subcorpus.collocates(window=10)) == 100
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_marginals(germaparl):
+
+    corpus = get_corpus(germaparl)
+    assert len(corpus.marginals()) == 14034
+    subcorpus = corpus.query(
+        cqp_query='[lemma="und"]',
+        context_break=germaparl['s_query'],
+        name='Test'
+    )
+    assert len(subcorpus.marginals()) == 2
+
+
+@pytest.mark.subcorpus
+def test_subcorpus_query_s_att(germaparl):
+
+    corpus = get_corpus(germaparl)
+    black = corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
+    assert "Union" in corpus.show_nqr().values
+    assert isinstance(black, SubCorpus)
+
+    interjection = corpus.query_s_att("p_type", values={"interjection"})
+    black_interjection = black.query_s_att("p_type", values={"interjection"})
+    assert len(black.matches()) > len(interjection.matches()) > len(black_interjection.matches())

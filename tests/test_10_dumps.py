@@ -7,13 +7,13 @@ from ccc.dumps import Dumps
 from .conftest import DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH):
+def get_corpus(corpus_settings, data_dir=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=corpus_settings.get('lib_dir', None),
+        data_dir=data_dir
     )
 
 
@@ -22,17 +22,17 @@ def get_corpus(corpus_settings, data_path=DATA_PATH):
 ########
 def test_query(germaparl):
     corpus = get_corpus(germaparl)
-    dump = corpus.query('"SPD"')
-    assert dump.name_cqp == 'Last'
-    assert dump.size == 632
-    assert (dump.df.columns == ['context', 'contextend']).all()
+    subcorpus = corpus.query('"SPD"')
+    assert subcorpus.subcorpus_name == 'Last'
+    assert len(subcorpus.df) == 632
+    assert (subcorpus.df.columns == ['context', 'contextend']).all()
 
 
 def test_query_name(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"', name="SPD")
-    assert dump.name_cqp == "SPD"
-    assert dump.size == 632
+    assert dump.subcorpus_name == "SPD"
+    assert len(dump.df) == 632
     assert (dump.df.columns == ['context', 'contextend']).all()
 
 
@@ -67,8 +67,7 @@ def test_matches_subcorpus(germaparl):
     corpus = get_corpus(germaparl)
     dump_base = corpus.query(r'[pos="NE"]? [pos="NE"] "\[" ".*" "\]"', name="Base")
     tokens_base = len(dump_base.matches())
-    corpus.subcorpus = "Base"
-    dump_neg = corpus.query('[pos="NE"]')
+    dump_neg = dump_base.query('[pos="NE"]')
     tokens_neg = len(dump_neg.matches())
     assert (tokens_base - tokens_neg) == 350
 
@@ -94,8 +93,8 @@ def test_query_s_satt(germaparl):
     corpus = get_corpus(germaparl)
     parties = {"GRUENE", "Bündnis 90/Die Grünen"}
     dump = corpus.query_s_att('text_party', parties)
-    assert dump.name_cqp is None
-    assert dump.size == 87
+    assert dump.subcorpus_name is not None
+    assert len(dump.df) == 87
     assert (dump.df.columns == ['text_party_cwbid', 'text_party']).all()
 
 
@@ -181,12 +180,12 @@ def test_dumps_keywords(germaparl):
     # keywords
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.keywords(order='log_ratio')
-    assert tables['green'].index[0] == "Oppositionsfraktion"
-    assert tables['red'].index[0] == "Bereicherung"
-    assert tables['black'].index[0] == "Abgabenquote"
-    assert tables['yellow'].index[0] == "Wirtschafts-"
-    assert tables['purple'].index[0] == "ÖPNV-Gesetz"
+    table = dumps.keywords(order='log_ratio')
+    assert table.loc['green'].index[0] == "Oppositionsfraktion"
+    assert table.loc['red'].index[0] == "Bereicherung"
+    assert table.loc['black'].index[0] == "Abgabenquote"
+    assert table.loc['yellow'].index[0] == "Wirtschafts-"
+    assert table.loc['purple'].index[0] == "ÖPNV-Gesetz"
 
 
 @pytest.mark.dumps
@@ -204,16 +203,17 @@ def test_dumps_collocates(germaparl):
     # collocates
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.collocates(
+    table = dumps.collocates(
         cqp_query='"Wirtschaft"',
         order='log_ratio',
         context_break='s',
         window=20
     )
-    assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Grad'
+    assert len(set(table.index.get_level_values('subcorpus'))) == len(parties)
+    assert table.loc['yellow'].index[0] == 'Grad'
 
 
+@pytest.mark.dumps
 def test_dumps_collocates_global(germaparl):
 
     # subcorpora via s-attribute values
@@ -228,15 +228,15 @@ def test_dumps_collocates_global(germaparl):
     # collocates
     corpus = get_corpus(germaparl)
     dumps = Dumps(corpus, parties, s_att='text_party')
-    tables = dumps.collocates(
+    table = dumps.collocates(
         cqp_query='"Wirtschaft"',
         order='log_ratio',
         context_break='s',
         window=20,
-        reference='global'
+        marginals='corpus'
     )
-    assert len(tables) == len(parties)
-    assert tables['yellow'].index[0] == 'Grad'
+    assert len(set(table.index.get_level_values('subcorpus'))) == len(parties)
+    assert table.loc['yellow'].index[0] == 'Grad'
 
 
 @pytest.mark.benchmark

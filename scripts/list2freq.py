@@ -1,5 +1,6 @@
-from pandas import read_csv, DataFrame
 from argparse import ArgumentParser
+
+from pandas import DataFrame, read_csv
 
 
 def main(path_in, path_out, col):

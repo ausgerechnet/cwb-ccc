@@ -4,33 +4,26 @@ library(kableExtra)
 library(DT)
 library(colorspace)
 library(matrixStats)
-library(anomalize)
-library(gespeR)
+# library(anomalize)
+# library(gespeR)
 library(irr)
 library(gridExtra)
+library(ggrepel)
+
+options(dplyr.summarise.inform = FALSE)
 
 # function for formatting concordance lines
-concordance.format <- function(conc, n = 10, tex = F, crop=NULL){
-  
-  if (tex){
-    conc %>% 
-      head(n) %>% 
-      xtable::xtable() %>% 
-      print(booktabs = TRUE, hline.after = 0:n)
-  }
-  
-  else {
-    conc %>%
-      head(n) %>%
-      select(c("left_word", "node_word", "right_word")) %>%
-      kbl(booktabs = T, align = c("rcl"), longtable = T,
-          col.names = c("left context", "node", "right context"),
-          table.attr = "style = \"color: white; background-color: black;\"") %>%
-      row_spec(0, bold = T) %>%
-      column_spec(c(1, 3), width = "6cm") %>%
-      column_spec(2, bold = T, width = "3cm") %>%
-      kable_styling(latex_options = "striped")
-  }
+concordance.format <- function(conc, n = 10, crop=NULL, columns = c("left_word", "node_word", "right_word")){
+  conc %>%
+    head(n) %>%
+    select(columns) %>%
+    kbl(booktabs = T, align = c("rcl"), longtable = T,
+        # col.names = c("left context", "node", "right context"),
+        table.attr = "style = \"color: white; background-color: black;\"") %>%
+    row_spec(0, bold = T) %>%
+    column_spec(c(1, 3), width = "6cm") %>%
+    column_spec(2, bold = T, width = "3cm") %>%
+    kable_styling(latex_options = "striped")
 }
 
 # function for plotting collocates

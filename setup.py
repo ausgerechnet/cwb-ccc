@@ -93,15 +93,15 @@ setup(
         'ccc'
     ],
     ext_modules=extensions,
-    python_requires='>=3.6.2',
+    python_requires='>=3.7.2',
     install_requires=[
-        "wheel>=0.37.1",
-        "association-measures>=0.2.6",
-        "pandas>=1.1.5",
-        "numexpr>=2.7.1",
-        "Bottleneck>=1.3.4",
-        "unidecode>=1.3.4",
-        "pyyaml>=6.0"
+        "wheel>=0.41.1,<0.42",
+        "association-measures>=0.2.6,<0.3",
+        "pandas>=1.3.5,<2.0",
+        "numexpr>=2.8.5,<3.0",
+        "Bottleneck>=1.3.7,<2.0",
+        "unidecode>=1.3.6,<2.0",
+        "pyyaml>=6.0.1,<7.0"
     ],
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -112,6 +112,6 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
-        'Programming Language :: Cython',
+        'Programming Language :: Cython'
     ],
 )

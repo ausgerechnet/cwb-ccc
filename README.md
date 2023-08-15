@@ -5,14 +5,14 @@
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
 [![Imports: association-measures](https://img.shields.io/badge/%20imports-association--measures-%231674b1?style=flat&labelColor=gray)](https://github.com/fau-klue/pandas-association-measures)
 
-**cwb-ccc** is a Python 3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries, extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
+**cwb-ccc** is a Python 3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries (including queries with more than two anchor points), extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
 The [Quickstart](#quickstart) should get you started. For a more detailed overview of the functionality, see the [Vignette](demos/vignette.md).
 
 * [Installation](#installation)
 * [Quickstart](#quickstart)
   * [Accessing Corpora](#accessing-corpora)
-  * [Queries and Dumps](#queries-and-dumps)
+  * [Queries and SubCorpora](#queries-and-subcorpus)
   * [Concordancing](#concordancing)
   * [Collocates](#collocation-analyses)
   * [Keywords](#keyword-analyses)
@@ -24,7 +24,7 @@ The [Quickstart](#quickstart) should get you started. For a more detailed overvi
 
 The module needs a working installation of the [CWB](http://cwb.sourceforge.net/) and operates on CWB-indexed corpora. If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.
 
-You can install this module with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
+You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 
     python -m pip install cwb-ccc
 
@@ -32,6 +32,7 @@ You can also clone the source from [github](https://github.com/ausgerechnet/cwb-
 
     python -m pip install pipenv
     pipenv install --dev
+    pipenv run python3 -m cython -2 ccc/cl.pyx
     pipenv run python3 setup.py bdist_wheel
 
 
@@ -43,7 +44,7 @@ To list all available corpora, you can use
 ```python
 from ccc import Corpora
 
-corpora = Corpora(registry_path="/usr/local/share/cwb/registry/")
+corpora = Corpora(registry_dir="/usr/local/share/cwb/registry/")
 ```
 
 All further methods rely on the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
@@ -53,29 +54,30 @@ from ccc import Corpus
 
 corpus = Corpus(
   corpus_name="GERMAPARL1386",
-  registry_path="/usr/local/share/cwb/registry/"
+  registry_dir="/usr/local/share/cwb/registry/"
 )
 ```
 
 This will raise a `KeyError` if the named corpus is not in the specified registry.
 
 
-### Queries and Dumps ###
+### Queries and SubCorpora ###
+
 The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
 
 ```python
-dump = corpus.query('[lemma="Arbeit"]', context_break='s')
+subcorpus = corpus.query('[lemma="Arbeit"]', context_break='s')
 ```
 
-The result is a `Dump` object; at its core is a pandas DataFrame with corpus positions (similar to CWB dumps).
+The result is a `SubCorpus`; at its core this is a pandas DataFrame with corpus positions (similar to CWB dumps of NQRs).
 
 
 ### Concordancing ###
 
-You can access concordance lines via the `concordance()` method of the dump.  This method returns a DataFrame with information about the query matches in context:
+You can access concordance lines via the `concordance()` method of the subcorpus.  This method returns a DataFrame with information about the query matches in context:
 
 <details>
-<summary><code>dump.concordance()</code></summary>
+<summary><code>subcorpus.concordance()</code></summary>
 <p>
 
 | *match* | *matchend* | word                                                                                                                                                    |
@@ -92,10 +94,10 @@ You can access concordance lines via the `concordance()` method of the dump.  Th
 </details>
 <br/>
 
-This retrieves concordance lines in simple format in the order in which they appear in the corpus. A better approach is
+By default, this retrieves concordance lines in simple format in the order in which they appear in the corpus. A better approach is
 
 <details>
-<summary><code>dump.concordance(form='kwic', order='random')</code></summary>
+<summary><code>subcorpus.concordance(form='kwic', order='random')</code></summary>
 <p>
 
 | *match* | *matchend* | left\_word                                                                                                                                    | node\_word | right\_word                                                                                                                                        |
@@ -114,11 +116,11 @@ This retrieves concordance lines in simple format in the order in which they app
 
 
 ### Collocation Analyses ###
-After executing a query, you can use `dump.collocates()` to extract collocates for a given window size (symmetric windows around the corpus matches). The result will be a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
 
+After executing a query, you can use `subcorpus.collocates()` to extract collocates (see the vignette for parameter settings). The result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
 
 <details>
-<summary><code>dump.collocates()</code></summary>
+<summary><code>subcorpus.collocates()</code></summary>
 <p>
 
 | *item*   |   O11 |   O12 |   O21 |    O22 |   R1 |     R2 |   C1 |     C2 |      N |      E11 |     E12 |      E21 |    E22 |   z\_score |   t\_score |   log\_likelihood |   simple\_ll |   min\_sensitivity |   liddell |     dice |   log\_ratio |   conservative\_log\_ratio |   mutual\_information |   local\_mutual\_information |     ipm |   ipm\_reference |   ipm\_expected |   in\_nodes |   marginal |
@@ -136,17 +138,19 @@ After executing a query, you can use `dump.collocates()` to extract collocates f
 
 The dataframe contains the counts and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`).
 
+
 ### Keyword Analyses ###
 
-Having created a subcorpus (a `dump`)
+Having created a subcorpus
+
 ```python
-dump = corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
+subcorpus = corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
 ```
 
 you can use its `keywords()` method for retrieving keywords:
 
 <details>
-<summary><code>dump.keywords(order='conservative_log_ratio')</code></summary>
+<summary><code>subcorpus.keywords(order='conservative_log_ratio')</code></summary>
 <p>
 
 | *item*     | O11 |   O12 |  O21 |    O22 |    R1 |     R2 |   C1 |     C2 |      N |     E11 |     E12 |     E21 |    E22 | z\_score | t\_score | log\_likelihood | simple\_ll | min\_sensitivity |  liddell |     dice | log\_ratio | conservative\_log\_ratio | mutual\_information | local\_mutual\_information |     ipm | ipm\_reference | ipm\_expected |
@@ -166,9 +170,7 @@ Just as with collocates, the result is a `DataFrame` with lemmata as index and f
 
 
 ## Testing ##
-The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.
-
-The corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
+The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996. This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
 
 <details>
 <summary><code>corpus.attributes_available</code></summary>
@@ -224,4 +226,4 @@ You can then simply
 - Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 - The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 - This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
-- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2023), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
+- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2024), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).

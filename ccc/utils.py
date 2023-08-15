@@ -198,6 +198,17 @@ def preprocess_query(query):
     }
 
 
+def decode(text):
+    """savely decode a string catching common errors
+
+    """
+    try:
+        text = text.decode('utf-8')
+    except (UnicodeDecodeError, AttributeError):
+        text = ""
+    return text
+
+
 #################################
 # working on nodes and contexts #
 #################################
@@ -229,15 +240,55 @@ node2cotext = np.vectorize(_node2cotext)
 
 
 def merge_intervals(inter, start_index=0):
-    """ for merging contexts """
+    """for merging contexts; union of intervals. intervals can have
+    arbitrary overlaps, but must be sorted by left boundaries
+
+    :param list inter: list of intervals (each one a pair of left and right boundary)
+    :param int start_index: for recursive application
+
+    :return: list of merged intervals
+    :rtype: list
+    """
+
     for i in range(start_index, len(inter)-1):
         if inter[i][1] >= inter[i+1][0]:
             new_start = inter[i][0]
-            new_end = inter[i+1][1]
+            new_end = max(inter[i][1], inter[i+1][1])
             inter[i] = [new_start, new_end]
             del inter[i+1]
             return merge_intervals(inter.copy(), start_index=i)
     return inter
+
+
+def intersect_intervals(inter_left, inter_right):
+    """for merging matches; intersection of intervals. intervals can have
+    arbitrary overlaps, but must be sorted by left boundaries.
+
+    :param list inter_left: list of intervals (each one a pair of left and right boundary + ...)
+    :param list inter_right: list of intervals (each one a pair of left and right boundary + ...)
+    """
+
+    i = j = 0                   # indexes of inter_left and inter_right
+    n = len(inter_left)
+    m = len(inter_right)
+
+    intervals = list()          # output variable
+    while i < n and j < m:
+
+        # compare inter_left[i] with inter_right[j]
+        start = max(inter_left[i][0], inter_right[j][0])
+        end = min(inter_left[i][1], inter_right[j][1])
+        if start <= end:
+            intervals.append([start, end] + inter_left[i][2:] + inter_right[j][2:])
+
+        # if inter_left[i]'s right bound is smaller than inter_right[j]'s right bound: increment i
+        if inter_left[i][1] < inter_right[j][1]:
+            i += 1
+        # else increment j
+        else:
+            j += 1
+
+    return intervals
 
 
 def calculate_offset(row):
@@ -420,9 +471,10 @@ def group_lines(df, names):
 
     """
 
-    df = df.copy()
     # TODO: deduplication necessary?
+    df = df.copy()
     df_reduced = df[~df.index.duplicated(keep='first')][['contextid', 'context', 'contextend']]
+
     for name in names:
         columns = [m + "_" + name for m in ['offset', 'match', 'matchend']]
         df[name] = df[columns].values.tolist()
@@ -439,12 +491,15 @@ def aggregate_matches(df, name, context_col='contextid',
     convert dataframe:
     === (m, me) ci ===
     to
-    === (ci) {name} COUNTS_{name} BOOL_{name} ===
+    === (ci) {name} {name}_COUNTS {name}_BOOL ===
 
     """
+
     # counts
     counts = DataFrame(df[context_col].value_counts()).astype("Int64")
     counts.columns = [name + '_COUNTS']
+    counts.index.name = context_col
+    counts = counts.sort_values(by=context_col)
 
     # matches
     matches = df.reset_index()
@@ -456,8 +511,7 @@ def aggregate_matches(df, name, context_col='contextid',
     table = counts.join(matches)
 
     # bool
-    table[name + '_BOOL'] = table[name + '_COUNTS'] > 0
-    table[name + '_BOOL'] = table[name + '_BOOL'].fillna(False)
+    table[name + '_BOOL'] = (table[name + '_COUNTS'] > 0).fillna(False)
 
     return table
 

@@ -1,5 +1,6 @@
 from ccc import Corpus
-from ccc.utils import filter_df, fold_item, merge_intervals, preprocess_query
+from ccc.utils import (filter_df, fold_item, intersect_intervals,
+                       merge_intervals, preprocess_query)
 
 from .conftest import DATA_PATH
 
@@ -73,16 +74,34 @@ def test_fold_items():
     )
 
 
-def test_merge_intervals():
-    intervals = [[1, 3], [2, 4], [5, 9], [6, 10]]
-    merge = merge_intervals(intervals)
-    assert(merge == [[1, 4], [5, 10]])
-
-
 def test_filter_df(germaparl):
-    c = Corpus(germaparl['corpus_name'], registry_path=germaparl['registry_path'], data_path=DATA_PATH)
-    dump = c.query(germaparl['query'])
-    coll = dump.collocates()
+    c = Corpus(germaparl['corpus_name'], registry_dir=germaparl['registry_dir'], data_dir=DATA_PATH)
+    subcorpus = c.query(germaparl['query'])
+    coll = subcorpus.collocates()
     assert ',' in coll.index
     coll_filtered = filter_df(coll, 'resources/stopwords-de.txt')
     assert ',' not in coll_filtered.index
+
+
+def test_merge_intervals():
+
+    intervals = [[1, 3], [2, 4], [5, 9], [6, 10]]
+    merge = merge_intervals(intervals)
+    assert merge == [[1, 4], [5, 10]]
+
+    intervals = [[0, 5], [2, 4], [6, 9], [6, 10]]
+    merge = merge_intervals(intervals)
+    assert merge == [[0, 5], [6, 10]]
+
+
+def test_intersect_intervals():
+
+    intervals_left = [[0, 1801], [7438, 7449]]
+    intervals_right = [[458, 463], [548, 553], [1025, 1500], [2540, 2670], [7438, 7439], [7440, 7449], [8500, 8600]]
+    merge = intersect_intervals(intervals_left, intervals_right)
+    assert merge == [[458, 463], [548, 553], [1025, 1500], [7438, 7439], [7440, 7449]]
+
+    intervals_left = [[0, 1801], [7438, 7449]]
+    intervals_right = [[458, 463], [548, 553], [1025, 1500], [1800, 1802], [7438, 7439], [7440, 7449], [8500, 8600]]
+    merge = intersect_intervals(intervals_left, intervals_right)
+    assert merge == [[458, 463], [548, 553], [1025, 1500], [1800, 1801], [7438, 7439], [7440, 7449]]

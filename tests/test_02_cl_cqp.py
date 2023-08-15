@@ -36,7 +36,7 @@ def test_cqp_kill():
 def test_cqp_query(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
@@ -46,7 +46,7 @@ def test_cqp_query(germaparl):
 def test_cqp_dump(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
@@ -59,7 +59,7 @@ def test_cqp_dump(germaparl):
 def test_cqp_undump(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('"Horst"')
@@ -73,7 +73,7 @@ def test_cqp_undump(germaparl):
 def test_cqp_group(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     cqp.Query('[lemma="Horst"] [lemma="Seehofer"]')
@@ -86,7 +86,7 @@ def test_cqp_group(germaparl):
 def test_nqr_from_query(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     assert(int(cqp.Exec('size Seehofer;')) == 0)
@@ -102,7 +102,7 @@ def test_nqr_from_query(germaparl):
 def test_nqr_from_dump(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
     assert(int(cqp.Exec('size Seehof;')) == 0)
@@ -114,7 +114,7 @@ def test_nqr_from_dump(germaparl):
 
 def test_cl(germaparl):
     corpus = Corpus(germaparl['corpus_name'],
-                    registry_dir=germaparl['registry_path'])
+                    registry_dir=germaparl['registry_dir'])
 
     # get sentences, words, pos-tags
     sentences = corpus.attribute('s', 's')
@@ -136,7 +136,7 @@ def test_cl(germaparl):
 def test_nqr_from_dump_error(germaparl):
     cqp = CQP(
         binary="cqp",
-        options='-c -r ' + germaparl['registry_path']
+        options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
 

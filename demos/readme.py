@@ -1,10 +1,12 @@
 """readme.py: create tables for the README.md"""
 
-import pyperclip
 import sys
+
+import pyperclip
+
 sys.path.append("/home/ausgerechnet/implementation/cwb-ccc/")
 import ccc
-from ccc import Corpus, Corpora
+from ccc import Corpora, Corpus
 
 print(ccc.__version__)
 

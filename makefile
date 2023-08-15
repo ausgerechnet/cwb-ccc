@@ -11,6 +11,9 @@ benchmark:
 coverage:
 	pipenv run pytest --cov-report term-missing -v --cov=ccc/
 
+requirements:
+	pipenv requirements > requirements.txt
+
 compile:
 	pipenv run cython -2 ccc/cl.pyx
 build:

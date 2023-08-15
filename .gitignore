@@ -1,5 +1,7 @@
 legacy/
 
+Pipfile.lock
+
 *.so
 
 *.pyc

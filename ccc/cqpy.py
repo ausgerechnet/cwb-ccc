@@ -50,11 +50,11 @@ def cqpy_load_json(query_path):
     # corpus
     if 'corpus_name' not in query.keys():
         query['corpus_name'] = "BREXIT_V20190522_DEDUP"
-    if 'lib_path' not in query.keys():
-        query['lib_path'] = None
+    if 'lib_dir' not in query.keys():
+        query['lib_dir'] = None
     out['corpus'] = {
         'corpus_name': query['corpus_name'],
-        'lib_path': query['lib_path']
+        'lib_dir': query['lib_dir']
     }
 
     # display

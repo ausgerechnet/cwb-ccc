@@ -40,13 +40,13 @@ from .conftest import DATA_PATH
 #   get_constellation_df
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH):
+def get_corpus(corpus_settings, data_dir=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=corpus_settings.get('lib_dir', None),
+        data_dir=data_dir
     )
 
 
@@ -234,45 +234,48 @@ def test_create_constellation(germaparl, discoursemes):
     topic_discourseme = {
         'topic': topic_items
     }
-    discoursemes = discoursemes
 
     # filter
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 topic_discourseme,
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=corpus_name,
+        # discoursemes
+        topic_discourseme=topic_discourseme,
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assert len(const.df) == 10
 
     # highlight
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 topic_discourseme,
-                                 {},
-                                 discoursemes,
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=corpus_name,
+        # discoursemes
+        topic_discourseme=topic_discourseme,
+        filter_discoursemes={},
+        additional_discoursemes=discoursemes,
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assert len(const.df) == 2990
 
@@ -290,23 +293,24 @@ def test_create_textconstellation(germaparl, discoursemes):
     s_context = parameters['s_context']
     context = parameters['context']
 
-    # create constellation
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 {},
-                                 discoursemes,
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=corpus_name,
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes={},
+        additional_discoursemes=discoursemes,
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assert len(const.df) == 2198
 
@@ -327,22 +331,24 @@ def test_constellation_conc(germaparl, discoursemes):
     discoursemes = discoursemes
 
     # filter
-    const = create_constellation(germaparl['corpus_name'],
-                                 # discoursemes
-                                 topic_discourseme,
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 parameters['s_context'],
-                                 parameters['context'],
-                                 # query settings
-                                 parameters['p_query'],
-                                 parameters['s_query'],
-                                 parameters['flags_query'],
-                                 parameters['escape_query'],
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme=topic_discourseme,
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=parameters['s_context'],
+        context=parameters['context'],
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=parameters['p_query'],
+        s_query=parameters['s_query'],
+        flags=parameters['flags_query'],
+        escape=parameters['escape_query']
+    )
 
     lines = const.concordance(s_show=['text_id'])
 
@@ -365,22 +371,24 @@ def test_constellation_conc_htmlify_meta(germaparl, discoursemes):
     discoursemes = discoursemes
 
     # filter
-    const = create_constellation(germaparl['corpus_name'],
-                                 # discoursemes
-                                 topic_discourseme,
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 parameters['s_context'],
-                                 parameters['context'],
-                                 # query settings
-                                 parameters['p_query'],
-                                 parameters['s_query'],
-                                 parameters['flags_query'],
-                                 parameters['escape_query'],
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme=topic_discourseme,
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=parameters['s_context'],
+        context=parameters['context'],
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=parameters['p_query'],
+        s_query=parameters['s_query'],
+        flags=parameters['flags_query'],
+        escape=parameters['escape_query']
+    )
 
     lines = const.concordance(s_show=['text_id'], htmlify_meta=True)
 
@@ -408,14 +416,13 @@ def test_constellation_collocates(germaparl):
     additional_discoursemes = {}
     windows = [3, 5, 7]
     cqp_bin = 'cqp'
-    lib_path = None
+    lib_dir = None
     p_show = ['lemma']
     ams = None
     cut_off = 200
     min_freq = 2
     order = 'log_likelihood'
     escape = True
-    frequencies = True
     match_strategy = 'longest'
 
     # preprocess parameters
@@ -424,27 +431,31 @@ def test_constellation_collocates(germaparl):
 
     # create constellation
     const = create_constellation(
-        germaparl['corpus_name'],
-        {topic_name: topic_items},
-        {},
-        additional_discoursemes,
-        s_context,
-        context,
-        p_query,
-        s_query,
-        flags_query,
-        escape,
-        match_strategy,
-        lib_path,
-        cqp_bin,
-        germaparl['registry_path'],
-        DATA_PATH
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={topic_name: topic_items},
+        filter_discoursemes={},
+        additional_discoursemes=additional_discoursemes,
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        match_strategy=match_strategy,
+        lib_dir=lib_dir,
+        cqp_bin=cqp_bin,
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags_query,
+        escape=escape
     )
 
-    collocates = const.collocates(windows=windows,
-                                  p_show=p_show, flags=flags_show,
-                                  ams=ams, frequencies=frequencies, min_freq=min_freq,
-                                  order=order, cut_off=cut_off)
+    collocates = const.collocates(windows=windows, p_show=p_show,
+                                  flags=flags_show, ams=ams,
+                                  min_freq=min_freq, order=order,
+                                  cut_off=cut_off)
 
     assert len(collocates) == 3
 
@@ -515,6 +526,7 @@ def test_constellation_coll(germaparl, discoursemes):
 ##########################
 # TEXTUAL CONSTELLATIONS #
 ##########################
+@pytest.mark.now
 def test_textual_constellation(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -538,6 +550,8 @@ def test_textual_constellation(germaparl, discoursemes):
     )
     assert len(const.df) == 624
     assert 'topic' in const.df.columns
+
+    print(const.df)
 
 
 def test_textual_constellation_add(germaparl, discoursemes):
@@ -585,8 +599,6 @@ def test_textual_constellation_add(germaparl, discoursemes):
 
 def test_textual_constellation_association(germaparl, discoursemes):
 
-    corpus_name = germaparl['corpus_name']
-
     # parameters
     parameters = discoursemes.pop('parameters')
     flags = parameters['flags_query']
@@ -596,22 +608,24 @@ def test_textual_constellation_association(germaparl, discoursemes):
     s_context = parameters['s_context']
     context = parameters['context']
 
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assoc = const.associations()
     assert len(assoc) == 6
@@ -620,8 +634,6 @@ def test_textual_constellation_association(germaparl, discoursemes):
 
 def test_textual_constellation_association_approximate(germaparl, discoursemes):
 
-    corpus_name = germaparl['corpus_name']
-
     # parameters
     parameters = discoursemes.pop('parameters')
     flags = parameters['flags_query']
@@ -631,23 +643,25 @@ def test_textual_constellation_association_approximate(germaparl, discoursemes):
     s_context = parameters['s_context']
     context = parameters['context']
 
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH,
-                                 approximate=True)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        approximate=True,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assoc = const.associations()
     assert len(assoc) == 6
@@ -655,8 +669,6 @@ def test_textual_constellation_association_approximate(germaparl, discoursemes):
 
 
 def test_textual_constellation_association_empty(germaparl, discoursemes):
-
-    corpus_name = germaparl['corpus_name']
 
     # parameters
     parameters = discoursemes.pop('parameters')
@@ -670,23 +682,25 @@ def test_textual_constellation_association_empty(germaparl, discoursemes):
     discoursemes2['fail'] = ["fail"]
     discoursemes2['fail2'] = ["fail2"]
 
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 discoursemes2,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH,
-                                 approximate=True)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        approximate=True,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assoc = const.associations()
     assert len(assoc) == 6
@@ -694,8 +708,6 @@ def test_textual_constellation_association_empty(germaparl, discoursemes):
 
 
 def test_textual_constellation_concordance(germaparl, discoursemes):
-
-    corpus_name = germaparl['corpus_name']
 
     # parameters
     parameters = discoursemes.pop('parameters')
@@ -707,22 +719,24 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
     context = parameters['context']
 
     # create constellation
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     # retrieve lines
     lines = const.concordance(cut_off=None)
@@ -732,8 +746,6 @@ def test_textual_constellation_concordance(germaparl, discoursemes):
 
 def test_textual_constellation_breakdown(germaparl, discoursemes):
 
-    corpus_name = germaparl['corpus_name']
-
     # parameters
     parameters = discoursemes.pop('parameters')
     flags = parameters['flags_query']
@@ -744,21 +756,23 @@ def test_textual_constellation_breakdown(germaparl, discoursemes):
     context = parameters['context']
 
     # create constellation
-    const = create_constellation(corpus_name,
-                                 # discoursemes
-                                 {},
-                                 discoursemes,
-                                 {},
-                                 # context settings
-                                 s_context,
-                                 context,
-                                 # query settings
-                                 p_query,
-                                 s_query,
-                                 flags,
-                                 escape,
-                                 # CWB setttings
-                                 registry_path=germaparl['registry_path'],
-                                 data_path=DATA_PATH)
+    const = create_constellation(
+        corpus_name=germaparl['corpus_name'],
+        # discoursemes
+        topic_discourseme={},
+        filter_discoursemes=discoursemes,
+        additional_discoursemes={},
+        # context settings
+        s_context=s_context,
+        context=context,
+        # CWB setttings
+        registry_dir=germaparl['registry_dir'],
+        data_dir=DATA_PATH,
+        # query settings
+        p_query=p_query,
+        s_query=s_query,
+        flags=flags,
+        escape=escape
+    )
 
     assert len(const.breakdown()) == 5

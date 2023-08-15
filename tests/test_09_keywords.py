@@ -7,13 +7,13 @@ from ccc.keywords import Keywords, keywords
 from .conftest import DATA_PATH
 
 
-def get_corpus(corpus_settings, data_path=DATA_PATH):
+def get_corpus(corpus_settings, data_dir=DATA_PATH):
 
     return Corpus(
         corpus_settings['corpus_name'],
-        registry_path=corpus_settings['registry_path'],
-        lib_path=corpus_settings.get('lib_path', None),
-        data_path=data_path
+        registry_dir=corpus_settings['registry_dir'],
+        lib_dir=corpus_settings.get('lib_dir', None),
+        data_dir=data_dir
     )
 
 
@@ -125,3 +125,34 @@ def test_keywords_func_corpora(germaparl):
     corpus = get_corpus(germaparl)
     kw = keywords(corpus, corpus, ['lemma'], ['word'], 'conservative_log_ratio')
     assert kw.index[0] == 'sie'
+
+
+@pytest.mark.subcorpus
+def test_keywords_func_corpora_p_atts(germaparl):
+
+    corpus = get_corpus(germaparl)
+    kw = keywords(corpus, corpus, ['lemma', 'pos'], ['lemma', 'pos'], 'conservative_log_ratio')
+
+    assert kw.index[0] == '! $.'
+
+
+@pytest.mark.subcorpus
+def test_keywords_func_p_atts(germaparl):
+
+    corpus = get_corpus(germaparl)
+    green = corpus.query_s_att("text_party", {"GRUENE", "Bündnis 90/Die Grünen"})
+    red = corpus.query_s_att("text_party", {"SPD", "S.P.D."})
+    kw = keywords(green, red, ['lemma', 'pos'], ['lemma', 'pos'], 'conservative_log_ratio')
+
+    assert kw.index[0] == 'Dr. NN'
+
+
+@pytest.mark.subcorpus
+def test_keywords_func_p_atts_2(germaparl):
+
+    corpus = get_corpus(germaparl)
+    green = corpus.query_s_att("text_party", {"GRUENE", "Bündnis 90/Die Grünen"})
+    red = corpus.query_s_att("text_party", {"SPD", "S.P.D."})
+    kw = keywords(green, red, ['word', 'pos'], ['lemma', 'pos'], 'conservative_log_ratio')
+
+    assert kw.index[0] == 'der ART'
