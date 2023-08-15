@@ -13,6 +13,7 @@ from pandas import DataFrame, concat
 
 # part of module
 from . import Corpus, SubCorpus
+from .cache import generate_idx
 from .collocates import Collocates, dump2cooc
 from .concordances import Concordance
 from .utils import (aggregate_matches, dump_left_join, format_cqp_query,
@@ -296,31 +297,49 @@ class Constellation:
         :rtype: list of DataFrames
         """
 
-        # TODO: cache df_cooc
+        # get df_cooc, f1_set, node_freq from cache if possible
+        identifier = generate_idx(
+            [self.df.reset_index()[['match', 'matchend', 'context', 'contextend']], p_show, min_freq, self.discoursemes.keys()]
+        )
+        f1_set = self.corpus.cache.get(identifier + "-f1_set")
+        df_cooc = self.corpus.cache.get(identifier + "-df_cooc")
+        node_freq = self.corpus.cache.get(identifier + "-node_freq")
 
-        # get relevant contexts
-        print('create cooc matrix')
-        df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
-        df_cooc, f1_set = dump2cooc(df_dump)
+        # create and cache otherwise
+        if not isinstance(df_cooc, DataFrame):
 
-        logger.info('get cpos that are consumed by discoursemes')
-        for idx in self.discoursemes.keys():
-            f1_set.update(self.discoursemes[idx].matches())
-        df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
+            # get relevant contexts
+            logger.info('create cooc matrix')
+            df_dump = self.df.drop_duplicates(subset=['context', 'contextend'])
+            df_cooc, f1_set = dump2cooc(df_dump)
 
-        # count node freqs
-        node_freq = self.corpus.counts.cpos(f1_set, p_show)
+            logger.info('get cpos that are consumed by discoursemes')
+            for idx in self.discoursemes.keys():
+                f1_set.update(self.discoursemes[idx].matches())
+            df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
+
+            # count node freqs
+            node_freq = self.corpus.counts.cpos(f1_set, p_show)
 
         # determine collocates
         collocates = Collocates(
-            corpus=self.corpus.copy(), df_dump=None, p_query=p_show, mws=max(windows),
-            df_cooc=df_cooc, f1_set=f1_set, node_freq=node_freq
+            corpus=self.corpus.copy(),
+            df_dump=None,
+            p_query=p_show,
+            mws=max(windows),
+            df_cooc=df_cooc,
+            f1_set=f1_set,
+            node_freq=node_freq
         )
         output = dict()
         for window in windows:
             output[window] = collocates.show(
-                window=window, order=order, cut_off=cut_off, ams=ams,
-                min_freq=min_freq, flags=flags,
+                window=window,
+                order=order,
+                cut_off=cut_off,
+                ams=ams,
+                min_freq=min_freq,
+                flags=flags,
                 marginals=marginals
             )
 
