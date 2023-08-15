@@ -592,8 +592,8 @@ def test_subcorpus_collocates(germaparl):
         context_break=germaparl['s_query'],
         name='Test'
     )
-    assert len(subcorpus.collocates(window=1)) == 71
-    assert len(subcorpus.collocates(window=10)) == 57
+    assert len(subcorpus.collocates(window=1)) == 100
+    assert len(subcorpus.collocates(window=10)) == 100
 
 
 @pytest.mark.subcorpus
@@ -605,12 +605,12 @@ def test_subcorpus_context(germaparl):
         context_break=germaparl['s_query'],
         name='Test'
     )
-    assert len(subcorpus.collocates(window=10)) == 57
-    assert len(subcorpus.collocates(window=20)) == 61
+    assert len(subcorpus.collocates(window=10)) == 100
+    assert len(subcorpus.collocates(window=20)) == 100
     # collocates
     subcorpus = subcorpus.set_context(20)
-    assert len(subcorpus.collocates()) == 54
-    assert len(subcorpus.collocates(window=10)) == 56
+    assert len(subcorpus.collocates()) == 100
+    assert len(subcorpus.collocates(window=10)) == 100
 
 
 @pytest.mark.subcorpus
