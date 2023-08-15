@@ -59,11 +59,11 @@ class Collocates:
             # create and cache otherwise
             if not isinstance(df_cooc, DataFrame):
                 # create collocation database
-                print('create')
-                logger.info('collecting cpos of matches and context')
+                logger.info('creating')
+                logger.info('.. collecting cpos of matches and context')
                 df_cooc, f1_set = dump2cooc(df_dump, self.mws)
                 node_freq = self.corpus.counts.cpos(f1_set, self.p_query)
-                logger.info(f'collected {len(df_cooc)} corpus positions')
+                logger.info(f'.. collected {len(df_cooc)} corpus positions')
                 self.corpus.cache.set(identifier + "-f1_set", f1_set)
                 self.corpus.cache.set(identifier + "-df_cooc", df_cooc)
                 self.corpus.cache.set(identifier + "-node_freq", node_freq)
@@ -114,14 +114,14 @@ class Collocates:
         if not isinstance(collocates, DataFrame):
 
             # get window counts and apply min freq
-            print('counting')
+            logger.info('.. counting')
             f = self.count(window).rename(columns={'freq': 'f'})
             vocab = len(f)
             f1 = f['f'].sum()
             f = f.loc[f['f'] >= min_freq]
 
             # get reference frequencies
-            print('reference')
+            logger.info('.. reference')
             if isinstance(marginals, str):
                 if marginals == 'corpus':
                     N = self.corpus.corpus_size - len(self.f1_set)
@@ -135,7 +135,7 @@ class Collocates:
                 raise NotImplementedError
 
             # f2 = marginals - node frequencies
-            print('calculating')
+            logger.info('.. calculating')
             f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
                 self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
             )
