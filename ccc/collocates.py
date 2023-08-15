@@ -106,7 +106,7 @@ class Collocates:
             return DataFrame()
 
         identifier = generate_idx(
-            [self.identifier, window, ams, min_freq, marginals]
+            [self.identifier, window, ams, min_freq, marginals, flags]
         )
 
         collocates = self.corpus.cache.get(identifier)
