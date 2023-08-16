@@ -455,6 +455,11 @@ class TextConstellation:
                      order='log_likelihood', cut_off=None):
 
         counts = self.df[[c for c in self.df.columns if c.endswith("_BOOL")]]
+
+        if len(counts.columns) == 1:
+            logger.error('cannot calculate associations has only one registered discourseme')
+            return None
+
         counts.columns = [c.split("_BOOL")[0] for c in counts.columns]
         cooc = counts.fillna(False)
 
