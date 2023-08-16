@@ -438,9 +438,11 @@ def dump_left_join(df1, df2, name, drop=True, window=None):
 
     # restrict to complete constellation ###
     if drop:
+
         m = m.dropna()
         # only keep co-occurrences that are within context
-        m = m.loc[(m['matchend_y'] >= m['context']) & (m['match_y'] < m['contextend'])]
+        m = m.loc[(m['matchend_y'] >= m['context']) & (m['match_y'] <= m['contextend'])]
+
         if window:
             # only keep co-occurrences that are within window
             m = m.loc[abs(m['offset_y']) <= window]
@@ -585,7 +587,7 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
     # add s-attributes
     if htmlify_meta:
         meta = {key: row[key] for key in s_show if not key.endswith("_BOOL")}
-        d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False)
+        d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
         for s in s_show:
             if s.endswith("_BOOL"):
                 d[s] = row[s]

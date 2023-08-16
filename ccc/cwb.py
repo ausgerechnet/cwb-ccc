@@ -1168,7 +1168,7 @@ class Corpus:
             queries = {**highlight_queries, **filter_queries}
 
             # INIT CQP
-            identifier = self.quick_query(s_context, topic_query="", filter_queries=queries.values(), match_strategy=match_strategy)
+            identifier = self.quick_query(s_context, topic_query="", filter_queries=list(queries.values()), match_strategy=match_strategy)
             cqp = self.start_cqp()
 
             # init CONTEXT (TextConstellation)
@@ -1213,7 +1213,7 @@ class Corpus:
 
             # INIT CQP
             logger.info('.. INIT')
-            identifier = self.quick_query(s_context, topic_query, filter_queries.values(), match_strategy)
+            identifier = self.quick_query(s_context, topic_query, list(filter_queries.values()), match_strategy)
             cqp = self.start_cqp()
 
             # set CONTEXT (TextConstellation)
@@ -1237,7 +1237,7 @@ class Corpus:
 
             # filter according to WINDOW size
             logger.info('.. FILTER')
-            for name, query in filter_queries.items():
+            for name, query in list(filter_queries.items()):
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
                 subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
@@ -1246,7 +1246,7 @@ class Corpus:
 
             # highlight
             logger.info('.. HIGHLIGHT')
-            for name, query in highlight_queries.items():
+            for name, query in list(highlight_queries.items()):
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
                 subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)

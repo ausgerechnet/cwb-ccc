@@ -299,7 +299,7 @@ class Constellation:
 
         # get df_cooc, f1_set, node_freq from cache if possible
         identifier = generate_idx(
-            [self.df.reset_index()[['match', 'matchend', 'context', 'contextend']], p_show, min_freq, self.discoursemes.keys()]
+            [self.df.reset_index()[['match', 'matchend', 'context', 'contextend']], p_show, min_freq, self.discoursemes.values()]
         )
         f1_set = self.corpus.cache.get(identifier + "-f1_set")
         df_cooc = self.corpus.cache.get(identifier + "-df_cooc")
@@ -314,8 +314,16 @@ class Constellation:
             df_cooc, f1_set = dump2cooc(df_dump)
 
             logger.info('get cpos that are consumed by discoursemes')
-            for idx in self.discoursemes.keys():
-                f1_set.update(self.discoursemes[idx].matches())
+            for idx, disc in self.discoursemes.items():
+                # print(idx)
+                cpos_total = disc.matches()  # cpos in whole corpus (if not approximate)
+                # cpos_in = set(df_cooc['cpos']).intersection(cpos_total)  # cpos in context
+                # breakdown = disc.breakdown(p_atts=p_show)  # breakdown of discourseme
+                # print(len(cpos_total))
+                # print(len(cpos_in))
+                # print(breakdown)
+                f1_set.update(cpos_total)
+                # print(len(f1_set))
             df_cooc = df_cooc.loc[~df_cooc['cpos'].isin(f1_set)]
 
             # count node freqs
@@ -447,6 +455,11 @@ class TextConstellation:
                      order='log_likelihood', cut_off=None):
 
         counts = self.df[[c for c in self.df.columns if c.endswith("_BOOL")]]
+
+        if len(counts.columns) == 1:
+            logger.error('cannot calculate associations has only one registered discourseme')
+            return None
+
         counts.columns = [c.split("_BOOL")[0] for c in counts.columns]
         cooc = counts.fillna(False)
 
@@ -575,6 +588,7 @@ def create_constellation(corpus_name,
         )
         const = Constellation(topic_dump, topic_name)
 
+        # only count on subcorpus of context of matches
         if approximate:
             sub = topic_dump.df.set_index(['context', 'contextend'])
             corpus = corpus.subcorpus('TempRestriction', df_dump=sub)
@@ -630,5 +644,3 @@ def create_constellation(corpus_name,
                 const.add_discourseme(disc_dump, disc_name)
 
     return const
-
-
