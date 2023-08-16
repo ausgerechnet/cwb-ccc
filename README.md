@@ -1,7 +1,7 @@
 # Collocation and Concordance Computation #
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
 [![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
-[![Downloads](https://pepy.tech/badge/cwb-ccc)](https://pepy.tech/project/cwb-ccc)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/cwb-ccc)](https://img.shields.io/pypi/dm/cwb-ccc)
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
 [![Imports: association-measures](https://img.shields.io/badge/%20imports-association--measures-%231674b1?style=flat&labelColor=gray)](https://github.com/fau-klue/pandas-association-measures)
 
@@ -173,7 +173,7 @@ Just as with collocates, the result is a `DataFrame` with lemmata as index and f
 The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996. This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
 
 <details>
-<summary><code>corpus.attributes_available</code></summary>
+<summary><code>corpus.available_attributes()</code></summary>
 <p>
 
 | type   | attribute                  | annotation   | active   |
