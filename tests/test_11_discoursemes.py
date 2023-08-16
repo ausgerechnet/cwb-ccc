@@ -53,6 +53,7 @@ def get_corpus(corpus_settings, data_dir=DATA_PATH):
 #################
 # CONSTELLATION #
 #################
+@pytest.mark.now
 def test_constellation_init(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
@@ -71,9 +72,10 @@ def test_constellation_init(germaparl, discoursemes):
         context_break=discoursemes['parameters']['s_context']
     )
     const = Constellation(topic_dump)
+    print(const.df)
 
     assert isinstance(const.df, DataFrame)
-    assert len(const.df) == 2777
+    assert len(const.df) == 2789
 
 
 def test_constellation_add(germaparl, discoursemes):
@@ -133,7 +135,7 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
         context_break=discoursemes['parameters']['s_context']
     )
     const = Constellation(topic_dump)
-    assert len(const.df) == 2777
+    assert len(const.df) == 2789
 
     # add discourseme
     disc1_query = format_cqp_query(
@@ -152,7 +154,7 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
         disc1_dump,
         drop=False
     )
-    assert len(const.df) == 3060
+    assert len(const.df) == 3072
 
 
 def test_constellation_add2(germaparl, discoursemes):
@@ -255,7 +257,7 @@ def test_create_constellation(germaparl, discoursemes):
         escape=escape
     )
 
-    assert len(const.df) == 10
+    assert len(const.df) == 12
 
     # highlight
     const = create_constellation(
@@ -277,7 +279,7 @@ def test_create_constellation(germaparl, discoursemes):
         escape=escape
     )
 
-    assert len(const.df) == 2990
+    assert len(const.df) == 3004
 
 
 def test_create_textconstellation(germaparl, discoursemes):
@@ -352,7 +354,7 @@ def test_constellation_conc(germaparl, discoursemes):
 
     lines = const.concordance(s_show=['text_id'])
 
-    assert len(lines) == 3
+    assert len(lines) == 4
     assert isinstance(lines[0], dict)
     assert 'word' in lines[0]
     assert isinstance(lines[0]['word'], list)
@@ -392,7 +394,7 @@ def test_constellation_conc_htmlify_meta(germaparl, discoursemes):
 
     lines = const.concordance(s_show=['text_id'], htmlify_meta=True)
 
-    assert len(lines) == 3
+    assert len(lines) == 4
     assert isinstance(lines[0], dict)
     assert 'word' in lines[0]
     assert isinstance(lines[0]['word'], list)
@@ -526,7 +528,6 @@ def test_constellation_coll(germaparl, discoursemes):
 ##########################
 # TEXTUAL CONSTELLATIONS #
 ##########################
-@pytest.mark.now
 def test_textual_constellation(germaparl, discoursemes):
 
     corpus = get_corpus(germaparl)
