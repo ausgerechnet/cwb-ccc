@@ -618,7 +618,6 @@ class Corpus:
 
         # run the query
         logger.info("running CQP query")
-
         # first run: anchors at 0 and 1 (considering within clause)
         cqp.Exec('set ant 0; ank 1;')
         df_dump = cqp.nqr_from_query(
@@ -1026,7 +1025,7 @@ class Corpus:
 
         # empty return?
         if len(df_dump) == 0:
-            logger.warning("found 0 matches")
+            logger.info("found 0 matches")
             df_dump = DataFrame(columns=['match', 'matchend']).set_index(
                 ['match', 'matchend']
             )
@@ -1085,6 +1084,7 @@ class Corpus:
 
         """
 
+        logger.info("--- enter quick-query ---")
         if len(topic_query) == 0:
             identifier = generate_idx([self.subcorpus_name, filter_queries, s_context, match_strategy], prefix='Query')
 
@@ -1129,7 +1129,7 @@ class Corpus:
             cqp.Exec(f'{filter_identifier} = {topic_identifier};')
             for query in filter_queries:
                 logger.info(f'filter query: {query}')
-                cqp.Exec(f'{filter_identifier};')
+                cqp.Exec(f'{filter_identifier} expand to {s_context};')
                 cqp.Query(f'{filter_identifier} = {query} expand to {s_context};')
                 logger.info('.. size: ' + cqp.Exec(f'size {filter_identifier};'))
 
@@ -1138,6 +1138,8 @@ class Corpus:
             cqp.Exec(f'save {filter_identifier};')
 
         cqp.__del__()
+
+        logger.info("--- exit quick-query ---")
 
         return filter_identifier
 
@@ -1181,6 +1183,7 @@ class Corpus:
 
             # HIGHLIGHT
             cqp.Exec(f'{identifier};')
+            cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
             for name, query in queries.items():
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
@@ -1219,18 +1222,21 @@ class Corpus:
             # set CONTEXT (TextConstellation)
             logger.info('.. SET')
             cqp.Exec(f'{identifier};')
+            cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
             if len(filter_queries) == 0:
                 cqp.Exec(f'sort {identifier} {cqp_order};')
                 cqp.Exec(f'cut {identifier} {cut_off};')
+                cqp.Exec(f'{identifier} = {identifier} expand to {s_context};')
+
             df_context = cqp.Dump(f'{identifier};')
-            subcorpus_context = self.subcorpus(None, df_context).set_context(window, s_context)
+            subcorpus_context = self.subcorpus(df_dump=df_context, overwrite=False).set_context(window, s_context, overwrite=False)
             df_context = subcorpus_context.df[['contextid', 'context', 'contextend']]
 
             # index by TOPIC MATCHES
             logger.info('.. INDEX')
             cqp.Exec(f'Temp = {topic_query};')
             df_query = cqp.Dump('Temp;')
-            subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+            subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
             df_context = dump_left_join(df_context, subcorpus_query.df, 'topic', drop=True, window=window)
             df_context = df_context.set_index(['match_topic', 'matchend_topic'])
             df_context.index.names = ['match', 'matchend']
@@ -1240,25 +1246,30 @@ class Corpus:
             for name, query in list(filter_queries.items()):
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
-                subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+                subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
                 df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=True, window=window)
-                df_context = df_context.drop([c + "_" + name for c in ['match', 'matchend', 'offset']], axis=1)
+
+            # restrict to cut-off
+            # self.subcorpus(subcorpus_name='Temp', df_dump=df_context[['context', 'contextend']].head(cut_off), overwrite=True)
+            # cqp.Exec('Temp expand to s;')
 
             # highlight
             logger.info('.. HIGHLIGHT')
             for name, query in list(highlight_queries.items()):
                 cqp.Exec(f'Temp = {query};')
                 df_query = cqp.Dump('Temp;')
-                subcorpus_query = self.subcorpus(None, df_query).set_context(window, s_context)
+                # print('A')
+                # print(cqp.Exec('size Temp;'))
+                subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
                 df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=False, window=window)
-
             cqp.__del__()
 
             # formatting
             logger.info('.. FORMAT')
-            hkeys = list(highlight_queries.keys())
+            hkeys = list(set(list(highlight_queries.keys()) + list(filter_queries.keys())))
             df = group_lines(df_context, hkeys)
-            conc = Concordance(self.copy(), df)
+            subcorpus_total = self.subcorpus(df_dump=df, overwrite=False).set_context(context_break=s_context, overwrite=False)
+            conc = Concordance(self.copy(), subcorpus_total.df)
             lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
             output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
 
@@ -1394,7 +1405,7 @@ class SubCorpus(Corpus):
         return self.__str__()
 
     def set_context(self, context=None, context_break=None,
-                    context_left=None, context_right=None):
+                    context_left=None, context_right=None, overwrite=True):
         """Set context in the dump.
 
         """
@@ -1409,7 +1420,20 @@ class SubCorpus(Corpus):
             self.df, context_left, context_right, context_break
         )
 
-        return self.subcorpus(self.subcorpus_name, df)
+        return self.subcorpus(self.subcorpus_name, df, overwrite=overwrite)
+
+    def set_context_as_matches(self, subcorpus_name=None, overwrite=True):
+        """Set match spans in the dump.
+
+        """
+
+        df_context = self.context()
+
+        df_context['match'] = df_context['context']
+        df_context['matchend'] = df_context['contextend']
+        df_context = df_context.set_index(['match', 'matchend'])
+
+        return self.subcorpus(subcorpus_name=subcorpus_name, df_dump=df_context, overwrite=overwrite)
 
     def correct_anchors(self, corrections):
         """Correct anchors by integer offsets.
@@ -1457,9 +1481,8 @@ class SubCorpus(Corpus):
         identifier = generate_idx([self.df[['context', 'contextend']]]) + "-contexts"
         df = self.cache.get(identifier)
         if not isinstance(df, DataFrame):
-            df = DataFrame.from_records(merge_intervals(
-                self.df[['context', 'contextend']].values.tolist()
-            ), columns=['context', 'contextend'])
+            intervals = self.df[['context', 'contextend']].drop_duplicates().values.tolist()
+            df = DataFrame.from_records(merge_intervals(intervals), columns=['context', 'contextend'])
             self.cache.set(identifier, df)
         return df
 
