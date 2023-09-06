@@ -401,7 +401,7 @@ class CQP:
 
         size = int(self.Exec(f"size {name}"))
         if size == 0:
-            logger.warning(f'no results for query: {query}')
+            logger.info(f'no results for query: {query}')
             return DataFrame() if return_dump else None
 
         if return_dump:
