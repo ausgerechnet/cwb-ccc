@@ -226,7 +226,7 @@ class Counts:
         - strategy 1: split NO/YES; flags  ; combo x
         - strategy 2: split   /YES; flags  ; combo x
 
-        :param list df_dump: corpus positions to fill
+        :param DataFrame df_dump: corpus positions to fill
         :param str start: column name where to start counting
         :param str end: column name where to end counting
         :param list p_atts: p-attribute (combinations) to count
