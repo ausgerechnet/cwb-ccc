@@ -1214,6 +1214,10 @@ class Corpus:
 
         else:
 
+            if len(filter_queries.keys() & highlight_queries.keys()) > 0:
+                logger.warning("query names for filter and highlighting overlap")
+                highlight_queries = {name: query for (name, query) in highlight_queries.items() if name not in filter_queries.keys()}
+
             # INIT CQP
             logger.info('.. INIT')
             identifier = self.quick_query(s_context, topic_query, list(filter_queries.values()), match_strategy)

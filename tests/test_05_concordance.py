@@ -21,7 +21,7 @@ def get_corpus(corpus_settings, data_dir=DATA_PATH):
 # CONCORDANCE #
 ###############
 @pytest.mark.concordance
-@pytest.mark.now
+@pytest.mark.quick_conc
 def test_ccc_quick_conc(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -49,6 +49,7 @@ def test_ccc_quick_conc(germaparl):
 
 
 @pytest.mark.concordance
+@pytest.mark.quick_conc
 def test_ccc_quick_conc_2(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -74,6 +75,7 @@ def test_ccc_quick_conc_2(germaparl):
 
 
 @pytest.mark.concordance
+@pytest.mark.quick_conc
 def test_ccc_quick_conc_random(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -109,10 +111,10 @@ def test_concordance_simple(germaparl):
         df_dump,
         p_show=['word', 'lemma']
     )
-    assert(len(lines) == len(df_dump))
-    assert(all(col in lines.columns for col in [
+    assert len(lines) == len(df_dump)
+    assert all(col in lines.columns for col in [
         'word', 'lemma'
-    ]))
+    ])
 
 
 @pytest.mark.raw
