@@ -536,49 +536,6 @@ def aggregate_matches(df, name, context_col='contextid',
     return table
 
 
-# def format_concordance(corpus, matches_df, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight):
-
-#     # TODO: simplify, retrieve more tokens left and right
-#     concordance = CCConcordance(corpus, matches_df)
-#     lines = concordance.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-#     out = list()
-#     for line in lines.iterrows():
-#         meta = {s: line[1][s] for s in s_show}
-#         line = line[1]['dict']
-#         line['lemma'] = [cqp_escape(item) for item in line['lemma']]
-#         roles = list()
-#         discoursemes_in_window = {disc_name: False for disc_name in matches_filter.keys()}
-#         for cpos, offset in zip(line['cpos'], line['offset']):
-#             cpos_roles = list()
-#             # node
-#             if offset == 0:
-#                 cpos_roles.append('node')
-#             # out of window
-#             elif abs(offset) > window:
-#                 cpos_roles.append('out_of_window')
-
-#             # highlighting
-#             for disc_name, disc_matches in matches_highlight.items():
-#                 if cpos in disc_matches:
-#                     cpos_roles.append(disc_name)
-
-#             # filtering
-#             for disc_name, disc_matches in matches_filter.items():
-#                 if cpos in disc_matches:
-#                     cpos_roles.append(disc_name)
-#                     if abs(offset) <= window:
-#                         discoursemes_in_window[disc_name] = True
-
-#             roles.append(cpos_roles)
-#         # we filter here according to window size
-#         if sum(discoursemes_in_window.values()) >= len(matches_filter):
-#             line['role'] = roles
-#             line['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
-#             out.append(line)
-
-#     return out
-
-
 def format_roles(row, names, s_show, window, htmlify_meta=False):
     """Take a row of a dataframe indexed by match, matchend of the node,
     columns for each discourseme with sets of tuples indicating discourseme positions,

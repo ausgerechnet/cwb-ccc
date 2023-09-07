@@ -18,13 +18,14 @@ from pandas.errors import EmptyDataError
 from .cache import Cache, generate_idx, generate_library_idx
 from .cl import Corpus as Attributes
 from .collocates import Collocates
-from .concordances import Concordance
+from .concordances import Concordance, format_concordance
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .keywords import Keywords
-from .utils import (aggregate_matches, chunk_anchors, correct_anchors, decode,
-                    dump_left_join, fold_df, format_roles, group_lines,
-                    intersect_intervals, merge_intervals, preprocess_query)
+from .utils import (aggregate_matches, chunk_anchors, correct_anchors,
+                    decode, dump_left_join, fold_df, format_roles,
+                    intersect_intervals, merge_intervals,
+                    preprocess_query, time_it)
 from .version import __version__
 
 logger = logging.getLogger(__name__)
@@ -1072,20 +1073,26 @@ class Corpus:
             raise NotImplementedError()
 
     def quick_query(self, s_context, topic_query="", filter_queries=[], match_strategy='longest'):
-        """makes sure query result is defined as subcorpus.
+        """makes sure query result is saved in CWB binary format
 
         without topic query:
         - finds all s_context spans that contain at least one filter_query
         with topic query:
         - finds all s_context spans that contain topic_query and all filter_queries
 
+        the distinction between with and without topic_query is made
+        because in collocation analyses, one topic is combined with
+        different other filters; the topic-query then does not have to
+        be queried again, only the filters on the topic-context
+
         :return: identifier (name of NQR on disk)
         :rtype: str
 
         """
 
-        logger.info("--- enter quick-query ---")
+        logger.info("-"*20 + " enter quick-query " + "-"*20)
         if len(topic_query) == 0:
+
             identifier = generate_idx([self.subcorpus_name, filter_queries, s_context, match_strategy], prefix='Query')
 
             cqp = self.start_cqp()
@@ -1110,13 +1117,13 @@ class Corpus:
         # CHECK CQP
         cqp = self.start_cqp()
         cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
-        size = int(cqp.Exec(f'size {filter_identifier};'))
 
+        # does filter already exist? then we're done
+        size = int(cqp.Exec(f'size {filter_identifier};'))
         if size == 0:
 
-            # TODO: avoid saving twice if there's no filter
+            # does topic already exist?
             size = int(cqp.Exec(f'size {topic_identifier};'))
-
             logger.info(f'topic query: {topic_query}')
             if size == 0:
                 # TOPIC
@@ -1139,10 +1146,11 @@ class Corpus:
 
         cqp.__del__()
 
-        logger.info("--- exit quick-query ---")
+        logger.info("-"*20 + " exit quick-query  " + "-"*20)
 
         return filter_identifier
 
+    @time_it
     def quick_conc(self, topic_query, s_context, window, order=42,
                    cut_off=100, highlight_queries=dict(),
                    filter_queries=dict(), p_show=['word'], s_show=[],
@@ -1153,8 +1161,7 @@ class Corpus:
         :rtype: list(dict)
         """
 
-        logger.info('quick concordancing should be quick')
-        logger.info('.. START')
+        logger.info('quick-conc :: quick concordancing should be quick')
 
         if order == 'first':
             cqp_order = ""
@@ -1219,65 +1226,73 @@ class Corpus:
                 highlight_queries = {name: query for (name, query) in highlight_queries.items() if name not in filter_queries.keys()}
 
             # INIT CQP
-            logger.info('.. INIT')
+            logger.info("quick-conc :: getting context")
             identifier = self.quick_query(s_context, topic_query, list(filter_queries.values()), match_strategy)
             cqp = self.start_cqp()
-
-            # set CONTEXT (TextConstellation)
-            logger.info('.. SET')
             cqp.Exec(f'{identifier};')
             cqp.Exec(f'set MatchingStrategy "{match_strategy}";')
+            full_size = int(cqp.Exec(f'size {identifier};'))
+
             if len(filter_queries) == 0:
-                cqp.Exec(f'sort {identifier} {cqp_order};')
-                cqp.Exec(f'cut {identifier} {cut_off};')
-                cqp.Exec(f'{identifier} = {identifier} expand to {s_context};')
+                cut_off_pre = cut_off
+                logger.info(f"quick-conc :: no further filtering according to window, applying cut-off ({cut_off_pre})")
+
+            else:
+                # we still have to filter according to window size and highlight all discoursemes
+                # we just take a maximum of n*cut_off
+                # TODO take next batch if needed
+                cut_off_pre = 10 * cut_off
+                logger.info(f"quick-conc :: further filtering according to window, applying extended cut-off ({cut_off_pre})")
+
+            cqp.Exec(f'sort {identifier} {cqp_order};')
+            cqp.Exec(f'cut {identifier} {cut_off_pre};')
+            cqp.Exec(f'{identifier} = {identifier} expand to {s_context};')
 
             df_context = cqp.Dump(f'{identifier};')
             subcorpus_context = self.subcorpus(df_dump=df_context, overwrite=False).set_context(window, s_context, overwrite=False)
             df_context = subcorpus_context.df[['contextid', 'context', 'contextend']]
 
             # index by TOPIC MATCHES
-            logger.info('.. INDEX')
+            logger.info("quick-conc :: index by topic")
             cqp.Exec(f'Temp = {topic_query};')
             df_query = cqp.Dump('Temp;')
             subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
             df_context = dump_left_join(df_context, subcorpus_query.df, 'topic', drop=True, window=window)
             df_context = df_context.set_index(['match_topic', 'matchend_topic'])
             df_context.index.names = ['match', 'matchend']
+            df_context = df_context.astype({'offset_topic': 'int'})
 
-            # filter according to WINDOW size
-            logger.info('.. FILTER')
+            # collect cpos of filter
+            logger.info("quick-conc :: collecting cpos of filter")
+            matches_filter = dict()
             for name, query in list(filter_queries.items()):
                 cqp.Exec(f'Temp = {query};')
-                df_query = cqp.Dump('Temp;')
-                subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
-                df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=True, window=window)
+                matches_filter[name] = self.subcorpus(df_dump=cqp.Dump('Temp;'), overwrite=False).matches()
 
-            # restrict to cut-off
-            # self.subcorpus(subcorpus_name='Temp', df_dump=df_context[['context', 'contextend']].head(cut_off), overwrite=True)
-            # cqp.Exec('Temp expand to s;')
-
-            # highlight
-            logger.info('.. HIGHLIGHT')
+            # .. and highlight
+            logger.info("quick-conc :: collecting cpos of highlight")
+            matches_highlight = dict()
             for name, query in list(highlight_queries.items()):
                 cqp.Exec(f'Temp = {query};')
-                df_query = cqp.Dump('Temp;')
-                # print('A')
-                # print(cqp.Exec('size Temp;'))
-                subcorpus_query = self.subcorpus(df_dump=df_query, overwrite=False).set_context(window, s_context, overwrite=False)
-                df_context = dump_left_join(df_context, subcorpus_query.df, name, drop=False, window=window)
-            cqp.__del__()
+                matches_highlight[name] = self.subcorpus(df_dump=cqp.Dump('Temp;'), overwrite=False).matches()
 
-            # formatting
-            logger.info('.. FORMAT')
-            hkeys = list(set(list(highlight_queries.keys()) + list(filter_queries.keys())))
-            df = group_lines(df_context, hkeys)
-            subcorpus_total = self.subcorpus(df_dump=df, overwrite=False).set_context(context_break=s_context, overwrite=False)
-            conc = Concordance(self.copy(), subcorpus_total.df)
-            lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-            output = lines.apply(lambda row: format_roles(row, hkeys, s_show, window, htmlify_meta=True), axis=1)
+            logger.info("quick-conc :: formatting")
+            from .concordances import format_line
+            output = df_context.apply(lambda row: format_line(self, row.name, row, p_show, s_show, matches_filter, matches_highlight, window), axis=1)
+            output = [line for line in output.values if line is not None]
+            output = output[:cut_off]
+            # print(output)
+            # output = format_concordance(self, df_context, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight)
 
-        logger.info('.. FINISH')
+            actual_size = len(output)
+            if (cut_off_pre < full_size) and (actual_size < cut_off):
+                logger.warning("quick-conc :: potentially missing concordance lines")
+                logger.warning(f'- full size:           {full_size}')
+                logger.warning(f'- retrieved size       {actual_size}')
+                logger.warning(f'- cut-off:             {cut_off}')
+                logger.warning(f'- preliminary cut-off: {cut_off_pre}')
+
+        logger.info("quick-conc :: exit")
         return list(output)
 
     def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
@@ -1379,8 +1394,8 @@ class SubCorpus(Corpus):
                 cqp.nqr_from_dump(df_dump, subcorpus_name)
                 cqp.nqr_save(self.corpus_name, subcorpus_name)
                 cqp.__del__()
-            else:
-                logger.info(f'NQR "{subcorpus_name}" already exists')
+            # else:
+            #     logger.info(f'NQR "{subcorpus_name}" already exists')
 
         else:
             # create in CQP
@@ -1391,7 +1406,7 @@ class SubCorpus(Corpus):
 
         if subcorpus_name not in self.show_nqr()['subcorpus'].values:
             logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe')
-        else:
+        elif overwrite:
             logger.info(f'assigned NQR "{subcorpus_name}" from dataframe')
 
     def __str__(self):
