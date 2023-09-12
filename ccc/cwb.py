@@ -18,7 +18,7 @@ from pandas.errors import EmptyDataError
 from .cache import Cache, generate_idx, generate_library_idx
 from .cl import Corpus as Attributes
 from .collocates import Collocates
-from .concordances import Concordance, format_concordance
+from .concordances import Concordance
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .keywords import Keywords
@@ -1281,11 +1281,9 @@ class Corpus:
             output = df_context.apply(lambda row: format_line(self, row.name, row, p_show, s_show, matches_filter, matches_highlight, window), axis=1)
             output = [line for line in output.values if line is not None]
             output = output[:cut_off]
-            # print(output)
-            # output = format_concordance(self, df_context, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight)
 
             actual_size = len(output)
-            if (cut_off_pre < full_size) and (actual_size < cut_off):
+            if cut_off and (cut_off_pre < full_size) and (actual_size < cut_off):
                 logger.warning("quick-conc :: potentially missing concordance lines")
                 logger.warning(f'- full size:           {full_size}')
                 logger.warning(f'- retrieved size       {actual_size}')
