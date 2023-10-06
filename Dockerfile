@@ -32,16 +32,21 @@ RUN apt-get update && \
     tar \
     gzip \
     less \
+    openssh-client \
     mg
 
 #####################
 # INSTALL LATEST CWB
 #####################
-RUN svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk /cwb
-WORKDIR /cwb
-RUN  sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
-    ./install-scripts/install-linux && \
-    ldconfig
+# RUN svn co http://svn.code.sf.net/p/cwb/code/cwb/trunk /cwb
+# WORKDIR /cwb
+# RUN  sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
+#     ./install-scripts/install-linux && \
+#     ldconfig
+RUN wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
+RUN wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
+RUN apt-get install ./cwb_3.5.0-1_amd64.deb
+RUN apt-get install ./cwb-dev_3.5.0-1_amd64.deb
 
 
 ##############################
@@ -50,9 +55,9 @@ RUN  sed -i 's/SITE=beta-install/SITE=standard/' config.mk && \
 RUN python3 -m pip install --upgrade pip && \
     python3 -m pip install -q pipenv
 
+RUN git clone https://github.com/ausgerechnet/cwb-ccc.git /cwb-ccc
 WORKDIR /cwb-ccc
-COPY . /cwb-ccc
-
+RUN git checkout v0.12.2
 
 ###############
 # BUILD & TEST
