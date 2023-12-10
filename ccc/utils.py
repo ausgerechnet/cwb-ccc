@@ -10,6 +10,7 @@ import pkgutil
 import re
 from functools import wraps
 from timeit import default_timer
+from trieregex import TrieRegEx as TRE
 
 # requirements
 import numpy as np
@@ -137,7 +138,6 @@ def format_cqp_query(items, p_query='word', s_query=None,
     mwu_queries = list()
     single_items = list()
     for item in items:
-
         # escape item (optional)
         if escape:
             item = cqp_escape(item)
@@ -157,7 +157,9 @@ def format_cqp_query(items, p_query='word', s_query=None,
             single_items.append(tokens[0])
 
     if len(single_items) > 0:
-        singles_queries = ["([" + p_query + "=" + '"' + "|".join(single_items) + '"' + flags + "])"]
+        # build minimal RegEx
+        tre = TRE(*single_items)
+        singles_queries = ["([" + p_query + "=" + '"' + tre.regex() + '"' + flags + "])"]
     else:
         singles_queries = []
 
@@ -567,8 +569,7 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
     for name in names:
 
         role = [None] * len(d['offset'])
-
-        if not isinstance(row[name], float):
+        if row[name] and not isinstance(row[name], float):
             for t in row[name]:
 
                 # check match information

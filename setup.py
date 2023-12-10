@@ -101,7 +101,8 @@ setup(
         "numexpr>=2.8.5,<3.0",
         "Bottleneck>=1.3.7,<2.0",
         "unidecode>=1.3.6,<2.0",
-        "pyyaml>=6.0.1,<7.0"
+        "pyyaml>=6.0.1,<7.0",
+        "trieregex>=1.0,<1.1"
     ],
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
