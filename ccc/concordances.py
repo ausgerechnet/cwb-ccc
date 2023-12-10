@@ -328,57 +328,57 @@ class Concordance:
         return df
 
 
-def format_concordance(corpus, matches_df, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight):
+# def format_concordance(corpus, matches_df, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight):
 
-    # TODO: simplify, retrieve more tokens left and right
-    concordance = Concordance(corpus, matches_df)
-    lines = concordance.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=None)
-    out = list()
-    for line in lines.iterrows():
+#     # TODO: simplify, retrieve more tokens left and right
+#     concordance = Concordance(corpus, matches_df)
+#     lines = concordance.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=None)
+#     out = list()
+#     for line in lines.iterrows():
 
-        meta = {s: line[1][s] for s in s_show}
-        line = line[1]['dict']
+#         meta = {s: line[1][s] for s in s_show}
+#         line = line[1]['dict']
 
-        roles = list()
-        discoursemes_in_window = {disc_name: False for disc_name in matches_filter.keys()}
+#         roles = list()
+#         discoursemes_in_window = {disc_name: False for disc_name in matches_filter.keys()}
 
-        for cpos, offset in zip(line['cpos'], line['offset']):
-            cpos_roles = list()
-            # node
-            if offset == 0:
-                cpos_roles.append('node')
-            # out of window
-            elif abs(offset) > window:
-                cpos_roles.append('out_of_window')
+#         for cpos, offset in zip(line['cpos'], line['offset']):
+#             cpos_roles = list()
+#             # node
+#             if offset == 0:
+#                 cpos_roles.append('node')
+#             # out of window
+#             elif abs(offset) > window:
+#                 cpos_roles.append('out_of_window')
 
-            # highlighting
-            for disc_name, disc_matches in matches_highlight.items():
-                if cpos in disc_matches:
-                    cpos_roles.append(disc_name)
+#             # highlighting
+#             for disc_name, disc_matches in matches_highlight.items():
+#                 if cpos in disc_matches:
+#                     cpos_roles.append(disc_name)
 
-            # filtering
-            for disc_name, disc_matches in matches_filter.items():
-                if cpos in disc_matches:
-                    cpos_roles.append(disc_name)
-                    if abs(offset) <= window:
-                        discoursemes_in_window[disc_name] = True
+#             # filtering
+#             for disc_name, disc_matches in matches_filter.items():
+#                 if cpos in disc_matches:
+#                     cpos_roles.append(disc_name)
+#                     if abs(offset) <= window:
+#                         discoursemes_in_window[disc_name] = True
 
-            roles.append(cpos_roles)
+#             roles.append(cpos_roles)
 
-        # we filter here according to window size
-        if sum(discoursemes_in_window.values()) >= len(matches_filter):
-            line['lemma'] = [cqp_escape(item) for item in line['lemma']]
-            line['role'] = roles
-            line['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
-            out.append(line)
+#         # we filter here according to window size
+#         if sum(discoursemes_in_window.values()) >= len(matches_filter):
+#             line['lemma'] = [cqp_escape(item) for item in line['lemma']]
+#             line['role'] = roles
+#             line['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
+#             out.append(line)
 
-        if len(out) >= cut_off:
-            break
+#         if len(out) >= cut_off:
+#             break
 
-    return out
+#     return out
 
 
-def format_line(corpus, index, row, p_show, s_show, matches_filter, matches_highlight, window):
+def format_line(corpus, index, row, p_show, s_show, matches_filter, matches_highlight, window, htmlify_meta=True, cwb_ids=False):
 
     # pack all values into a dictionary
     row = dict(row)
@@ -433,15 +433,23 @@ def format_line(corpus, index, row, p_show, s_show, matches_filter, matches_high
         for p, a in zip(p_show, p_att_lists):
             d[p] = list(a)
 
-        # add meta data at match
+        # retrieve meta data at match
         meta = dict()
         for s in s_show:
             s_att = corpus.attributes.attribute(s, 's')
             try:
                 meta[s] = decode(s_att[s_att.cpos2struc(match)][2])
+                if cwb_ids:
+                    meta[s + "_cwbid"] = s_att.cpos2struc(match)
             except KeyError:
                 meta[s] = None
-        d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
+
+        # add meta data
+        if htmlify_meta:
+            d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
+        else:
+            for s, m in meta.items():
+                d[s] = m
 
         # add roles
         d['role'] = roles
