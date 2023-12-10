@@ -11,14 +11,14 @@ from io import StringIO
 
 # requirements
 from numpy import maximum, minimum
-from pandas import DataFrame, read_csv
+from pandas import DataFrame, concat, read_csv
 from pandas.errors import EmptyDataError
 
 # part of module
 from .cache import Cache, generate_idx, generate_library_idx
 from .cl import Corpus as Attributes
 from .collocates import Collocates
-from .concordances import Concordance
+from .concordances import Concordance, format_line
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .keywords import Keywords
@@ -588,6 +588,7 @@ class Corpus:
             cqp.__del__()
         else:
             sbcrpssize = None
+
         identifier = generate_idx([
              query, s_query, anchors, match_strategy, self.subcorpus_name, sbcrpssize
         ], prefix="df_dump:")
@@ -1001,7 +1002,6 @@ class Corpus:
 
         # preprocess input
         save = False if name is None else True  # save NQR from CQP to disk?
-        name = 'Last' if name is None else name  # name in CQP
         query_dict = preprocess_query(cqp_query)
         query = query_dict['query']
         s_query = query_dict['s_query']
@@ -1154,7 +1154,7 @@ class Corpus:
     def quick_conc(self, topic_query, s_context, window, order=42,
                    cut_off=100, highlight_queries=dict(),
                    filter_queries=dict(), p_show=['word'], s_show=[],
-                   match_strategy='longest'):
+                   match_strategy='longest', htmlify_meta=True, cwb_ids=False):
         """
 
         :return: concordance lines, each one a dict
@@ -1216,8 +1216,9 @@ class Corpus:
 
             # ACTUAL CONCORDANCING
             conc = Concordance(self.copy(), df)
-            lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off)
-            output = lines.apply(lambda row: format_roles(row, names, s_show=names_bool+s_show, window=0, htmlify_meta=True), axis=1)
+            lines = conc.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=cut_off, cwb_ids=cwb_ids)
+            output = lines.apply(lambda row: format_roles(row, names, s_show=names_bool+s_show, window=0,
+                                                          htmlify_meta=htmlify_meta), axis=1)
 
         else:
 
@@ -1277,8 +1278,11 @@ class Corpus:
                 matches_highlight[name] = self.subcorpus(df_dump=cqp.Dump('Temp;'), overwrite=False).matches()
 
             logger.info("quick-conc :: formatting")
-            from .concordances import format_line
-            output = df_context.apply(lambda row: format_line(self, row.name, row, p_show, s_show, matches_filter, matches_highlight, window), axis=1)
+            output = df_context.apply(
+                lambda row: format_line(self, row.name, row, p_show, s_show, matches_filter, matches_highlight, window,
+                                        htmlify_meta=htmlify_meta, cwb_ids=cwb_ids),
+                axis=1
+            )
             output = [line for line in output.values if line is not None]
             output = output[:cut_off]
 
@@ -1301,8 +1305,10 @@ class Corpus:
 
 class SubCorpus(Corpus):
 
-    def __init__(self, subcorpus_name, df_dump, corpus_name, lib_dir,
-                 cqp_bin, registry_dir, data_dir, overwrite=True):
+    def __init__(self, subcorpus_name, df_dump, corpus_name,
+                 lib_dir=None, cqp_bin='cqp',
+                 registry_dir='/usr/local/share/cwb/registry/',
+                 data_dir=None, overwrite=True):
         """
         :param str subcorpus_name: name of NQR in CQP
         :param DataFrame df_dump: a "DumpFrame"
@@ -1411,8 +1417,8 @@ class SubCorpus(Corpus):
 
         return '\n' + '\n'.join([
             f'corpus:    {self.corpus_name} ({self.corpus_size} tokens)',
-            f'data:      {self.data_dir}',
-            f'subcorpus: {self.subcorpus_name} ({len(self.df)} spans)'
+            f'subcorpus: {self.subcorpus_name} ({self.size()} tokens in {len(self.df)} spans)',
+            f'data:      {self.data_dir}'
         ]) + '\n'
 
     def __repr__(self):
@@ -1488,6 +1494,9 @@ class SubCorpus(Corpus):
                 f1.update(range(match, matchend + 1))
             self.cache.set(identifier, f1)
         return f1
+
+    def size(self):
+        return (self.df.reset_index()['matchend'] - self.df.reset_index()['match'] + 1).sum()
 
     def context(self):
         """
@@ -1584,3 +1593,148 @@ class SubCorpus(Corpus):
             marginals=marginals,
             show_negative=show_negative
         )
+
+
+class SubCorpora:
+    """
+    partitioning of corpus
+    - non-overlapping sets of regions (= match..matchend)
+    - does not have to be exhaustive → complement
+    """
+    def __init__(self, corpus_name, mapping,
+                 lib_dir=None,
+                 cqp_bin='cqp',
+                 registry_dir='/usr/local/share/cwb/registry/',
+                 data_dir=None):
+        """
+        :param Corpus corpus: CWB corpus
+        :param dict mapping: dictionary of {name: query} or DataFrame indexed by (match, matchend) with column 'subcorpus'
+
+        query can be one of
+        + <text>-query
+        + cqp-query
+        """
+
+        self.corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
+
+        subcorpora = dict()
+        if isinstance(mapping, DataFrame):
+            column = 'subcorpus'
+            for name, df in mapping.groupby(column):
+                subcorpora[name] = self.corpus.subcorpus(None, df.drop(column, axis=1))
+
+        elif isinstance(mapping, dict):
+            raise NotImplementedError()
+
+        else:
+            raise ValueError()
+
+        self.subcorpora = subcorpora
+
+    def keywords(self):
+        """
+        - one vs. complement
+        - one vs. another
+        - one vs. rest
+        """
+        pass
+
+    def query(self, cqp_query=None, context=20, context_left=None,
+              context_right=None, context_break=None,
+              corrections=dict(), s_query=None, s_values=None,
+              match_strategy='longest', propagate_error=False):
+        """
+        - query each subcorpus defined in partioning
+        - note that this finds at most the number of matches as querying the whole corpus
+        - because matches might overlap with boundaries
+        """
+
+        s_query = context_break if s_query is None else s_query
+
+        if cqp_query is None and s_query is None:
+            raise ValueError("you have to provide cqp_query or s_query")
+
+        out = list()
+        if cqp_query is None:
+            for name, subcorpus in self.subcorpora.items():
+                df = self.query_s_att(s_query, s_values).df
+                df['subcorpus'] = name
+                out.append(df)
+
+        elif s_values is None:
+            for name, subcorpus in self.subcorpora.items():
+                df = subcorpus.query_cqp(cqp_query, context, context_left,
+                                         context_right, s_query, corrections,
+                                         match_strategy, propagate_error=propagate_error).df
+                df['subcorpus'] = name
+                out.append(df)
+
+        else:
+            raise NotImplementedError()
+
+        nodes = concat(out)
+        # just in case
+        nodes['context'] = nodes['context'].astype(int)
+        nodes['contextend'] = nodes['contextend'].astype(int)
+
+        self.nodes = nodes
+
+    def concordance(self, form='kwic', p_show=['word'], s_show=[],
+                    order='random', cut_off=100, matches=None,
+                    slots=None, cwb_ids=False):
+
+        if self.nodes is None:
+            raise ValueError("you first have to run a query")
+
+        dfs = list()
+        for name, df in self.nodes.groupby('subcorpus'):
+            conc = Concordance(
+                self.corpus,
+                df_dump=df
+            ).lines(
+                form=form,
+                p_show=p_show,
+                s_show=s_show,
+                order=order,
+                cut_off=cut_off,
+                matches=matches,
+                slots=slots,
+                cwb_ids=cwb_ids
+            )
+            conc['subcorpus'] = name
+            dfs.append(conc)
+
+        return concat(dfs)
+
+    def collocates(self, p_query=['lemma'], window=5,
+                   order='log_likelihood', cut_off=100, ams=None,
+                   min_freq=2, flags=None, marginals='corpus',
+                   show_negative=False):
+        """
+        - find collocates of query matches in each subcorpus
+        """
+
+        if self.nodes is None:
+            raise ValueError("you first have to run a query")
+
+        dfs = list()
+        for name, df in self.nodes.groupby('subcorpus'):
+            coll = Collocates(
+                self.corpus,
+                df,
+                p_query=p_query,
+                mws=10
+            ).show(
+                window,
+                order,
+                cut_off,
+                ams,
+                min_freq,
+                flags,
+                marginals,
+                show_negative
+            )
+            coll['subcorpus'] = name
+            dfs.append(coll)
+
+        return concat(dfs)
