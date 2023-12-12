@@ -265,9 +265,9 @@ class CQP:
         if 'target' in df.columns:
             wth = 'with target '
             columns = columns + ['target']
-            if 'keyword' in df.columns:
-                wth = 'with target keyword '
-                columns = columns + ['target', 'keyword']
+        if 'keyword' in df.columns:
+            wth = 'with target keyword '
+            columns = columns + ['keyword']
 
         with NamedTemporaryFile(mode='wt') as f:
             f.write(str(len(df)) + "\n")
