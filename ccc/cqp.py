@@ -259,17 +259,19 @@ class CQP:
 
     def Undump(self, subcorpus="Last", df=DataFrame()):
         """Undump named query result from table of corpus positions."""
-        columns = []
+
+        columns = ['match', 'matchend']
         wth = ''
         if 'target' in df.columns:
             wth = 'with target '
-            columns = ['target']
+            columns = columns + ['target']
             if 'keyword' in df.columns:
                 wth = 'with target keyword '
-                columns = ['target', 'keyword']
+                columns = columns + ['target', 'keyword']
+
         with NamedTemporaryFile(mode='wt') as f:
             f.write(str(len(df)) + "\n")
-            df.to_csv(f, mode="a", sep="\t", columns=columns, header=None)
+            df.reset_index().to_csv(f, mode="a", sep="\t", columns=columns, header=None, index=False)
             f.seek(0)
             f.flush()
             self.Exec("undump " + subcorpus + " " + wth + '< "' + f.name + '";')
