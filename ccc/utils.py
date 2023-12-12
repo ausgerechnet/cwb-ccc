@@ -157,9 +157,12 @@ def format_cqp_query(items, p_query='word', s_query=None,
             single_items.append(tokens[0])
 
     if len(single_items) > 0:
-        # build minimal RegEx
-        tre = TRE(*single_items)
-        singles_queries = ["([" + p_query + "=" + '"' + tre.regex() + '"' + flags + "])"]
+        if escape:
+            # build minimal RegEx
+            reg = TRE(*single_items).regex()
+        else:
+            reg = "|".join(single_items)
+        singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
     else:
         singles_queries = []
 
