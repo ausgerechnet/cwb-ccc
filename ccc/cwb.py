@@ -529,7 +529,6 @@ class Corpus:
         logger.info(f'creating dataframe of spans of "{s_att}"')
 
         df = DataFrame(list(self.attributes.attribute(s_att, 's')))
-
         # two or three columns: 0 (start), 1 (end), 2* (annotation)
         if annotation:
             annotation = (2 in df.columns)  # just to make sure ...
@@ -933,7 +932,7 @@ class Corpus:
     #################################################
     # QUERY ALIASES #################################
     #################################################
-    def query_s_att(self, s_att, values=set(), name=None):
+    def query_s_att(self, s_att, values=set(), name=None, overwrite=True):
         """Get s-attribute spans as Dump, optionally restricting the spans by
         matching the provided values against the s-att annotations.
 
@@ -974,11 +973,12 @@ class Corpus:
             df_spans = df_spans.set_index(['match', 'matchend'])
 
         # return SubCorpus
-        return self.subcorpus(subcorpus_name=name, df_dump=df_spans)
+        return self.subcorpus(subcorpus_name=name, df_dump=df_spans, overwrite=overwrite)
 
     def query_cqp(self, cqp_query, context=20, context_left=None,
                   context_right=None, context_break=None, corrections=dict(),
-                  match_strategy='standard', name=None, propagate_error=False):
+                  match_strategy='standard', name=None, propagate_error=False,
+                  overwrite=True):
         """Get query result as (context-extended) Dump (with corrected
         anchors). If a name is given, the resulting NQR (without
         context and before anchor correction) will be written to disk
@@ -1039,7 +1039,7 @@ class Corpus:
             df_dump = correct_anchors(df_dump, corrections)
 
         # return SubCorpus
-        return self.subcorpus(subcorpus_name=name, df_dump=df_dump)
+        return self.subcorpus(subcorpus_name=name, df_dump=df_dump, overwrite=overwrite)
 
     def query(self, cqp_query=None, context=20, context_left=None,
               context_right=None, context_break=None,
