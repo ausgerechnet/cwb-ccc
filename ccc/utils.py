@@ -126,47 +126,51 @@ def cqp_unescape(token):
     return token
 
 
-def format_cqp_query(items, p_query='word', s_query=None,
-                     flags="", escape=True):
+def format_cqp_query(items, p_query='word', s_query=None, flags="", escape=True):
     """ wrapper for easy queries
 
     :return: valid cqp query
     :rtype: str
     """
 
-    # gather all MWUs
+    # three-way categorisation
     mwu_queries = list()
     single_items = list()
-    for item in items:
-        # escape item (optional)
-        if escape:
-            item = cqp_escape(item)
+    single_items_escaped = list()
 
-        # split items on white-space
+    for item in items:
+
         tokens = item.split(" ")
+
         if len(tokens) > 1:
             mwu_query = ""
-
-            # convert to CQP syntax considering p-att and flags
             for token in tokens:
+                token = cqp_escape(token) if escape else token
                 mwu_query += f'[{p_query}="{token}"{flags}]'
-
-            # add MWU item to list
             mwu_queries.append("(" + mwu_query + ")")
-        else:
-            single_items.append(tokens[0])
 
+        else:
+
+            if escape:
+                item_escaped = cqp_escape(item)
+                if item_escaped == item:
+                    single_items.append(item)
+                else:
+                    single_items_escaped.append(item)
+            else:
+                single_items.append(item)
+
+    singles_queries = []
     if len(single_items) > 0:
-        if escape:
-            # build minimal RegEx
-            reg = TRE(*single_items).regex()
-        else:
-            reg = "|".join(single_items)
+        reg = TRE(*single_items).regex().replace("?:", "")
         singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
-    else:
-        singles_queries = []
 
-    queries = mwu_queries + singles_queries
+    singles_queries_escaped = []
+    if len(single_items_escaped) > 0:
+        reg = "|".join(single_items)
+        singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
+
+    queries = mwu_queries + singles_queries + singles_queries_escaped
 
     # disjunctive join
     query = ' | '.join(queries)
