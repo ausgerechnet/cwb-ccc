@@ -579,6 +579,9 @@ class Corpus:
 
         """
 
+        # we have to give a name to be able to run iteratively when giving several anchors
+        name = 'Last' if name is None else name
+
         # identify query
         if self.subcorpus_name is not None:
             # check subcorpus size to avoid confusion when re-naming
@@ -651,7 +654,6 @@ class Corpus:
                 raise NotImplementedError("cannot work with several anchors for CWB versions older than 3.4.16")
 
             for pair in remaining_anchors:
-
                 logger.info(f".. running query for anchor(s) {str(pair)}")
                 # set appropriate anchors
                 cqp.Exec(f'set ant {pair[0]};')
@@ -665,6 +667,8 @@ class Corpus:
                     cqp.Query(f"Temp = <<{name}/>> ( {query} );")
                 elif cwb_version['minor'] == 4 and cwb_version['patch'] >= 16:
                     cqp.Query(f'Temp = <match> ( {query} );')
+                else:
+                    raise NotImplementedError("cannot work with several anchors for CWB versions older than 3.4.16")
                 df = cqp.Dump("Temp")
 
                 # select columns and join to global df
@@ -999,7 +1003,6 @@ class Corpus:
         :rtype: Dump
 
         """
-
         # preprocess input
         save = False if name is None else True  # save NQR from CQP to disk?
         query_dict = preprocess_query(cqp_query)
