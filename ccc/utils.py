@@ -156,7 +156,7 @@ def format_cqp_query(items, p_query='word', s_query=None, flags="", escape=True)
                 if item_escaped == item:
                     single_items.append(item)
                 else:
-                    single_items_escaped.append(item)
+                    single_items_escaped.append(item_escaped)
             else:
                 single_items.append(item)
 
@@ -167,7 +167,7 @@ def format_cqp_query(items, p_query='word', s_query=None, flags="", escape=True)
 
     singles_queries_escaped = []
     if len(single_items_escaped) > 0:
-        reg = "|".join(single_items)
+        reg = "|".join(single_items_escaped)
         singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
 
     queries = mwu_queries + singles_queries + singles_queries_escaped
