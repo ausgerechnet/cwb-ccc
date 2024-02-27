@@ -158,7 +158,11 @@ def format_cqp_query(items, p_query='word', s_query=None, flags="", escape=True)
                 else:
                     single_items_escaped.append(item_escaped)
             else:
-                single_items.append(item)
+                item_escaped = cqp_escape(item)
+                if item_escaped == item:
+                    single_items.append(item)
+                else:
+                    single_items_escaped.append(item)
 
     singles_queries = []
     if len(single_items) > 0:
