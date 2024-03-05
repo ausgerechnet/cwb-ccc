@@ -1046,7 +1046,7 @@ class Corpus:
 
     def query(self, cqp_query=None, context=20, context_left=None,
               context_right=None, context_break=None,
-              corrections=dict(), s_query=None, s_values=None,
+              corrections=dict(), s_query=None, s_values=set(),
               match_strategy='standard', name=None, propagate_error=False):
         """Query the corpus, get the result as Dump.
 
