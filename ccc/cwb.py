@@ -1067,7 +1067,7 @@ class Corpus:
         if cqp_query is None:
             return self.query_s_att(s_query, s_values, name)
 
-        elif s_values is None:
+        elif len(s_values) == 0:
             return self.query_cqp(cqp_query, context, context_left,
                                   context_right, s_query, corrections,
                                   match_strategy, name, propagate_error)
