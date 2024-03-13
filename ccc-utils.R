@@ -13,7 +13,7 @@ library(ggrepel)
 options(dplyr.summarise.inform = FALSE)
 
 # function for formatting concordance lines
-concordance.format <- function(conc, n = 10, crop=NULL, columns = c("left_word", "node_word", "right_word")){
+concordance.format.old <- function(conc, n = 10, crop=NULL, columns = c("left_word", "node_word", "right_word")){
   conc %>%
     head(n) %>%
     select(columns) %>%
@@ -24,6 +24,55 @@ concordance.format <- function(conc, n = 10, crop=NULL, columns = c("left_word",
     column_spec(c(1, 3), width = "6cm") %>%
     column_spec(2, bold = T, width = "3cm") %>%
     kable_styling(latex_options = "striped")
+}
+
+concordance.format <- function(conc, s.show = c(), path.out = NULL, crop = NULL){
+
+  # prepare input
+  df <- tibble()
+  for (line in concordance$tokens){
+    df <- rbind(df, tibble(
+      left = line |> filter(offset < 0) |> pull(primary) |> str_flatten(" "), 
+      node = line |> filter(offset == 0) |> pull(primary) |> str_flatten(" "), 
+      right = line |> filter(offset > 0) |> pull(primary) |> str_flatten(" ")
+    ))
+  }
+  
+  for (s in s.show){
+    df[s] <- concordance$structural |> pull(s)
+  }
+  
+  df <- df[, c(s.show, c("left", "node", "right"))]
+
+  # save to file
+  if (! is.null(path.out)){
+    if (is.null(crop)){
+      df |> xtable::xtable() |> 
+        print(file = path.out, booktabs = TRUE, hline.after = 0:nrow(df))
+    }
+    else {
+      df |> 
+        rowwise() %>% 
+        mutate(
+          left = str_sub(left, str_length(left) - min(crop, str_length(left))),
+          right = str_sub(right, end = min(crop, str_length(right)))
+        ) %>% 
+        xtable::xtable() %>% 
+        print(file = path.out, booktabs = TRUE)
+    }
+  }
+
+  # display in Quarto document
+  else {
+    a <- df |> 
+      kbl(booktabs = T, align = c("rcl"), longtable = T,
+          table.attr = "style = \"color: white; background-color: black;\"") %>%
+      row_spec(0, bold = T) %>%
+      column_spec(c(1, 3), width = "6cm") %>%
+      column_spec(2, bold = T, width = "3cm") %>%
+      kable_styling(latex_options = "striped")
+    return(a)
+  }
 }
 
 # function for plotting collocates

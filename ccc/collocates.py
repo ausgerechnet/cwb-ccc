@@ -171,7 +171,7 @@ class Collocates:
         return collocates
 
 
-def dump2cooc(df_dump, context=None, rm_nodes=True):
+def dump2cooc(df_dump, context=None, rm_nodes=True, drop_duplicates=True):
     """ converts df_dump to df_cooc + f1_set
 
     strategy:
@@ -226,13 +226,16 @@ def dump2cooc(df_dump, context=None, rm_nodes=True):
         'offset': list(chain.from_iterable(df['offset_list'].values))
     })
 
-    logger.info("(2a) sort by absolute offset")
-    df_infl['abs_offset'] = df_infl.offset.abs()
-    df_infl = df_infl.sort_values(by=['abs_offset', 'cpos'])
-    df_infl = df_infl.drop(["abs_offset"], axis=1)
+    if drop_duplicates:
+        logger.info("(2a) sort by absolute offset")
+        df_infl['abs_offset'] = df_infl.offset.abs()
+        df_infl = df_infl.sort_values(by=['abs_offset', 'cpos'])
+        df_infl = df_infl.drop(["abs_offset"], axis=1)
 
-    logger.info("(2b) drop duplicates")
-    df_defl = df_infl.drop_duplicates(subset='cpos')
+        logger.info("(2b) drop duplicates")
+        df_defl = df_infl.drop_duplicates(subset='cpos')
+    else:
+        df_defl = df_infl
 
     if not rm_nodes:
         return df_defl

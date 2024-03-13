@@ -282,7 +282,7 @@ class Concordance:
         logger.info('lines: selecting matches')
         if matches is None:
             # select all matches
-            matches = set(self.df_dump.index.droplevel('matchend'))
+            matches = list(self.df_dump.index.droplevel('matchend'))
         # pre-process cut_off if necessary
         if (cut_off is None) or (len(matches) < cut_off):
             cut_off = len(matches)
@@ -290,15 +290,19 @@ class Concordance:
         if isinstance(order, int):
             seed(order)
             order = 'random'
+
         if order == 'random':
             matches = sample(list(matches), cut_off)
         elif order == 'first':
             matches = sorted(list(matches))[:cut_off]
         elif order == 'last':
             matches = sorted(list(matches))[-cut_off:]
+        elif order == 'asis':
+            pass
         else:
             logger.error('order not implemented, using "random" order')
             order = 'random'
+            matches = sample(list(matches), cut_off)
         logger.info(f"lines: retrieving {len(matches)} concordance line(s)")
         df = self.df_dump.loc[list(matches), :]
 
