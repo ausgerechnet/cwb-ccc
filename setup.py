@@ -95,7 +95,7 @@ setup(
     ext_modules=extensions,
     python_requires='>=3.7.2',
     install_requires=[
-        "wheel>=0.41.1,<0.42",
+        "wheel>=0.41.1,<0.50",
         "association-measures>=0.2.6,<0.4",
         "pandas>=2.0,<2.1",
         "numexpr>=2.8.5,<3.0",
