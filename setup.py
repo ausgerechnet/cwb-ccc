@@ -97,7 +97,7 @@ setup(
     install_requires=[
         "wheel>=0.41.1,<0.42",
         "association-measures>=0.2.6,<0.4",
-        "pandas>=1.3.5,<2.0",
+        "pandas>=2.0,<2.1",
         "numexpr>=2.8.5,<3.0",
         "Bottleneck>=1.3.7,<2.0",
         "unidecode>=1.3.6,<2.0",
@@ -109,10 +109,10 @@ setup(
         "Development Status :: 4 - Beta",
         "Operating System :: Unix",
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Cython'
     ],
 )
