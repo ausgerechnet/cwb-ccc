@@ -241,7 +241,7 @@ class Counts:
 
         # choose strategy
         if strategy == 2 and not split:
-            logger.warning("dump: cannot use cwb-scan-corpus for MWUs")
+            logger.info("dump: cannot use cwb-scan-corpus for MWUs, extracting and splitting tokens instead")
             strategy = 1
         logger.info(f"dump: strategy {strategy}")
 

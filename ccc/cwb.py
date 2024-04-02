@@ -1467,7 +1467,7 @@ class SubCorpus(Corpus):
         """
         self.df = correct_anchors(self.df, corrections)
 
-    def breakdown(self, p_atts=['word'], flags=""):
+    def breakdown(self, p_atts=['word'], flags="", split=False):
         """Frequency breakdown of match..matchend.
 
         """
@@ -1476,7 +1476,7 @@ class SubCorpus(Corpus):
         breakdown = self.counts.dump(
             df_dump=self.df,
             start='match', end='matchend',
-            p_atts=p_atts, strategy=1
+            p_atts=p_atts, split=split
         )
 
         breakdown = fold_df(breakdown, flags)
