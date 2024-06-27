@@ -95,14 +95,14 @@ setup(
     ext_modules=extensions,
     python_requires='>=3.7.2',
     install_requires=[
-        "wheel>=0.41.1,<0.50",
-        "association-measures>=0.2.6,<0.4",
-        "pandas>=2.0,<2.1",
-        "numexpr>=2.8.5,<3.0",
-        "Bottleneck>=1.3.7,<2.0",
-        "unidecode>=1.3.6,<2.0",
+        "wheel>=0.43.0,<1.0",
+        "association-measures>=0.3.0,<0.4",
+        "pandas>=2.0,<3.0",
+        "numexpr>=2.8.6,<3.0",
+        "Bottleneck>=1.4.0,<2.0",
+        "unidecode>=1.3.8,<2.0",
         "pyyaml>=6.0.1,<7.0",
-        "trieregex>=1.0,<1.1"
+        "trieregex>=1.0.0,<1.1"
     ],
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -113,6 +113,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Programming Language :: Cython'
     ],
 )
