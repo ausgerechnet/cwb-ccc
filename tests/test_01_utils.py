@@ -54,24 +54,18 @@ def test_preprocess_anchor_query():
     )
     query_4 = preprocess_query(query)
 
-    assert(query_1['s_query'] == query_2['s_query'] is None)
-    assert(query_3['s_query'] == 'tweet')
-    assert(query_4['s_query'] == 's')
-    assert(query_1['query'] == query_2['query'] ==
-           query_3['query'] == query_4['query'])
-    assert(query_1['anchors'] == query_2['anchors'] ==
-           query_3['anchors'] == query_4['anchors'])
+    assert query_1['s_query'] == query_2['s_query'] is None
+    assert query_3['s_query'] == 'tweet'
+    assert query_4['s_query'] == 's'
+    assert query_1['query'] == query_2['query'] == query_3['query'] == query_4['query']
+    assert query_1['anchors'] == query_2['anchors'] == query_3['anchors'] == query_4['anchors']
 
 
 def test_fold_items():
     items_aber = ['aber', 'äber', 'AbEr', 'ÄBER']
     items_francais = ['français', 'Fráncàis']
-    assert(
-        len(set([fold_item(item) for item in items_aber])) == 1
-    )
-    assert(
-        len(set([fold_item(item) for item in items_francais])) == 1
-    )
+    assert len(set([fold_item(item) for item in items_aber])) == 1
+    assert len(set([fold_item(item) for item in items_francais])) == 1
 
 
 def test_filter_df(germaparl):

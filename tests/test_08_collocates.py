@@ -26,8 +26,8 @@ def test_collo_single(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, 'lemma')
     c = collocates.show(order='log_likelihood')
-    assert(type(c) == pd.DataFrame)
-    assert('Dr.' in c.index)
+    assert isinstance(c, pd.DataFrame)
+    assert 'Dr.' in c.index
 
 
 @pytest.mark.default
@@ -39,7 +39,7 @@ def test_collo_combo(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, ['lemma', 'pos'])
     c = collocates.show(order='log_likelihood')
-    assert(type(c) == pd.DataFrame)
+    assert isinstance(c, pd.DataFrame)
 
 
 @pytest.mark.fallback
@@ -51,8 +51,8 @@ def test_query_logging(germaparl):
     df_dump = corpus.query(query).df
     collocates = Collocates(corpus, df_dump, 'fail')
     c = collocates.show(order='log_likelihood', window=15)
-    assert(type(c) == pd.DataFrame)
-    assert('Dr.' in c.index)
+    assert isinstance(c, pd.DataFrame)
+    assert 'Dr.' in c.index
 
 
 @pytest.mark.collocates_speed
@@ -63,7 +63,7 @@ def test_collocates_speed_many(germaparl):
     collocates = Collocates(corpus, df_dump, p_query='lemma', mws=100)
     c2 = collocates.show(window=50, cut_off=50)
     assert c2.index[0] == ','
-    assert type(c2) == pd.DataFrame
+    assert isinstance(c2, pd.DataFrame)
 
 
 @pytest.mark.persistence
@@ -89,8 +89,8 @@ def test_collocates_persistence(germaparl):
     collocates = Collocates(corpus, result, 'lemma')
     line_3 = collocates.show()
 
-    assert(line_1.equals(line_2))
-    assert(not line_2.equals(line_3))
+    assert line_1.equals(line_2)
+    assert not line_2.equals(line_3)
 
 
 @pytest.mark.keywords_collocates
@@ -101,7 +101,7 @@ def test_query_keywords_collocates(germaparl):
     )
     dump = corpus.query(query)
     keywords = Keywords(corpus, df_dump=dump.df, p_query='lemma')
-    assert('Horst' == keywords.show(order='log_likelihood').head(1).index[0])
+    assert 'Horst' == keywords.show(order='log_likelihood').head(1).index[0]
 
 
 @pytest.mark.mwu_marginals
@@ -113,10 +113,10 @@ def test_collocates_mwu(germaparl):
     result = corpus.query(query, match_strategy='longest')
     collocates = Collocates(corpus, result.df, 'lemma')
     c = collocates.show(order='log_likelihood', cut_off=None)
-    assert(type(c) == pd.DataFrame)
-    assert(len(c) > 9)
-    assert('CSU' in c.index)
-    assert(int(c.loc['CSU']['in_nodes']) > int(c.loc['CSU']['O11']))
+    assert isinstance(c, pd.DataFrame)
+    assert len(c) > 9
+    assert 'CSU' in c.index
+    assert int(c.loc['CSU']['in_nodes']) > int(c.loc['CSU']['O11'])
 
 
 @pytest.mark.fold_items
@@ -128,9 +128,9 @@ def test_collocates_pp(germaparl):
     result = corpus.query(query)
     collocates = Collocates(corpus, result.df, p_query='word')
     c = collocates.show(order='log_likelihood', cut_off=None)
-    assert(int(c.loc['Bündnis']['O11']) < int(c.loc['BÜNDNIS']['O11']))
+    assert int(c.loc['Bündnis']['O11']) < int(c.loc['BÜNDNIS']['O11'])
     c = collocates.show(order='log_likelihood', cut_off=None, flags="%cd")
-    assert('bundnis' in c.index and 'Bündnis' not in c.index)
+    assert 'bundnis' in c.index and 'Bündnis' not in c.index
 
 
 @pytest.mark.fail
@@ -176,8 +176,8 @@ def test_collocates_nodes(germaparl):
     dump = corpus.query(query)
     collocates = Collocates(corpus, dump.df)
     df = collocates.show(cut_off=None)
-    assert("," not in df.index)
-    assert("(" not in df.index)
+    assert "," not in df.index
+    assert "(" not in df.index
 
 
 @pytest.mark.collocates_gold
@@ -204,10 +204,10 @@ def test_compare_counts(germaparl, ucs_counts):
     ucs_node_cooc = ucs_counts[lemma].loc[lemma]
     ccc_node_freq = corpus.marginals([lemma], "lemma")['freq'].values[0]
 
-    assert(counts['O11'].equals(counts['f_ucs']))
-    assert((counts['O11'] + counts['O21']).equals(counts['f2_ucs']))
-    assert((counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs']))
-    assert((counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs']))
+    assert counts['O11'].equals(counts['f_ucs'])
+    assert (counts['O11'] + counts['O21']).equals(counts['f2_ucs'])
+    assert (counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs'])
+    assert (counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs'])
 
     # [lemma="und"]
     lemma = "und"
@@ -223,10 +223,10 @@ def test_compare_counts(germaparl, ucs_counts):
     ucs_node_cooc = ucs_counts['und'].loc['und']
     ccc_node_freq = corpus.marginals(['und'], "lemma")['freq'].values[0]
 
-    assert(counts['O11'].equals(counts['f_ucs']))
-    assert((counts['O11'] + counts['O21']).equals(counts['f2_ucs']))
-    assert((counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs']))
-    assert((counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs']))
+    assert counts['O11'].equals(counts['f_ucs'])
+    assert (counts['O11'] + counts['O21']).equals(counts['f2_ucs'])
+    assert (counts['O11'] + counts['O12'] + counts['O21'] + counts['O22'] + ccc_node_freq).equals(counts['N_ucs'])
+    assert (counts['O11'] + counts['O12']).equals(counts['f1_ucs'] - ucs_node_cooc['f_ucs'])
 
 
 @pytest.mark.benchmark

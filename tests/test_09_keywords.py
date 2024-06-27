@@ -101,7 +101,7 @@ def test_keywords(germaparl):
         columns={'freq': 'f2'}
     )
 
-    df = left.join(right).fillna(0, downcast='infer')
+    df = left.join(right).fillna(0)  # , downcast='infer')
     df['N1'] = df['f1'].sum()
     df['N2'] = df['f2'].sum()
     kw = score_counts(df, order='O11')

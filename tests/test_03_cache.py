@@ -13,26 +13,26 @@ def test_set_get_empty():
     parameters = {'query': "test", 's_break': "test"}
     cache = Cache()
     s = generate_idx(parameters)
-    assert(cache.get(s) is None)
+    assert cache.get(s) is None
     cache.set(s, parameters)
-    assert(cache.get(s) is None)
+    assert cache.get(s) is None
 
 
 def test_set_get():
 
     cache = Cache(os.path.join(DATA_PATH, 'test-cache'))
-    parameters = {'query': "test", 's_break': "test", 'key': randint(0, 9 * 10^9)}
+    parameters = {'query': "test", 's_break': "test", 'key': randint(0, 9 * 10 ^ 9)}
     dump = DataFrame()
     r = cache.get(parameters.values())
-    assert(r is None)
+    assert r is None
 
     cache.set(parameters, dump)
     r = cache.get(parameters)
-    assert(r.empty)
+    assert r.empty
 
     cache.set('testtest', dump)
     r = cache.get('testtest')
-    assert(r.empty)
+    assert r.empty
 
 
 def test_generate_library_idx(germaparl):

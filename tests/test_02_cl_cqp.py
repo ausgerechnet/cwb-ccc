@@ -52,8 +52,8 @@ def test_cqp_dump(germaparl):
     cqp.Query('"Horst"')
     df = cqp.Dump()
     cqp.__del__()
-    assert(len(df) == 55)
-    assert(isinstance(df, DataFrame))
+    assert len(df) == 55
+    assert isinstance(df, DataFrame)
 
 
 def test_cqp_undump(germaparl):
@@ -65,8 +65,8 @@ def test_cqp_undump(germaparl):
     cqp.Query('"Horst"')
     df = cqp.Dump()
     cqp.Undump("Test", df)
-    assert(int(cqp.Exec("size Test;")) > 0)
-    assert(cqp.Exec("size Test;") == str(len(df)))
+    assert int(cqp.Exec("size Test;")) > 0
+    assert cqp.Exec("size Test;") == str(len(df))
     cqp.__del__()
 
 
@@ -79,8 +79,8 @@ def test_cqp_group(germaparl):
     cqp.Query('[lemma="Horst"] [lemma="Seehofer"]')
     counts = cqp.Group(spec1="match.lemma", spec2="matchend.lemma")
     cqp.__del__()
-    assert(type(counts) == str)
-    assert(int(counts.split("\t")[-1]) == 11)
+    assert isinstance(counts, str)
+    assert int(counts.split("\t")[-1]) == 11
 
 
 def test_nqr_from_query(germaparl):
@@ -89,13 +89,13 @@ def test_nqr_from_query(germaparl):
         options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
-    assert(int(cqp.Exec('size Seehofer;')) == 0)
+    assert int(cqp.Exec('size Seehofer;')) == 0
     cqp.nqr_from_query(
         query='[lemma="Seehofer"];',
         name='Seehofer',
         return_dump=False
     )
-    assert(int(cqp.Exec('size Seehofer;')) > 0)
+    assert int(cqp.Exec('size Seehofer;')) > 0
     cqp.__del__()
 
 
@@ -105,10 +105,10 @@ def test_nqr_from_dump(germaparl):
         options='-c -r ' + germaparl['registry_dir']
     )
     cqp.Exec(germaparl['corpus_name'])
-    assert(int(cqp.Exec('size Seehof;')) == 0)
+    assert int(cqp.Exec('size Seehof;')) == 0
     df_dump = germaparl['dump']
     cqp.nqr_from_dump(df_dump, name='Seehof')
-    assert(int(cqp.Exec('size Seehof;')) > 0)
+    assert int(cqp.Exec('size Seehof;')) > 0
     cqp.__del__()
 
 
@@ -118,19 +118,19 @@ def test_cl(germaparl):
 
     # get sentences, words, pos-tags
     sentences = corpus.attribute('s', 's')
-    assert(len(sentences) == 11364)
+    assert len(sentences) == 11364
     words = corpus.attribute('word', 'p')
-    assert(len(words) == 149800)
+    assert len(words) == 149800
     postags = corpus.attribute('pos', 'p')
-    assert(len(postags) == 149800)
+    assert len(postags) == 149800
 
     # offsets of the 1235th sentence (0-based)
     s_1234 = sentences[1234]
-    assert(s_1234[0] == 21678)
-    assert(s_1234[1] == 21688)
+    assert s_1234[0] == 21678
+    assert s_1234[1] == 21688
 
     # first word of 1235th sentence
-    assert(words[s_1234[0]] == "Die")
+    assert words[s_1234[0]] == "Die"
 
 
 def test_nqr_from_dump_error(germaparl):
