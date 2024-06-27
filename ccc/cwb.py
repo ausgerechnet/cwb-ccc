@@ -434,8 +434,7 @@ class Corpus:
             # preprocess tuples
             items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
             # select relevant rows
-            df = df.reindex(items)
-            df = df.fillna(0, downcast='infer')
+            df = df.reindex(items, fill_value=0)
 
         # sort by frequency
         df = df.sort_values(by=['freq', 'item'], ascending=False)
@@ -685,7 +684,7 @@ class Corpus:
             # it is more reasonable to yield all requested columns
             # (even if some are all NA) -- instead of silently
             # dropping columns
-            df_dump = df_dump.fillna(-1, downcast='infer')
+            df_dump = df_dump.fillna(-1)  # , downcast='infer')
 
         # restrict output to requested anchors
         df_dump = df_dump[anchors]
@@ -830,7 +829,7 @@ class Corpus:
                 s_att + '_span', s_att + '_spanend'
             ]] = df[[
                 s_att + '_span', s_att + '_spanend'
-            ]].fillna(-1, downcast='infer')
+            ]].fillna(-1)  # , downcast='infer')
         else:
             df_dump[[
                 s_att + '_span', s_att + '_spanend'
@@ -1533,8 +1532,7 @@ class SubCorpus(Corpus):
             # preprocess tuples
             items = [" ".join(i) for i in items] if isinstance(items[0], tuple) else items
             # select relevant rows
-            df = df.reindex(items)
-            df = df.fillna(0, downcast='infer')
+            df = df.reindex(items, fill_value=0)
 
         # sort by frequency
         df = df.sort_values(by=['freq', 'item'], ascending=False)

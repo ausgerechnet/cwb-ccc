@@ -9,7 +9,7 @@ import logging
 from itertools import chain
 
 # requirements
-from pandas import DataFrame
+from pandas import DataFrame, to_numeric
 
 # part of module
 from .cache import generate_idx
@@ -138,15 +138,17 @@ class Collocates:
             f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
                 self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
             )
-            f2 = f2.fillna(0, downcast='infer')
+            f2['in_nodes'] = to_numeric(f2['in_nodes'], downcast='integer')
+            f2 = f2.fillna(0)  # , downcast='infer')
             f2['f2'] = f2['marginal'] - f2['in_nodes']
+            f2['f2'] = to_numeric(f2['f2'], downcast='integer')
 
             logger.info('.. calculating')
             # create dataframe
             df = f[['f']].join(f2[['f2']], how='left')
             df['f1'] = f1
             df['N'] = N
-            df = df.fillna(0, downcast='infer')
+            df = df.fillna(0)  # , downcast='infer')
 
             # score
             collocates = score_counts(df, order=order, cut_off=None,
