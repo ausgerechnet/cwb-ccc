@@ -131,6 +131,8 @@ def cwb_scan_corpus(corpus_name, registry_dir, path=None,
     """Run cwb-scan-corpus: create frequency list of p-attribute(s) at corpus positions.
     CLI: cwb-scan-corpus [-R path] CORPUS_NAME p_atts
 
+    Ranges must be sorted and non-overlapping.
+
     :return: counts of the p-attribute values (or their combinations)
              at the given positions (if any)
     :param str corpus_name:
@@ -273,7 +275,7 @@ class Counts:
                 logger.info("... writing dump temporarily to disk")
                 df_dump[[start, end]].to_csv(f.name, sep="\t", header=None, index=False)
                 df_counts, R = cwb_scan_corpus(
-                    self.corpus_name, self.registry_dir, f.name, p_atts
+                    self.corpus_name, self.registry_dir, f.name, p_atts, min_freq=1
                 )
 
         df_counts = df_counts.sort_values(by=['freq', 'item'], ascending=False)
@@ -385,7 +387,7 @@ class Counts:
                 logger.info("... writing dump temporarily to disk")
                 cqp.Exec(f'dump {name} > "{f.name}";')
                 df_counts, R = cwb_scan_corpus(
-                    self.corpus_name, self.registry_dir, f.name, p_atts
+                    self.corpus_name, self.registry_dir, f.name, p_atts, min_freq=1
                 )
 
         return df_counts

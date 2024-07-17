@@ -225,6 +225,9 @@ class Corpus:
         """
         return self.__str__()
 
+    def size(self):
+        return self.corpus_size
+
     def available_macros(self):
         """Get available macros (either system-defined or via library).
 
