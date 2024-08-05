@@ -134,8 +134,10 @@ def init_data_dir(data_dir, corpus_name, lib_dir=None):
     if not isinstance(data_dir, str):
         raise ValueError("parameter data_dir must be str")
 
-    # generate library idx to invalidate cache when updated
+    # ensure library exists; generate library idx to invalidate cache when updated
     if lib_dir is not None:
+        os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
+        os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
         lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
     else:
         lib_idx = "lib-vanilla"
