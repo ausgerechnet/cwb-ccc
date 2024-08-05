@@ -490,7 +490,6 @@ def start_cqp(cqp_bin, registry_dir,
             abs_path = os.path.abspath(wordlist)
             cqp_exec = f'define ${name} < "{abs_path}";'
             cqp.Exec(cqp_exec)
-
         # macros
         macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
         for macro in macros:
@@ -510,6 +509,6 @@ def start_cqp(cqp_bin, registry_dir,
         cqp.Exec(subcorpus_name)
 
     if not cqp.Ok():
-        raise NotImplementedError()
+        raise NotImplementedError(cqp.error_message.decode())
 
     return cqp
