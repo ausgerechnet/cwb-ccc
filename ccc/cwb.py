@@ -135,15 +135,12 @@ def init_data_dir(data_dir, corpus_name, lib_dir=None, inval_cache=True):
         raise ValueError("parameter data_dir must be str")
 
     # ensure library exists; generate library idx to invalidate cache when updated
-    if lib_dir is not None:
-        if inval_cache:
-            os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
-            os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
-            lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
-        else:
-            lib_idx = "lib-constant"
-    else:
+    if (not inval_cache) or (lib_dir is None):
         lib_idx = "lib-vanilla"
+    else:
+        os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
+        os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
+        lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
 
     # each corpus has its separate directory for each library
     subdir = corpus_name + "-" + lib_idx
@@ -1316,7 +1313,7 @@ class Corpus:
     def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
 
         return SubCorpus(subcorpus_name, df_dump, self.corpus_name,
-                         self.lib_dir, self.cqp_bin, self.registry_dir, self.data_dir, overwrite)
+                         self.lib_dir, self.cqp_bin, self.registry_dir, self.data_dir, overwrite, self.inval_cache)
 
 
 class SubCorpus(Corpus):
@@ -1324,7 +1321,7 @@ class SubCorpus(Corpus):
     def __init__(self, subcorpus_name, df_dump, corpus_name,
                  lib_dir=None, cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
-                 data_dir=None, overwrite=True):
+                 data_dir=None, overwrite=True, inval_cache=True):
         """
         :param str subcorpus_name: name of NQR in CQP
         :param DataFrame df_dump: a "DumpFrame"
@@ -1382,7 +1379,7 @@ class SubCorpus(Corpus):
 
         """
 
-        super().__init__(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
+        super().__init__(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir, inval_cache)
 
         if (subcorpus_name is None and df_dump is None):
             logger.warning('no subcorpus information provided, returning Corpus')
@@ -1620,7 +1617,8 @@ class SubCorpora:
                  lib_dir=None,
                  cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
-                 data_dir=None):
+                 data_dir=None,
+                 inval_cache=True):
         """
         :param Corpus corpus: CWB corpus
         :param dict mapping: dictionary of {name: query} or DataFrame indexed by (match, matchend) with column 'subcorpus'
@@ -1630,7 +1628,7 @@ class SubCorpora:
         + cqp-query
         """
 
-        self.corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir)
+        self.corpus = Corpus(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir, inval_cache=inval_cache)
 
         subcorpora = dict()
         if isinstance(mapping, DataFrame):
