@@ -36,8 +36,7 @@ class Corpora:
 
     """
 
-    def __init__(self, cqp_bin='cqp',
-                 registry_dir='/usr/local/share/cwb/registry/'):
+    def __init__(self, cqp_bin='cqp', registry_dir='/usr/local/share/cwb/registry/'):
         """Establish connection to registry and CQP.
 
         :param str cqp_bin: /path/to/cqp-binary
@@ -104,13 +103,13 @@ class Corpora:
 
         return corpora
 
-    def corpus(self, corpus_name,
-               lib_dir=None, data_dir=None):
+    def corpus(self, corpus_name, lib_dir=None, data_dir=None, inval_cache=True):
         """Activate a corpus.
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_dir: /path/to/macros/and/wordlists/
         :param str data_dir: /path/to/data/and/cache/
+        :param bool inval_cache: invalidate cache when updating library?
 
         :return: corpus
         :rtype: Corpus
@@ -121,10 +120,11 @@ class Corpora:
                       lib_dir=lib_dir,
                       cqp_bin=self.cqp_bin,
                       registry_dir=self.registry_dir,
-                      data_dir=data_dir)
+                      data_dir=data_dir,
+                      inval_cache=inval_cache)
 
 
-def init_data_dir(data_dir, corpus_name, lib_dir=None):
+def init_data_dir(data_dir, corpus_name, lib_dir=None, inval_cache=True):
     """ get a data directory / ensure that the given one complies with schema
 
     """
@@ -136,9 +136,12 @@ def init_data_dir(data_dir, corpus_name, lib_dir=None):
 
     # ensure library exists; generate library idx to invalidate cache when updated
     if lib_dir is not None:
-        os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
-        os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
-        lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
+        if inval_cache:
+            os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
+            os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
+            lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
+        else:
+            lib_idx = "lib-constant"
     else:
         lib_idx = "lib-vanilla"
 
@@ -163,7 +166,7 @@ class Corpus:
 
     def __init__(self, corpus_name, lib_dir=None, cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
-                 data_dir=None):
+                 data_dir=None, inval_cache=True):
         """Establish connection to CQP and corpus attributes, set paths, read
         library.
 
@@ -180,17 +183,19 @@ class Corpus:
         :param str cqp_bin: /path/to/cqp-binary
         :param str registry_dir: /path/to/cwb/registry/
         :param str data_dir: /path/to/data/and/cache/
+        :param bool inval_cache: invalidate cache when updating library?
 
         """
 
         # preprocess data dir
-        data_dir = init_data_dir(data_dir, corpus_name, lib_dir)
+        data_dir = init_data_dir(data_dir, corpus_name, lib_dir, inval_cache)
 
         # save paths
         self.data_dir = data_dir
         self.registry_dir = registry_dir
         self.cqp_bin = cqp_bin
         self.lib_dir = lib_dir
+        self.inval_cache = inval_cache
 
         # init (sub-)corpus information
         self.corpus_name = corpus_name
@@ -228,6 +233,9 @@ class Corpus:
         return self.__str__()
 
     def size(self):
+        """Number of tokens in corpus.
+
+        """
         return self.corpus_size
 
     def available_macros(self):
@@ -318,7 +326,8 @@ class Corpus:
             self.lib_dir,
             self.cqp_bin,
             self.registry_dir,
-            self.data_dir
+            self.data_dir,
+            self.inval_cache
         )
 
     ################
