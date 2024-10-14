@@ -2,6 +2,13 @@
 
 install:
 	pipenv install --dev
+
+install_req:
+	python3 -m venv venv && \
+	. venv/bin/activate && \
+	pip3 install -U pip setuptools wheel && \
+	pip3 install -r requirements.txt
+
 lint:
 	pipenv run pylint --rcfile=.pylintrc ccc/*.py
 test:
