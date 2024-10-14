@@ -4,5 +4,5 @@ numexpr>=2.8.6,<3.0
 bottleneck==1.4.0
 unidecode>=1.3.8,<2.0
 pyyaml>=6.0.1,<7.0
-trieregex>=1.0.0,1.1
+trieregex>=1.0.0,<1.1
 numpy<2.0
