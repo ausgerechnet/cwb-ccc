@@ -99,7 +99,7 @@ setup(
         "association-measures>=0.3.0,<0.4",
         "pandas>=2.0,<2.1",
         "numexpr>=2.8.6,<3.0",
-        "Bottleneck>=1.4.0,<2.0",
+        "Bottleneck==1.4.0",
         "unidecode>=1.3.8,<2.0",
         "pyyaml>=6.0.1,<7.0",
         "trieregex>=1.0.0,<1.1"
