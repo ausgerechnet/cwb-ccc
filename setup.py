@@ -98,6 +98,7 @@ setup(
         "wheel>=0.43.0,<1.0",
         "association-measures>=0.3.0,<0.4",
         "pandas>=2.0,<2.1",
+        "numpy<2.0",
         "numexpr>=2.8.6,<3.0",
         "Bottleneck==1.4.0",
         "unidecode>=1.3.8,<2.0",
