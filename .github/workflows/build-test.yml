@@ -1,4 +1,4 @@
-name: build & test
+name: Build & test using current Python versions
 
 on: [workflow_dispatch, push]
 
