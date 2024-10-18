@@ -1,4 +1,4 @@
-numpy<=1.24.0,<2.0
+numpy>=1.24.0,<2.0
 numexpr>=2.8.6,<3.0
 bottleneck==1.4.0
 pandas>=2.0,<2.1
