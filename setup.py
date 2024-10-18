@@ -95,12 +95,11 @@ setup(
     ext_modules=extensions,
     python_requires='>=3.8.0',
     install_requires=[
-        "wheel>=0.43.0,<1.0",
-        "association-measures>=0.3.0,<0.4",
-        "pandas>=2.0,<2.1",
-        "numpy<2.0",
+        "numpy>=1.24.0,<2.0",
         "numexpr>=2.8.6,<3.0",
-        "Bottleneck==1.4.0",
+        "bottleneck==1.4.0",
+        "pandas>=2.0,<2.1",
+        "association-measures>=0.3.0,<0.4",
         "unidecode>=1.3.8,<2.0",
         "pyyaml>=6.0.1,<7.0",
         "trieregex>=1.0.0,<1.1"
