@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ##########################
 # INSTALL OS DEPENDENCIES
@@ -52,8 +52,7 @@ RUN apt-get install ./cwb-dev_3.5.0-1_amd64.deb
 ##############################
 # INSTALL PYTHON DEPENDENCIES
 ##############################
-RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install -q pipenv
+RUN python3 -m pip install --upgrade pip
 
 RUN git clone https://github.com/ausgerechnet/cwb-ccc.git /cwb-ccc
 WORKDIR /cwb-ccc
