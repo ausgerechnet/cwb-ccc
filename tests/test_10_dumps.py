@@ -55,6 +55,13 @@ def test_breakdown_p_att(germaparl):
     assert breakdown.loc['gehen']['freq'] == 224
 
 
+def test_breakdown_anchor(germaparl):
+    corpus = get_corpus(germaparl)
+    restricted = corpus.query('[pos="APPR"]@1[pos="ADJA"][pos="NN"]')
+    bd = restricted.breakdown(p_atts=['lemma'], start=1, end=1)
+    assert bd.sort_values(by='freq', ascending=False).index[0] == 'neu'
+
+
 def test_matches(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
