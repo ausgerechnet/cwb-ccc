@@ -21,10 +21,14 @@ jobs:
         sed -i 's/SITE=beta-install/SITE=standard/' config.mk
         sudo ./install-scripts/install-linux
         sudo ldconfig
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        make install
     - name: Create Dist
       run: |
         make sdist
