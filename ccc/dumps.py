@@ -4,6 +4,8 @@
 
 definition of Dump and Dumps classes
 
+TODO: re-write as subcorpora
+
 """
 import logging
 
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 class Dumps:
     """ collection of dumps, i.e. query matches in different subcorpora """
 
-    def __init__(self, corpus, s_dict, s_att='text_id'):
+    def __init__(self, corpus, s_dict=None, s_att='text_id', df_dumps=None):
         """
         :param Corpus corpus: corpus to work on
         :param dict s_dict: dicitonary of {subcorpus_name: set of values for s_att}
@@ -28,13 +30,22 @@ class Dumps:
         self.s_dict = s_dict
         self.s_att = s_att
 
-        logger.info("creating subcorpora ...")
-        df_spans = corpus.dump_from_s_att(s_att)
         dumps = dict()
-        for i, s in enumerate(self.s_dict.keys()):
-            logger.info(f"... subcorpus {i+1} of {len(s_dict)}")
-            df_dump = df_spans.loc[df_spans[s_att].isin(s_dict[s])]
-            dumps[s] = corpus.subcorpus(None, df_dump)
+
+        if df_dumps is not None:
+            logger.info("saving subcorpora ...")
+            for i, s in enumerate(df_dumps.keys()):
+                logger.info(f"... subcorpus {i+1} of {len(df_dumps)}: %s")
+                df_dump = df_dumps[s]
+                dumps[s] = corpus.subcorpus(None, df_dump)
+
+        else:
+            logger.info("creating subcorpora ...")
+            df_spans = corpus.dump_from_s_att(s_att)
+            for i, s in enumerate(self.s_dict.keys()):
+                logger.info(f"... subcorpus {i+1} of {len(s_dict)}: %s")
+                df_dump = df_spans.loc[df_spans[s_att].isin(s_dict[s])]
+                dumps[s] = corpus.subcorpus(None, df_dump)
 
         self.dumps = dumps
 
@@ -47,7 +58,7 @@ class Dumps:
         """
         # TODO: multiproc
 
-        subset = list(self.s_dict.keys()) if subset is None else subset
+        subset = list(self.dumps.keys()) if subset is None else subset
 
         logger.info("computing keyword tables ...")
         tables = list()
@@ -73,6 +84,9 @@ class Dumps:
                    context_break=None, marginals='corpus',
                    show_negative=False):
         """
+        TODO: context / context_left / context_right
+        TODO: allow context = None
+
         reference:
         .. local: window freq. compared to marginals of subcorpus (excl. nodes)
         .. global: window freq. compared to marginals in whole corpus (excl. nodes)
@@ -84,7 +98,7 @@ class Dumps:
         """
         # TODO: multiproc
 
-        subset = list(self.s_dict.keys()) if subset is None else subset
+        subset = list(self.dumps.keys()) if subset is None else subset
         context_break = self.s_att if context_break is None else context_break
 
         # run query once and extend dump

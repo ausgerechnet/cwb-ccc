@@ -139,7 +139,7 @@ def keywords(corpus, corpus_reference, p=['lemma'],
         df = target.join(reference, how='outer')
         df['N1'] = target['f1'].sum()
         df['N2'] = reference['f2'].sum()
-        df = df.fillna(0, downcast='infer')
+        df = df.fillna(0)  # , downcast='infer')
 
         logger.info('-- cut-off')
         vocab = len(df)

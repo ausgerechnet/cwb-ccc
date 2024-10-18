@@ -316,8 +316,8 @@ class Constellation:
             logger.info('get cpos that are consumed by discoursemes')
             for idx, disc in self.discoursemes.items():
                 # print(idx)
-                cpos_total = disc.matches()  # cpos in whole corpus (if not approximate)
-                # cpos_in = set(df_cooc['cpos']).intersection(cpos_total)  # cpos in context
+                cpos_total = disc.matches()  # cpos of discoursemes in whole corpus (if not approximate)
+                # cpos_in = set(df_cooc['cpos']).intersection(cpos_total)  # cpos of discoursemes in topic context (respecting window)
                 # breakdown = disc.breakdown(p_atts=p_show)  # breakdown of discourseme
                 # print(len(cpos_total))
                 # print(len(cpos_in))

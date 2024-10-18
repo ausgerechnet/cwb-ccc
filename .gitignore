@@ -23,3 +23,5 @@ build/
 .Rproj.user
 .RData
 .Rhistory
+
+venv/

@@ -7,7 +7,7 @@
 
 **cwb-ccc** is a Python 3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries (including queries with more than two anchor points), extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
-The [Quickstart](#quickstart) should get you started. For a more detailed overview of the functionality, see the [Vignette](demos/vignette.md).
+The [Quickstart](#quickstart) gives a rough overview. For a more detailed dive into the functionality, see the [Vignette](demos/vignette.md).
 
 * [Installation](#installation)
 * [Quickstart](#quickstart)
@@ -22,7 +22,7 @@ The [Quickstart](#quickstart) should get you started. For a more detailed overvi
 
 ### Installation ###
 
-The module needs a working installation of the [CWB](http://cwb.sourceforge.net/) and operates on CWB-indexed corpora. If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.
+The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora. If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later. We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).
 
 You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 
@@ -30,10 +30,13 @@ You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 
 You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
 
-    python -m pip install pipenv
-    pipenv install --dev
-    pipenv run python3 -m cython -2 ccc/cl.pyx
-    pipenv run python3 setup.py bdist_wheel
+	python3 -m venv venv
+	. venv/bin/activate
+	pip3 install -U pip setuptools wheel twine
+	pip3 install -r requirements.txt
+	pip3 install -r requirements-dev.txt
+    python3 -m cython -2 ccc/cl.pyx
+    python3 setup.py bdist_wheel
 
 
 ## Quickstart ##
@@ -41,17 +44,18 @@ You can also clone the source from [github](https://github.com/ausgerechnet/cwb-
 ### Accessing Corpora ###
 
 To list all available corpora, you can use
+
 ```python
 from ccc import Corpora
-
-corpora = Corpora(registry_dir="/usr/local/share/cwb/registry/")
+corpora = Corpora(
+    registry_dir="/usr/local/share/cwb/registry/"
+)
 ```
 
-All further methods rely on the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
+Most functionality is tied to the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
 
 ```python
 from ccc import Corpus
-
 corpus = Corpus(
   corpus_name="GERMAPARL1386",
   registry_dir="/usr/local/share/cwb/registry/"
@@ -66,11 +70,20 @@ This will raise a `KeyError` if the named corpus is not in the specified registr
 The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
 
 ```python
-subcorpus = corpus.query('[lemma="Arbeit"]', context_break='s')
+subcorpus = corpus.query(
+    '[lemma="Arbeit"]', context_break='s'
+)
 ```
 
 The result is a `SubCorpus`; at its core this is a pandas DataFrame with corpus positions (similar to CWB dumps of NQRs).
 
+Note that you can also query for structural attributes, e.g.:
+
+```python
+corpus.query(
+    s_query='text_party', s_values={'CDU', 'CSU'}
+)
+```
 
 ### Concordancing ###
 
@@ -92,7 +105,6 @@ You can access concordance lines via the `concordance()` method of the subcorpus
 
 </p>
 </details>
-<br/>
 
 By default, this retrieves concordance lines in simple format in the order in which they appear in the corpus. A better approach is
 
@@ -112,7 +124,8 @@ By default, this retrieves concordance lines in simple format in the order in wh
 
 </p>
 </details>
-<br/>
+
+which retrieves random concordance lines in KWIC formatting. Use `cut_off` to specify the maximum number of lines.
 
 
 ### Collocation Analyses ###
@@ -134,9 +147,8 @@ After executing a query, you can use `subcorpus.collocates()` to extract colloca
 
 </p>
 </details>
-<br/>
 
-The dataframe contains the counts and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`).
+This allows calculating scores for arbitrary combinations of positional attributes, e.g. `p_query=['lemma', 'pos']`.  The dataframe contains the counts and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`).
 
 
 ### Keyword Analyses ###
@@ -144,7 +156,9 @@ The dataframe contains the counts and is annotated with all available associatio
 Having created a subcorpus
 
 ```python
-subcorpus = corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
+subcorpus = corpus.query(
+    s_query='text_party', s_values={'CDU', 'CSU'}
+)
 ```
 
 you can use its `keywords()` method for retrieving keywords:
@@ -164,13 +178,12 @@ you can use its `keywords()` method for retrieving keywords:
 
 </p>
 </details>
-<br/>
 
 Just as with collocates, the result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns.
 
-
 ## Testing ##
-The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996. This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
+
+The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.  This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
 
 <details>
 <summary><code>corpus.available_attributes()</code></summary>
@@ -206,19 +219,12 @@ The module ships with a small test corpus ("GERMAPARL1386"), which contains all 
 
 </p>
 </details>
-<br/>
 
-The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus (as well as some reference counts and scores from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists).  Make sure you install all development dependencies (especially [pytest](https://pytest.org/)):
+The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus as well as some reference counts and scores obtained from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists.  Make sure you install all development dependencies (especially [pytest](https://pytest.org/)).  You can then
 
-    python -m pip install pipenv
-    pipenv install --dev
-
-You can then simply
-
-    make build
-    make test
-    make coverage
-
+    pytest -m "not benchmark"
+    pytest -m benchmark
+    pytest --cov-report term-missing -v --cov=ccc/
 
 ## Acknowledgements ##
 
@@ -226,4 +232,4 @@ You can then simply
 - Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 - The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 - This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
-- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the project [Reconstructing Arguments from Noisy Text](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057 (2018-2024), as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
+- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the projects [Reconstructing Arguments from Noisy Text (2018-2021) and Newsworthy Debates (2021-2024)](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057, as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).

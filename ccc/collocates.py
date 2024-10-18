@@ -9,7 +9,7 @@ import logging
 from itertools import chain
 
 # requirements
-from pandas import DataFrame
+from pandas import DataFrame, to_numeric
 
 # part of module
 from .cache import generate_idx
@@ -113,8 +113,8 @@ class Collocates:
 
         if not isinstance(collocates, DataFrame):
 
-            # get window counts and apply min freq
             logger.info('.. counting')
+            # get window counts and apply min freq
             f = self.count(window).rename(columns={'freq': 'f'})
             vocab = len(f)
             f1 = f['f'].sum()
@@ -135,18 +135,20 @@ class Collocates:
                 raise NotImplementedError
 
             # f2 = marginals - node frequencies
-            logger.info('.. calculating')
             f2 = marginals[['freq']].rename(columns={'freq': 'marginal'}).join(
                 self.node_freq[['freq']].rename(columns={'freq': 'in_nodes'})
             )
-            f2 = f2.fillna(0, downcast='infer')
+            f2['in_nodes'] = to_numeric(f2['in_nodes'], downcast='integer')
+            f2 = f2.fillna(0)  # , downcast='infer')
             f2['f2'] = f2['marginal'] - f2['in_nodes']
+            f2['f2'] = to_numeric(f2['f2'], downcast='integer')
 
+            logger.info('.. calculating')
             # create dataframe
             df = f[['f']].join(f2[['f2']], how='left')
             df['f1'] = f1
             df['N'] = N
-            df = df.fillna(0, downcast='infer')
+            df = df.fillna(0)  # , downcast='infer')
 
             # score
             collocates = score_counts(df, order=order, cut_off=None,
@@ -171,7 +173,7 @@ class Collocates:
         return collocates
 
 
-def dump2cooc(df_dump, context=None):
+def dump2cooc(df_dump, context=None, rm_nodes=True, drop_duplicates=True):
     """ converts df_dump to df_cooc + f1_set
 
     strategy:
@@ -226,13 +228,19 @@ def dump2cooc(df_dump, context=None):
         'offset': list(chain.from_iterable(df['offset_list'].values))
     })
 
-    logger.info("(2a) sort by absolute offset")
-    df_infl['abs_offset'] = df_infl.offset.abs()
-    df_infl = df_infl.sort_values(by=['abs_offset', 'cpos'])
-    df_infl = df_infl.drop(["abs_offset"], axis=1)
+    if drop_duplicates:
+        logger.info("(2a) sort by absolute offset")
+        df_infl['abs_offset'] = df_infl.offset.abs()
+        df_infl = df_infl.sort_values(by=['abs_offset', 'cpos'])
+        df_infl = df_infl.drop(["abs_offset"], axis=1)
 
-    logger.info("(2b) drop duplicates")
-    df_defl = df_infl.drop_duplicates(subset='cpos')
+        logger.info("(2b) drop duplicates")
+        df_defl = df_infl.drop_duplicates(subset='cpos')
+    else:
+        df_defl = df_infl
+
+    if not rm_nodes:
+        return df_defl
 
     logger.info("(3a) identify nodes ...")
     f1_set = set(df_defl.loc[df_defl['offset'] == 0]['cpos'])

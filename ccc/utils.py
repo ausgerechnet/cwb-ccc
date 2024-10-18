@@ -10,6 +10,7 @@ import pkgutil
 import re
 from functools import wraps
 from timeit import default_timer
+from trieregex import TrieRegEx as TRE
 
 # requirements
 import numpy as np
@@ -85,6 +86,25 @@ def correct_anchors(df, corrections):
 ###########
 # QUERIES #
 ###########
+CQP_META = {
+    ".": r"\.",
+    "?": r"\?",
+    "*": r"\*",
+    "+": r"\+",
+    "|": r"\|",
+    "(": r"\(",
+    ")": r"\)",
+    "[": r"\[",
+    "]": r"\]",
+    "{": r"\{",
+    "}": r"\}",
+    "^": r"\^",
+    "$": r"\$",
+    '"': r"\"",
+    "'": r"\'"
+}
+
+
 def cqp_escape(token):
     """ escape CQP meta-characters
 
@@ -93,58 +113,69 @@ def cqp_escape(token):
     :rtype: str
 
     """
-    return token.translate(str.maketrans({
-        ".": r"\.",
-        "?": r"\?",
-        "*": r"\*",
-        "+": r"\+",
-        "|": r"\|",
-        "(": r"\(",
-        ")": r"\)",
-        "[": r"\[",
-        "]": r"\]",
-        "{": r"\{",
-        "}": r"\}",
-        "^": r"\^",
-        "$": r"\$",
-        '"': r"\"",
-        "'": r"\'"
-    }))
+    return token.translate(str.maketrans(CQP_META))
 
 
-def format_cqp_query(items, p_query='word', s_query=None,
-                     flags="", escape=True):
+def cqp_unescape(token):
+
+    token = token.replace("\\\\", "\\")
+
+    for unescaped, escaped in CQP_META.items():
+        token = token.replace(escaped, unescaped)
+
+    return token
+
+
+def format_cqp_query(items, p_query='word', s_query=None, flags="", escape=True):
     """ wrapper for easy queries
 
     :return: valid cqp query
     :rtype: str
     """
 
-    # gather all MWUs
+    # three-way categorisation
     mwu_queries = list()
     single_items = list()
+    single_items_escaped = list()
+
     for item in items:
 
-        # escape item (optional)
-        if escape:
-            item = cqp_escape(item)
-
-        # split items on white-space
         tokens = item.split(" ")
+
         if len(tokens) > 1:
             mwu_query = ""
-
-            # convert to CQP syntax considering p-att and flags
             for token in tokens:
+                token = cqp_escape(token) if escape else token
                 mwu_query += f'[{p_query}="{token}"{flags}]'
-
-            # add MWU item to list
             mwu_queries.append("(" + mwu_query + ")")
-        else:
-            single_items.append(tokens[0])
 
-    singles_query = "([" + p_query + "=" + '"' + "|".join(single_items) + '"' + flags + "])"
-    queries = mwu_queries + [singles_query]
+        else:
+
+            if escape:
+                item_escaped = cqp_escape(item)
+                if item_escaped == item:
+                    single_items.append(item)
+                else:
+                    single_items_escaped.append(item_escaped)
+            else:
+                item_escaped = cqp_escape(item)
+                if item_escaped == item:
+                    single_items.append(item)
+                else:
+                    single_items_escaped.append(item)
+
+    singles_queries = []
+    if len(single_items) > 0:
+        reg = TRE(*single_items).regex().replace("?:", "")
+        singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
+
+    singles_queries_escaped = []
+    if len(single_items_escaped) > 0:
+        reg = "|".join(single_items_escaped)
+        singles_queries = ["([" + p_query + "=" + '"' + reg + '"' + flags + "])"]
+
+    queries = mwu_queries + singles_queries + singles_queries_escaped
+
     # disjunctive join
     query = ' | '.join(queries)
 
@@ -241,7 +272,7 @@ node2cotext = np.vectorize(_node2cotext)
 
 def merge_intervals(inter, start_index=0):
     """for merging contexts; union of intervals. intervals can have
-    arbitrary overlaps, but must be sorted by left boundaries
+    arbitrary overlaps, but must be sorted by left boundaries.
 
     :param list inter: list of intervals (each one a pair of left and right boundary)
     :param int start_index: for recursive application
@@ -397,7 +428,7 @@ def fold_df(df, flags="%cd"):
     df.index = df.index.map(lambda x: fold_item(x, flags))
     df = df.select_dtypes(include=np.number)
     grouped = df.groupby(df.index)
-    df = grouped.aggregate(np.sum)
+    df = grouped.aggregate('sum')
     return df
 
 
@@ -549,8 +580,7 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
     for name in names:
 
         role = [None] * len(d['offset'])
-
-        if not isinstance(row[name], float):
+        if row[name] and not isinstance(row[name], float):
             for t in row[name]:
 
                 # check match information
@@ -563,7 +593,7 @@ def format_roles(row, names, s_show, window, htmlify_meta=False):
                     start = 1
                     end = 2
                 else:
-                    continue
+                    raise ValueError()
 
                 # skip NAs
                 if not isinstance(t[start], int):

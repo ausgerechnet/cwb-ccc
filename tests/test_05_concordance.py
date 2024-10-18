@@ -21,7 +21,7 @@ def get_corpus(corpus_settings, data_dir=DATA_PATH):
 # CONCORDANCE #
 ###############
 @pytest.mark.concordance
-@pytest.mark.now
+@pytest.mark.quick_conc
 def test_ccc_quick_conc(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -49,6 +49,7 @@ def test_ccc_quick_conc(germaparl):
 
 
 @pytest.mark.concordance
+@pytest.mark.quick_conc
 def test_ccc_quick_conc_2(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -74,6 +75,7 @@ def test_ccc_quick_conc_2(germaparl):
 
 
 @pytest.mark.concordance
+@pytest.mark.quick_conc
 def test_ccc_quick_conc_random(germaparl):
 
     corpus = get_corpus(germaparl)
@@ -109,10 +111,10 @@ def test_concordance_simple(germaparl):
         df_dump,
         p_show=['word', 'lemma']
     )
-    assert(len(lines) == len(df_dump))
-    assert(all(col in lines.columns for col in [
+    assert len(lines) == len(df_dump)
+    assert all(col in lines.columns for col in [
         'word', 'lemma'
-    ]))
+    ])
 
 
 @pytest.mark.raw
@@ -124,10 +126,10 @@ def test_concordance_simple_nocontext(germaparl):
         df_dump,
         p_show=['word']
     )
-    assert(len(lines) == len(df_dump))
-    assert(all(col in lines.columns for col in [
+    assert len(lines) == len(df_dump)
+    assert all(col in lines.columns for col in [
         'word'
-    ]))
+    ])
 
 
 @pytest.mark.raw
@@ -139,11 +141,11 @@ def test_concordance_kwic(germaparl):
         df_dump,
         p_show=['word', 'lemma']
     )
-    assert(len(lines) == len(df_dump))
-    assert(all(col in lines.columns for col in [
+    assert len(lines) == len(df_dump)
+    assert all(col in lines.columns for col in [
         'left_word', 'node_word', 'right_word',
         'left_lemma', 'node_lemma', 'right_lemma'
-    ]))
+    ])
 
 
 @pytest.mark.raw
@@ -155,10 +157,10 @@ def test_concordance_kwic_nocontext(germaparl):
         df_dump,
         p_show=['word']
     )
-    assert(len(lines) == len(df_dump))
-    assert(all(col in lines.columns for col in [
+    assert len(lines) == len(df_dump)
+    assert all(col in lines.columns for col in [
         'left_word', 'node_word', 'right_word'
-    ]))
+    ])
 
 
 @pytest.mark.raw
@@ -174,11 +176,11 @@ def test_concordance_slots_singletons(germaparl):
         df_dump,
         ['word', 'lemma']
     )
-    assert(set(lines.columns) == {
+    assert set(lines.columns) == {
         "word", "lemma",
         "1_word", "1_lemma", "2_word", "2_lemma", "3_word", "3_lemma",
         "match..matchend_word", "match..matchend_lemma"
-    })
+    }
 
 
 @pytest.mark.raw
@@ -195,9 +197,9 @@ def test_concordance_slots_regions(germaparl):
         ['word'],
         slots=[['match', 1], [2, 3]]
     )
-    assert(set(lines.columns) == {
+    assert set(lines.columns) == {
         "word", "match..1_word", "2..3_word"
-    })
+    }
 
 
 @pytest.mark.raw
@@ -214,9 +216,9 @@ def test_concordance_slots_regions_dict(germaparl):
         ['word'],
         slots={'mp': ['match', 1], 'party': [2, 3]}
     )
-    assert(set(lines.columns) == {
+    assert set(lines.columns) == {
         'word', 'mp_word', 'party_word'
-    })
+    }
 
 
 @pytest.mark.line
@@ -231,8 +233,8 @@ def test_concordance_export_dict(germaparl):
     text_line = concordance._export(
         line.name, line, p_show=['word', 'pos'], form='dict'
     )
-    assert(isinstance(text_line, dict))
-    assert('cpos' in text_line)
+    assert isinstance(text_line, dict)
+    assert 'cpos' in text_line
 
 
 @pytest.mark.line
@@ -247,7 +249,7 @@ def test_concordance_export_dataframe(germaparl):
     text_line = concordance._export(
         line.name, line, p_show=['word', 'pos'], form='dataframe'
     )
-    assert(isinstance(text_line, pd.DataFrame))
+    assert isinstance(text_line, pd.DataFrame)
 
 
 @pytest.mark.raw
@@ -259,8 +261,8 @@ def test_concordance_dict(germaparl):
         df_dump,
         p_show=['word']
     )
-    assert(isinstance(lines['dict'].iloc[0], dict))
-    assert('word' in lines['dict'].iloc[0])
+    assert isinstance(lines['dict'].iloc[0], dict)
+    assert 'word' in lines['dict'].iloc[0]
 
 
 @pytest.mark.raw
@@ -274,8 +276,8 @@ def test_concordance_dataframes(germaparl):
     concordance = Concordance(corpus, result.df)
     df = concordance.dict(result.df, p_show=['word', 'lemma'])
     lines = concordance.dataframe(df, p_show=['word', 'lemma'])
-    assert('dataframe' in lines.columns)
-    assert(isinstance(lines['dataframe'].iloc[0], pd.DataFrame))
+    assert 'dataframe' in lines.columns
+    assert isinstance(lines['dataframe'].iloc[0], pd.DataFrame)
 
 
 @pytest.mark.lines
@@ -291,41 +293,41 @@ def test_concordance_lines(germaparl):
 
     # default = simple
     lines = concordance.lines()
-    assert(len(lines) > 10)
-    assert('word' in lines.columns)
+    assert len(lines) > 10
+    assert 'word' in lines.columns
 
     # kwic
     lines = concordance.lines(form='kwic', cut_off=10)
-    assert(all(
+    assert all(
         elem in lines.columns for elem in ['left_word', 'node_word', 'right_word']
-    ))
-    assert(len(lines) == 10)
+    )
+    assert len(lines) == 10
 
     # kwic with s-attribute
     lines = concordance.lines(form='kwic', s_show=['text_id'], cut_off=10)
-    assert(len(lines) == 10)
-    assert('text_id' in lines.columns)
+    assert len(lines) == 10
+    assert 'text_id' in lines.columns
 
     # slots
     lines = concordance.lines(form='slots', s_show=['text_id'], cut_off=10)
-    assert(len(lines) == 10)
-    assert(all(
+    assert len(lines) == 10
+    assert all(
         elem in lines.columns for elem in ['match..matchend_word', '1_word']
-    ))
+    )
 
     # dict
     lines = concordance.lines(form='dict', s_show=['text_id'], cut_off=10)
-    assert(len(lines) == 10)
-    assert(all(
+    assert len(lines) == 10
+    assert all(
         elem in lines.columns for elem in ['dict', 'text_id']
-    ))
+    )
 
     # dict
     lines = concordance.lines(form='dataframe', s_show=['text_id'], cut_off=10)
-    assert(len(lines) == 10)
-    assert(all(
+    assert len(lines) == 10
+    assert all(
         elem in lines.columns for elem in ['dataframe', 'text_id']
-    ))
+    )
 
 
 @pytest.mark.lines
@@ -337,7 +339,7 @@ def test_concordance_many(germaparl):
     result = corpus.query(query)
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines()
-    assert(len(lines) == 100)
+    assert len(lines) == 100
 
 
 @pytest.mark.lines
@@ -349,8 +351,8 @@ def test_concordance_p_atts(germaparl):
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines(p_show=['lemma', 'pos'], form='dataframe')
-    assert('pos' in lines.iloc[0]['dataframe'].columns)
-    assert(len(lines) == 13)
+    assert 'pos' in lines.iloc[0]['dataframe'].columns
+    assert len(lines) == 13
 
 
 @pytest.mark.lines
@@ -362,7 +364,7 @@ def test_concordance_anchors(germaparl):
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines(p_show=['lemma', 'pos'], form='dataframe')
-    assert(len(lines) == 13)
+    assert len(lines) == 13
 
 
 @pytest.mark.lines
@@ -374,7 +376,7 @@ def test_concordance_anchors_weird(germaparl):
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines(order='random', cut_off=100, form='dataframe')
-    assert(len(lines) == 13)
+    assert len(lines) == 13
 
 
 @pytest.mark.lines
@@ -386,7 +388,7 @@ def test_concordance_form_simple(germaparl):
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines(order='random', cut_off=100, form='simple')
-    assert(len(lines) == 13)
+    assert len(lines) == 13
 
 
 @pytest.mark.lines
@@ -398,7 +400,7 @@ def test_concordance_form_kwic(germaparl):
     result = corpus.query(query, context_break='s')
     concordance = Concordance(corpus, result.df)
     lines = concordance.lines(order='random', cut_off=100, form='kwic')
-    assert(len(lines) == 13)
+    assert len(lines) == 13
 
 
 @pytest.mark.lines
@@ -427,8 +429,8 @@ def test_concordance_persistence(germaparl):
     line_3 = concordance.lines(cut_off=1, form='dataframe')
     df_3 = line_3['dataframe'].iloc[0]
 
-    assert(df_1.equals(df_2))
-    assert(not df_2.equals(df_3))
+    assert df_1.equals(df_2)
+    assert not df_2.equals(df_3)
 
 
 @pytest.mark.fail
@@ -439,7 +441,7 @@ def test_concordance_empty(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(conc.lines().empty)
+    assert conc.lines().empty
 
 
 @pytest.mark.fail
@@ -471,7 +473,7 @@ def test_concordance_last(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(isinstance(conc.lines(order='last'), pd.DataFrame))
+    assert isinstance(conc.lines(order='last'), pd.DataFrame)
 
 
 def test_concordance_fallback(germaparl):
@@ -481,10 +483,7 @@ def test_concordance_fallback(germaparl):
     )
     dump = corpus.query(query)
     conc = Concordance(corpus, dump.df)
-    assert(isinstance(
-        conc.lines(order='last', form='simple', p_show=['word', 'lemma']),
-        pd.DataFrame)
-    )
+    assert isinstance(conc.lines(order='last', form='simple', p_show=['word', 'lemma']), pd.DataFrame)
 
 
 @pytest.mark.benchmark

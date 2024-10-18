@@ -30,8 +30,8 @@ def test_lexdecode_and_read(germaparl):
                             germaparl['registry_dir'],
                             'lemma')
 
-    assert(R1 == R2)
-    assert(df1.equals(df2))
+    assert R1 == R2
+    assert df1.equals(df2)
 
 
 @pytest.mark.cwb_counts
@@ -65,7 +65,7 @@ def test_cwb_scan_corpus_subcorpora(germaparl):
                                   f.name)
 
     # check that results are different
-    assert(sum(df2['freq']) != sum(df1['freq']))
+    assert sum(df2['freq']) != sum(df1['freq'])
 
     cqp.__del__()
 
@@ -83,10 +83,10 @@ def test_cwb_scan_corpus_marginal(germaparl):
         germaparl['registry_dir'],
         p_atts=['lemma', 'pos']
     )
-    assert(df1.index.name == 'item')
-    assert(df2.index.name == 'item')
-    assert(list(df1.columns) == ['freq', 'word'])
-    assert(list(df2.columns) == ['freq', 'lemma', 'pos'])
+    assert df1.index.name == 'item'
+    assert df2.index.name == 'item'
+    assert list(df1.columns) == ['freq', 'word']
+    assert list(df2.columns) == ['freq', 'lemma', 'pos']
 
 
 @pytest.mark.marginals
@@ -94,8 +94,8 @@ def test_cwb_scan_corpus_marginal(germaparl):
 def test_marginals(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.marginals(["Helmut", "Kohl", "CDU"])
-    assert(len(freqframe) == 3)
-    assert(isinstance(freqframe, pd.DataFrame))
+    assert len(freqframe) == 3
+    assert isinstance(freqframe, pd.DataFrame)
 
 
 @pytest.mark.marginals
@@ -112,28 +112,28 @@ def test_marginals_all(germaparl):
 def test_marginals_patterns(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.marginals(["H.*", "Kohl", "CDU"])
-    assert(len(freqframe) == 3)
-    assert(isinstance(freqframe, pd.DataFrame))
-    assert(freqframe.loc['H.*']['freq'] == 0)
+    assert len(freqframe) == 3
+    assert isinstance(freqframe, pd.DataFrame)
+    assert freqframe.loc['H.*']['freq'] == 0
     freqframe = corpus.marginals(["H.*", "Kohl", "CDU"], pattern=True)
-    assert(len(freqframe) == 3)
-    assert(isinstance(freqframe, pd.DataFrame))
-    assert(freqframe.loc['H.*']['freq'] == 2466)
+    assert len(freqframe) == 3
+    assert isinstance(freqframe, pd.DataFrame)
+    assert freqframe.loc['H.*']['freq'] == 2466
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['word'])
-    assert(isinstance(freqframe, pd.DataFrame))
+    assert isinstance(freqframe, pd.DataFrame)
 
 
 @pytest.mark.cwb_counts
 def test_count_cpos_combo(germaparl):
     corpus = get_corpus(germaparl)
     freqframe = corpus.counts.cpos(list(range(1, 1000)), p_atts=['lemma', 'pos'])
-    assert(isinstance(freqframe, pd.DataFrame))
-    assert(list(freqframe.columns) == ['freq'] + ['lemma', 'pos'])
+    assert isinstance(freqframe, pd.DataFrame)
+    assert list(freqframe.columns) == ['freq'] + ['lemma', 'pos']
 
 
 @pytest.mark.marginals
@@ -152,20 +152,20 @@ def test_count_items(germaparl):
     # whole corpus
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
-    assert(list(counts1["freq"]) == list(counts2["freq"]))
+    assert list(counts1["freq"]) == list(counts2["freq"])
 
     # subcorpus
     cqp.nqr_from_query(query='[lemma="und"] expand to s', name='und')
     cqp.nqr_activate(corpus.corpus_name, 'und')
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
-    assert(counts1.loc[items[0], 'freq'] > counts2.loc[queries[0], 'freq'])
+    assert counts1.loc[items[0], 'freq'] > counts2.loc[queries[0], 'freq']
 
     # whole corpus
     cqp.nqr_activate(corpus.corpus_name)
     counts1 = corpus.marginals(items)
     counts2 = corpus.counts.mwus(cqp, queries)
-    assert(list(counts1["freq"]) == list(counts2["freq"]))
+    assert list(counts1["freq"]) == list(counts2["freq"])
 
     cqp.__del__()
 
@@ -189,7 +189,7 @@ def test_count_mwus_3(germaparl):
     )
     cqp.__del__()
 
-    assert(counts3['freq']['CSU'] == 635)
+    assert counts3['freq']['CSU'] == 635
 
 
 @pytest.mark.mwus
@@ -210,7 +210,7 @@ def test_count_mwus_strategies(germaparl):
         strategy=1,
         fill_missing=False
     )
-    assert(queries[0] in counts1.index)
+    assert queries[0] in counts1.index
 
     counts2 = corpus.counts.mwus(
         cqp,
@@ -227,8 +227,8 @@ def test_count_mwus_strategies(germaparl):
     )
 
     cqp.__del__()
-    assert(counts2.equals(counts3))
-    assert(sum(counts1['freq']) == sum(counts2['freq']))
+    assert counts2.equals(counts3)
+    assert sum(counts1['freq']) == sum(counts2['freq'])
 
 
 @pytest.mark.cwb_counts
@@ -249,7 +249,7 @@ def test_count_items_subcorpora(germaparl):
         strategy=1,
         fill_missing=False
     )
-    assert(sum(counts1['freq']) > 0)
+    assert sum(counts1['freq']) > 0
 
     counts2 = corpus.counts.mwus(
         cqp,
@@ -264,7 +264,7 @@ def test_count_items_subcorpora(germaparl):
         strategy=3,
         fill_missing=False
     )
-    assert(counts2.equals(counts3))
+    assert counts2.equals(counts3)
     cqp.__del__()
 
 
@@ -276,10 +276,10 @@ def test_counts_dump_mwu_1_split(germaparl):
     dump = corpus.dump_from_query('[lemma="die" %cd] [pos="N.*"]')
 
     df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
-    assert(int(df["freq"]["der"]) == 3775)
+    assert int(df["freq"]["der"]) == 3775
 
     df = corpus.counts.dump(dump, p_atts=['word', 'lemma'], split=True, strategy=strategy)
-    assert(int(df["freq"]["der die"]) == 3775)
+    assert int(df["freq"]["der die"]) == 3775
 
 
 @pytest.mark.cwb_counts
@@ -291,10 +291,10 @@ def test_counts_dump_mwu_1_no_split(germaparl):
 
     # no split
     df = corpus.counts.dump(dump, p_atts=['word'], split=False, strategy=strategy)
-    assert("Helmut Kohl" in df.index)
+    assert "Helmut Kohl" in df.index
 
     df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=False, strategy=strategy)
-    assert("Helmut Kohl NE NE" in df.index)
+    assert "Helmut Kohl NE NE" in df.index
 
 
 @pytest.mark.cwb_counts
@@ -305,18 +305,18 @@ def test_counts_dump_mwu_2(germaparl):
     dump = corpus.dump_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]')
 
     df = corpus.counts.dump(dump, p_atts=['word'], split=True, strategy=strategy)
-    assert(df["freq"]["Helmut"] == 6)
+    assert df["freq"]["Helmut"] == 6
 
     df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=True, strategy=strategy)
-    assert(df["freq"]["Helmut NE"] == 6)
+    assert df["freq"]["Helmut NE"] == 6
 
     df = corpus.counts.dump(dump, p_atts=['word'], split=False, strategy=strategy)
-    assert("Helmut Kohl" in df.index)
-    assert(df["freq"].iloc[0] == 6)
+    assert "Helmut Kohl" in df.index
+    assert df["freq"].iloc[0] == 6
 
     df = corpus.counts.dump(dump, p_atts=['word', 'pos'], split=False, strategy=strategy)
-    assert(("Helmut Kohl NE NE") in df.index)
-    assert(df["freq"].iloc[0] == 6)
+    assert ("Helmut Kohl NE NE") in df.index
+    assert df["freq"].iloc[0] == 6
 
 
 @pytest.mark.cwb_counts
@@ -331,18 +331,18 @@ def test_counts_matches_mwu_1(germaparl):
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                flags="%cd", strategy=strategy)
-    assert("helmut kohl" in df.index)
+    assert "helmut kohl" in df.index
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                strategy=strategy)
-    assert("Helmut Kohl" in df.index)
+    assert "Helmut Kohl" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
-    assert("helmut" in df.index)
+    assert "helmut" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
-    assert("Helmut" in df.index)
+    assert "Helmut" in df.index
 
     cqp.__del__()
 
@@ -359,19 +359,19 @@ def test_counts_matches_mwu_2(germaparl):
     cqp.nqr_activate(corpus.corpus_name, 'Last')
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                flags="%cd", strategy=strategy)
-    assert("helmut kohl" in df.index)
+    assert "helmut kohl" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=False,
                                strategy=strategy)
-    assert("Helmut Kohl" in df.index)
+    assert "Helmut Kohl" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
-    assert("helmut" in df.index)
+    assert "helmut" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
-    assert("Helmut" in df.index)
+    assert "Helmut" in df.index
     cqp.__del__()
 
 
@@ -385,15 +385,15 @@ def test_counts_matches_mwu_3(germaparl):
     cqp.nqr_from_query('[lemma="Helmut"%cd] [lemma="Kohl"%cd]', name='Last')
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                flags="%cd", strategy=strategy)
-    assert("helmut" in df.index)
+    assert "helmut" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word'], split=True,
                                strategy=strategy)
-    assert("Helmut" in df.index)
+    assert "Helmut" in df.index
 
     df = corpus.counts.matches(cqp, 'Last', p_atts=['word', 'pos'], split=True,
                                strategy=strategy)
-    assert("Helmut NE" in df.index)
+    assert "Helmut NE" in df.index
     cqp.__del__()
 
 
@@ -406,20 +406,20 @@ def test_counts_mwus(germaparl):
     df = corpus.counts.mwus(cqp,
                             queries,
                             strategy=1)
-    assert(df['freq'][queries[1]] == 55)
+    assert df['freq'][queries[1]] == 55
 
     df = corpus.counts.mwus(cqp,
                             queries,
                             strategy=3,
                             p_atts=['lemma', 'pos'])
-    assert(df['freq']['Horst NE'] == 55)
+    assert df['freq']['Horst NE'] == 55
 
     df = corpus.counts.mwus(cqp,
                             queries,
                             strategy=3,
                             p_atts=['lemma'])
 
-    assert(df['freq']['Horst'] == 55)
+    assert df['freq']['Horst'] == 55
 
     cqp.__del__()
 
@@ -432,7 +432,7 @@ def test_cwb_counts(germaparl):
     df = corpus.counts.mwus(cqp,
                             queries)
 
-    assert(df['freq'][queries[1]] == 55)
+    assert df['freq'][queries[1]] == 55
     cqp.__del__()
 
 
@@ -445,7 +445,7 @@ def test_score_counts(germaparl, empirist):
     )
     df['N1'] = R1
     df['N2'] = R2
-    df = df.fillna(0, downcast='infer')
+    df = df.fillna(0)  # , downcast='infer')
 
     kw = score_counts(df, cut_off=None)
     assert kw['log_likelihood']['die'] == 4087.276827

@@ -23,7 +23,7 @@ def get_corpus(corpus_settings, data_dir=DATA_PATH):
 def test_query(germaparl):
     corpus = get_corpus(germaparl)
     subcorpus = corpus.query('"SPD"')
-    assert subcorpus.subcorpus_name == 'Last'
+    assert subcorpus.subcorpus_name == 'df_b37e127b31'
     assert len(subcorpus.df) == 632
     assert (subcorpus.df.columns == ['context', 'contextend']).all()
 

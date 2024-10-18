@@ -259,17 +259,19 @@ class CQP:
 
     def Undump(self, subcorpus="Last", df=DataFrame()):
         """Undump named query result from table of corpus positions."""
-        columns = []
+
+        columns = ['match', 'matchend']
         wth = ''
         if 'target' in df.columns:
             wth = 'with target '
-            columns = ['target']
-            if 'keyword' in df.columns:
-                wth = 'with target keyword '
-                columns = ['target', 'keyword']
+            columns = columns + ['target']
+        if 'keyword' in df.columns:
+            wth = 'with target keyword '
+            columns = columns + ['keyword']
+
         with NamedTemporaryFile(mode='wt') as f:
             f.write(str(len(df)) + "\n")
-            df.to_csv(f, mode="a", sep="\t", columns=columns, header=None)
+            df.reset_index().to_csv(f, mode="a", sep="\t", columns=columns, header=None, index=False)
             f.seek(0)
             f.flush()
             self.Exec("undump " + subcorpus + " " + wth + '< "' + f.name + '";')
@@ -401,7 +403,7 @@ class CQP:
 
         size = int(self.Exec(f"size {name}"))
         if size == 0:
-            logger.warning(f'no results for query: {query}')
+            logger.info(f'no results for query: {query}')
             return DataFrame() if return_dump else None
 
         if return_dump:
@@ -488,7 +490,6 @@ def start_cqp(cqp_bin, registry_dir,
             abs_path = os.path.abspath(wordlist)
             cqp_exec = f'define ${name} < "{abs_path}";'
             cqp.Exec(cqp_exec)
-
         # macros
         macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
         for macro in macros:
@@ -508,6 +509,6 @@ def start_cqp(cqp_bin, registry_dir,
         cqp.Exec(subcorpus_name)
 
     if not cqp.Ok():
-        raise NotImplementedError()
+        raise NotImplementedError(cqp.error_message.decode())
 
     return cqp

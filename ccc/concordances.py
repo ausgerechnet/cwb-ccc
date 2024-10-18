@@ -13,7 +13,7 @@ from random import sample, seed
 from pandas import DataFrame
 
 # part of module
-from .utils import _node2cotext
+from .utils import cqp_escape, decode, _node2cotext
 
 logger = logging.getLogger(__name__)
 
@@ -282,7 +282,7 @@ class Concordance:
         logger.info('lines: selecting matches')
         if matches is None:
             # select all matches
-            matches = set(self.df_dump.index.droplevel('matchend'))
+            matches = list(self.df_dump.index.droplevel('matchend'))
         # pre-process cut_off if necessary
         if (cut_off is None) or (len(matches) < cut_off):
             cut_off = len(matches)
@@ -290,15 +290,19 @@ class Concordance:
         if isinstance(order, int):
             seed(order)
             order = 'random'
+
         if order == 'random':
             matches = sample(list(matches), cut_off)
         elif order == 'first':
             matches = sorted(list(matches))[:cut_off]
         elif order == 'last':
             matches = sorted(list(matches))[-cut_off:]
+        elif order == 'asis':
+            pass
         else:
             logger.error('order not implemented, using "random" order')
             order = 'random'
+            matches = sample(list(matches), cut_off)
         logger.info(f"lines: retrieving {len(matches)} concordance line(s)")
         df = self.df_dump.loc[list(matches), :]
 
@@ -326,3 +330,139 @@ class Concordance:
                 df[s_att + "_cwbid"] = tmp[s_att + "_cwbid"]
 
         return df
+
+
+# def format_concordance(corpus, matches_df, p_show, s_show, order, cut_off, window, matches_filter, matches_highlight):
+
+#     # TODO: simplify, retrieve more tokens left and right
+#     concordance = Concordance(corpus, matches_df)
+#     lines = concordance.lines(form='dict', p_show=p_show, s_show=s_show, order=order, cut_off=None)
+#     out = list()
+#     for line in lines.iterrows():
+
+#         meta = {s: line[1][s] for s in s_show}
+#         line = line[1]['dict']
+
+#         roles = list()
+#         discoursemes_in_window = {disc_name: False for disc_name in matches_filter.keys()}
+
+#         for cpos, offset in zip(line['cpos'], line['offset']):
+#             cpos_roles = list()
+#             # node
+#             if offset == 0:
+#                 cpos_roles.append('node')
+#             # out of window
+#             elif abs(offset) > window:
+#                 cpos_roles.append('out_of_window')
+
+#             # highlighting
+#             for disc_name, disc_matches in matches_highlight.items():
+#                 if cpos in disc_matches:
+#                     cpos_roles.append(disc_name)
+
+#             # filtering
+#             for disc_name, disc_matches in matches_filter.items():
+#                 if cpos in disc_matches:
+#                     cpos_roles.append(disc_name)
+#                     if abs(offset) <= window:
+#                         discoursemes_in_window[disc_name] = True
+
+#             roles.append(cpos_roles)
+
+#         # we filter here according to window size
+#         if sum(discoursemes_in_window.values()) >= len(matches_filter):
+#             line['lemma'] = [cqp_escape(item) for item in line['lemma']]
+#             line['role'] = roles
+#             line['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
+#             out.append(line)
+
+#         if len(out) >= cut_off:
+#             break
+
+#     return out
+
+
+def format_line(corpus, index, row, p_show, s_show, matches_filter, matches_highlight, window, htmlify_meta=True, cwb_ids=False):
+
+    # pack all values into a dictionary
+    row = dict(row)
+    match, matchend = index
+    row['match'] = match
+    row['matchend'] = matchend
+
+    # create cotext
+    cotext = _node2cotext(row['match'], row['matchend'], row['context'], row['contextend'])
+
+    # init output dictionary
+    d = {
+        'match': match,
+        'cpos': cotext['cpos_list'],
+        'offset': cotext['offset_list']
+    }
+
+    # role formatting and window-based cut-off
+    roles = list()
+    discoursemes_in_window = {disc_name: False for disc_name in matches_filter.keys()}
+
+    for cpos, offset in zip(d['cpos'], d['offset']):
+
+        cpos_roles = list()
+
+        # node
+        if offset == 0:
+            cpos_roles.append('node')
+        # out of window
+        elif abs(offset) > window:
+            cpos_roles.append('out_of_window')
+
+        # highlighting
+        for disc_name, disc_matches in matches_highlight.items():
+            if cpos in disc_matches:
+                cpos_roles.append(disc_name)
+
+        # filtering
+        for disc_name, disc_matches in matches_filter.items():
+            if cpos in disc_matches:
+                cpos_roles.append(disc_name)
+                if abs(offset) <= window:
+                    discoursemes_in_window[disc_name] = True
+
+        roles.append(cpos_roles)
+
+    # we filter here according to window size
+    if sum(discoursemes_in_window.values()) >= len(matches_filter):
+
+        # lexicalize cpos
+        p_att_lists = zip(*list(map(lambda x: corpus.cpos2patts(x, p_show), d['cpos'])))
+        for p, a in zip(p_show, p_att_lists):
+            d[p] = list(a)
+
+        # retrieve meta data at match
+        meta = dict()
+        for s in s_show:
+            s_att = corpus.attributes.attribute(s, 's')
+            try:
+                meta[s] = decode(s_att[s_att.cpos2struc(match)][2])
+                if cwb_ids:
+                    meta[s + "_cwbid"] = s_att.cpos2struc(match)
+            except KeyError:
+                meta[s] = None
+
+        # add meta data
+        if htmlify_meta:
+            d['meta'] = DataFrame.from_dict(meta, orient='index').to_html(bold_rows=False, header=False, render_links=True)
+        else:
+            for s, m in meta.items():
+                d[s] = m
+
+        # add roles
+        d['role'] = roles
+
+        # post-process lemmata
+        if 'lemma' in d.keys():
+            d['lemma'] = [cqp_escape(item) for item in d['lemma']]
+
+        return d
+
+    else:
+        return None
