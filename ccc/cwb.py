@@ -1477,7 +1477,7 @@ class SubCorpus(Corpus):
         """
         self.df = correct_anchors(self.df, corrections)
 
-    def breakdown(self, p_atts=['word'], flags="", split=False):
+    def breakdown(self, p_atts=['word'], flags="", split=False, start='match', end='matchend'):
         """Frequency breakdown of match..matchend.
 
         """
@@ -1485,7 +1485,7 @@ class SubCorpus(Corpus):
         logger.info('creating frequency breakdown')
         breakdown = self.counts.dump(
             df_dump=self.df,
-            start='match', end='matchend',
+            start=start, end=end,
             p_atts=p_atts, split=split
         )
 
