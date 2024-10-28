@@ -249,7 +249,7 @@ def _node2cotext(match, matchend, context, contextend):
 
     """
     # get lists
-    cpos_list = list(range(context, contextend + 1))
+    cpos_list = list(range(int(context), int(contextend) + 1))
     match_list = [match] * len(cpos_list)
     offset_list = [
         (cpos - match) if cpos < match else
