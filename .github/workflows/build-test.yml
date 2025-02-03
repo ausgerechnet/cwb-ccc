@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install CWB
       run: |
-        sudo apt-get install libncurses5-dev
+        sudo apt-get install libncurses5-dev glib2.0-dev libpcre3 libpcre3-dev
         wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
         wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
         sudo apt-get install ./cwb_3.5.0-1_amd64.deb
