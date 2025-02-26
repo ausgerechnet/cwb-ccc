@@ -20,14 +20,14 @@ The [Quickstart](#quickstart) here gives a rough overview.  For a more detailed 
 * [Acknowledgements](#acknowledgements)
 
 
-### Installation ###
+## Installation ##
 
 **System requirements**:  The module is developed for Ubuntu (currently 24.04 LTS) but also runs on other Debian-based systems and MacOS.  On a fresh install of Ubuntu, you will need to install the following packages:
 ```
 sudo apt install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
 ```
 
-**CWB***:  The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora.  If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.  We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).  You will also need to install the corresponding `cwb-dev` package. On Ubuntu, you can e.g. run
+**CWB**:  The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora.  If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.  We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).  You will also need to install the corresponding `cwb-dev` package. On Ubuntu, you can e.g. run
 ```
 wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
 wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
