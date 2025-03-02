@@ -45,6 +45,8 @@ brew install cwb3
 
 **Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
 
+In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.
+
 **Installation using pip**:  You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 ```
 python3 -m pip install cwb-ccc
@@ -53,13 +55,10 @@ python3 -m pip install cwb-ccc
 **Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and e.g. build your own wheel:
 ```
 python3 -m pip install -U pip setuptools wheel twine
-python3 -m pip install -r requirements.txt
 python3 -m pip install -r requirements-dev.txt
 python3 -m cython -2 ccc/cl.pyx
 python3 setup.py bdist_wheel
 ```
-
-In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.
 
 ## Quickstart ##
 
