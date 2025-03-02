@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install CWB
       run: |
-        brew install cwb3 cwb3-dev
+        brew install cwb3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
