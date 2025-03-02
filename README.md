@@ -1,5 +1,6 @@
 # Collocation and Concordance Computation #
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml?query=branch%3Amaster)
 [![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/cwb-ccc)](https://img.shields.io/pypi/dm/cwb-ccc)
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
@@ -27,7 +28,9 @@ The [Quickstart](#quickstart) here gives a rough overview.  For a more detailed 
 sudo apt install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
 ```
 
-**CWB**:  The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora.  If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.  We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).  You will also need to install the corresponding `cwb-dev` package. On Ubuntu, you can e.g. run
+**CWB**:  The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora.  If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.  We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).
+
+On Ubuntu, you will also need to install the corresponding `cwb-dev` package:
 ```
 wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
 wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
@@ -35,7 +38,12 @@ sudo apt install ./cwb_3.5.0-1_amd64.deb
 sudo apt install ./cwb-dev_3.5.0-1_amd64.deb
 ```
 
-**Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  We recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
+On MacOS, you can simply
+```
+brew install cwb3
+```
+
+**Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
 
 **Installation using pip**:  You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 ```
@@ -44,14 +52,14 @@ python3 -m pip install cwb-ccc
 
 **Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and e.g. build your own wheel:
 ```
-python3 -m venv venv
-. venv/bin/activate
-pip3 install -U pip setuptools wheel twine
-pip3 install -r requirements.txt
-pip3 install -r requirements-dev.txt
+python3 -m pip install -U pip setuptools wheel twine
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-dev.txt
 python3 -m cython -2 ccc/cl.pyx
 python3 setup.py bdist_wheel
 ```
+
+In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.
 
 ## Quickstart ##
 
