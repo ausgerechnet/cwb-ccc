@@ -30,8 +30,6 @@ with open(os.path.join(here, 'ccc', 'version.py'), mode='rt', encoding='utf-8') 
 with open(os.path.join(here, 'requirements.txt'), mode='rt', encoding='utf-8') as f:
     install_requires = f.read().strip().split("\n")
 
-print(install_requires)
-
 
 ##############
 # cwb-config #
