@@ -52,12 +52,18 @@ In all cases, we recommend installing dependencies in a [virtual environment](ht
 python3 -m pip install cwb-ccc
 ```
 
-**Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and e.g. build your own wheel:
+**Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, install all dependencies
 ```
 python3 -m pip install -U pip setuptools wheel twine
 python3 -m pip install -r requirements-dev.txt
+```
+compile the C-extension
+```
 python3 -m cython -2 ccc/cl.pyx
-python3 setup.py bdist_wheel
+```
+and build it
+```
+python3 setup.py bdist_ext --inplace
 ```
 
 ## Quickstart ##
