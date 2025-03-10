@@ -25,3 +25,5 @@ build/
 .Rhistory
 
 venv/
+
+*.Rproj
