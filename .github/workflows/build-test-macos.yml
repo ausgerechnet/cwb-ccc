@@ -1,4 +1,4 @@
-name: Build & test (Ubuntu)
+name: Build & test (MacOS)
 
 on: [workflow_dispatch, push]
 
@@ -6,7 +6,7 @@ jobs:
 
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     strategy:
       matrix:
@@ -16,11 +16,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install CWB
       run: |
-        sudo apt-get install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
-        wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
-        wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
-        sudo apt-get install ./cwb_3.5.0-1_amd64.deb
-        sudo apt-get install ./cwb-dev_3.5.0-1_amd64.deb
+        brew install cwb3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:

@@ -27,6 +27,9 @@ version = {}
 with open(os.path.join(here, 'ccc', 'version.py'), mode='rt', encoding='utf-8') as f:
     exec(f.read(), version)
 
+with open(os.path.join(here, 'requirements.txt'), mode='rt', encoding='utf-8') as f:
+    install_requires = f.read().strip().split("\n")
+
 
 ##############
 # cwb-config #
@@ -94,16 +97,7 @@ setup(
     ],
     ext_modules=extensions,
     python_requires='>=3.8.0',
-    install_requires=[
-        "numpy>=1.24.0,<2.0",
-        "numexpr>=2.8.6,<3.0",
-        "bottleneck==1.4.0",
-        "pandas>=2.0,<3.0",
-        "association-measures>=0.3.0,<0.4",
-        "unidecode>=1.3.8,<2.0",
-        "pyyaml>=6.0.1,<7.0",
-        "trieregex>=1.0.0,<1.1"
-    ],
+    install_requires=install_requires,
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 4 - Beta",

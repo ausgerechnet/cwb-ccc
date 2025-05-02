@@ -1,5 +1,6 @@
 # Collocation and Concordance Computation #
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
+[![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml?query=branch%3Amaster)
 [![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/cwb-ccc)](https://img.shields.io/pypi/dm/cwb-ccc)
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)
@@ -7,7 +8,7 @@
 
 **cwb-ccc** is a Python 3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries (including queries with more than two anchor points), extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
-The [Quickstart](#quickstart) gives a rough overview. For a more detailed dive into the functionality, see the [Vignette](demos/vignette.md).
+The [Quickstart](#quickstart) here gives a rough overview.  For a more detailed dive into the functionality, see the [Vignette](demos/vignette.md).
 
 * [Installation](#installation)
 * [Quickstart](#quickstart)
@@ -20,74 +21,86 @@ The [Quickstart](#quickstart) gives a rough overview. For a more detailed dive i
 * [Acknowledgements](#acknowledgements)
 
 
-### Installation ###
+## Installation ##
 
-The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora. If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later. We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).
+**System requirements**:  The module is developed for Ubuntu (currently 24.04 LTS) but also runs on other Debian-based systems and MacOS.  On a fresh install of Ubuntu, you will need to install the following packages:
+```
+sudo apt install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
+```
 
-You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
+**CWB**:  The module needs a working installation of [CWB](http://cwb.sourceforge.io/) and operates on CWB-indexed corpora.  If you want to run queries with more than two anchor points, you will need CWB version 3.4.16 or later.  We recommend installing the [3.5.x package](https://cwb.sourceforge.io/install.php).
 
-    python -m pip install cwb-ccc
+On Ubuntu, you will also need to install the corresponding `cwb-dev` package:
+```
+wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
+wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
+sudo apt install ./cwb_3.5.0-1_amd64.deb
+sudo apt install ./cwb-dev_3.5.0-1_amd64.deb
+```
 
-You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, and build your own wheel:
+On MacOS, you can simply
+```
+brew install cwb3
+```
 
-	python3 -m venv venv
-	. venv/bin/activate
-	pip3 install -U pip setuptools wheel twine
-	pip3 install -r requirements.txt
-	pip3 install -r requirements-dev.txt
-    python3 -m cython -2 ccc/cl.pyx
-    python3 setup.py bdist_wheel
+**Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
 
+In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.
+
+**Installation using pip**:  You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
+```
+python3 -m pip install cwb-ccc
+```
+
+**Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, install all dependencies
+```
+python3 -m pip install -U pip setuptools wheel twine
+python3 -m pip install -r requirements-dev.txt
+```
+compile the C-extension
+```
+python3 -m cython -2 ccc/cl.pyx
+```
+and build it
+```
+python3 setup.py bdist_ext --inplace
+```
 
 ## Quickstart ##
 
 ### Accessing Corpora ###
 
 To list all available corpora, you can use
-
 ```python
 from ccc import Corpora
-corpora = Corpora(
-    registry_dir="/usr/local/share/cwb/registry/"
-)
+corpora = Corpora(registry_dir="/usr/local/share/cwb/registry/")
 ```
 
 Most functionality is tied to the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
-
 ```python
 from ccc import Corpus
-corpus = Corpus(
-  corpus_name="GERMAPARL1386",
-  registry_dir="/usr/local/share/cwb/registry/"
-)
+corpus = Corpus(corpus_name="GERMAPARL1386", registry_dir="tests/corpora/registry/")
 ```
-
 This will raise a `KeyError` if the named corpus is not in the specified registry.
 
 
 ### Queries and SubCorpora ###
 
-The usual starting point for using this module is to run a query with `corpus.query()`, which accepts valid CQP queries such as
-
+The usual starting point is to run a query with `corpus.query()`.  This method accepts valid CQP queries such as
 ```python
-subcorpus = corpus.query(
-    '[lemma="Arbeit"]', context_break='s'
-)
+subcorpus = corpus.query('[lemma="Arbeit"]', context_break='s')
 ```
 
-The result is a `SubCorpus`; at its core this is a pandas DataFrame with corpus positions (similar to CWB dumps of NQRs).
+The result is a `SubCorpus`; at its core this is a pandas `DataFrame` with corpus positions (similar to CWB dumps of NQRs).
 
-Note that you can also query for structural attributes, e.g.:
-
+You can also query structural attributes, e.g.
 ```python
-corpus.query(
-    s_query='text_party', s_values={'CDU', 'CSU'}
-)
+corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
 ```
 
 ### Concordancing ###
 
-You can access concordance lines via the `concordance()` method of the subcorpus.  This method returns a DataFrame with information about the query matches in context:
+You can access concordance lines via the `concordance()` method of subcorpora.  This method returns a DataFrame with information about the query matches in context:
 
 <details>
 <summary><code>subcorpus.concordance()</code></summary>
@@ -106,7 +119,7 @@ You can access concordance lines via the `concordance()` method of the subcorpus
 </p>
 </details>
 
-By default, this retrieves concordance lines in simple format in the order in which they appear in the corpus. A better approach is
+By default, it retrieves concordance lines in `simple` format in the order in which they appear in the corpus.  In most situations it is more useful to get `random` concordance lines in KWIC formatting:
 
 <details>
 <summary><code>subcorpus.concordance(form='kwic', order='random')</code></summary>
@@ -125,42 +138,38 @@ By default, this retrieves concordance lines in simple format in the order in wh
 </p>
 </details>
 
-which retrieves random concordance lines in KWIC formatting. Use `cut_off` to specify the maximum number of lines.
+Use `cut_off` to specify the maximum number of lines.
 
 
 ### Collocation Analyses ###
 
-After executing a query, you can use `subcorpus.collocates()` to extract collocates (see the vignette for parameter settings). The result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
+After executing a query, you can use `subcorpus.collocates()` to extract collocates (see the vignette for parameter settings).  The result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
 
 <details>
 <summary><code>subcorpus.collocates()</code></summary>
 <p>
 
-| *item*   |   O11 |   O12 |   O21 |    O22 |   R1 |     R2 |   C1 |     C2 |      N |      E11 |     E12 |      E21 |    E22 |   z\_score |   t\_score |   log\_likelihood |   simple\_ll |   min\_sensitivity |   liddell |     dice |   log\_ratio |   conservative\_log\_ratio |   mutual\_information |   local\_mutual\_information |     ipm |   ipm\_reference |   ipm\_expected |   in\_nodes |   marginal |
-|:---------|------:|------:|------:|-------:|-----:|-------:|-----:|-------:|-------:|---------:|--------:|---------:|-------:|-----------:|-----------:|------------------:|-------------:|-------------------:|----------:|---------:|-------------:|---------------------------:|----------------------:|-----------------------------:|--------:|-----------------:|----------------:|------------:|-----------:|
-| für      |    46 |   730 |   831 | 148102 |  776 | 148933 |  877 | 148832 | 149709 |  4.54583 | 771.454 |  872.454 | 148061 |  19.4429   |   6.11208  |        134.301    |   130.019    |           0.052452 |  0.047547 | 0.055656 |     3.40925  |                    2.26335 |              1.00514  |                    46.2366   | 59278.4 |          5579.69 |         5858.03 |           0 |        877 |
-| ,        |    43 |   733 |  7827 | 141106 |  776 | 148933 | 7870 | 141839 | 149709 | 40.7933  | 735.207 | 7829.21  | 141104 |   0.345505 |   0.336523 |          0.124564 |     0.117278 |           0.005464 |  0.000296 | 0.009947 |     0.076412 |                    0       |              0.02288  |                     0.983836 | 55412.4 |         52553.8  |        52568.6  |           0 |       7870 |
-| .        |    33 |   743 |  5626 | 143307 |  776 | 148933 | 5659 | 144050 | 149709 | 29.3328  | 746.667 | 5629.67  | 143303 |   0.677108 |   0.638378 |          0.461005 |     0.440481 |           0.005831 |  0.000673 | 0.010256 |     0.170891 |                    0       |              0.05116  |                     1.68829  | 42525.8 |         37775.4  |        37800    |           0 |       5659 |
-| und      |    32 |   744 |  2848 | 146085 |  776 | 148933 | 2880 | 146829 | 149709 | 14.9282  | 761.072 | 2865.07  | 146068 |   4.41852  |   3.0179   |         15.1452   |    14.6555   |           0.011111 |  0.006044 | 0.017505 |     1.10866  |                    0       |              0.331144 |                    10.5966   | 41237.1 |         19122.7  |        19237.3  |           0 |       2880 |
-| in       |    24 |   752 |  2474 | 146459 |  776 | 148933 | 2498 | 147211 | 149709 | 12.9481  | 763.052 | 2485.05  | 146448 |   3.07138  |   2.25596  |          7.72813  |     7.51722  |           0.009608 |  0.004499 | 0.014661 |     0.896724 |                    0       |              0.268005 |                     6.43212  | 30927.8 |         16611.5  |        16685.7  |           0 |       2498 |
-|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|...|
+| *item* | O11 | O12 |  O21 |    O22 |  R1 |     R2 |   C1 |     C2 |      N |     E11 |     E12 |     E21 |    E22 | z\_score | t\_score | log\_likelihood | simple\_ll | min\_sensitivity |  liddell |     dice | log\_ratio | conservative\_log\_ratio | mutual\_information | local\_mutual\_information |     ipm | ipm\_reference | ipm\_expected | in\_nodes | marginal |
+|:-------|----:|----:|-----:|-------:|----:|-------:|-----:|-------:|-------:|--------:|--------:|--------:|-------:|---------:|---------:|----------------:|-----------:|-----------------:|---------:|---------:|-----------:|-------------------------:|--------------------:|---------------------------:|--------:|---------------:|--------------:|----------:|---------:|
+| für    |  46 | 730 |  831 | 148102 | 776 | 148933 |  877 | 148832 | 149709 | 4.54583 | 771.454 | 872.454 | 148061 |  19.4429 |  6.11208 |         134.301 |    130.019 |         0.052452 | 0.047547 | 0.055656 |    3.40925 |                  2.26335 |             1.00514 |                    46.2366 | 59278.4 |        5579.69 |       5858.03 |         0 |      877 |
+| ,      |  43 | 733 | 7827 | 141106 | 776 | 148933 | 7870 | 141839 | 149709 | 40.7933 | 735.207 | 7829.21 | 141104 | 0.345505 | 0.336523 |        0.124564 |   0.117278 |         0.005464 | 0.000296 | 0.009947 |   0.076412 |                        0 |             0.02288 |                   0.983836 | 55412.4 |        52553.8 |       52568.6 |         0 |     7870 |
+| .      |  33 | 743 | 5626 | 143307 | 776 | 148933 | 5659 | 144050 | 149709 | 29.3328 | 746.667 | 5629.67 | 143303 | 0.677108 | 0.638378 |        0.461005 |   0.440481 |         0.005831 | 0.000673 | 0.010256 |   0.170891 |                        0 |             0.05116 |                    1.68829 | 42525.8 |        37775.4 |         37800 |         0 |     5659 |
+| und    |  32 | 744 | 2848 | 146085 | 776 | 148933 | 2880 | 146829 | 149709 | 14.9282 | 761.072 | 2865.07 | 146068 |  4.41852 |   3.0179 |         15.1452 |    14.6555 |         0.011111 | 0.006044 | 0.017505 |    1.10866 |                        0 |            0.331144 |                    10.5966 | 41237.1 |        19122.7 |       19237.3 |         0 |     2880 |
+| in     |  24 | 752 | 2474 | 146459 | 776 | 148933 | 2498 | 147211 | 149709 | 12.9481 | 763.052 | 2485.05 | 146448 |  3.07138 |  2.25596 |         7.72813 |    7.51722 |         0.009608 | 0.004499 | 0.014661 |   0.896724 |                        0 |            0.268005 |                    6.43212 | 30927.8 |        16611.5 |       16685.7 |         0 |     2498 |
+| ...    | ... | ... |  ... |    ... | ... |    ... |  ... |    ... |    ... |     ... |     ... |     ... |    ... |      ... |      ... |             ... |        ... |              ... |      ... |      ... |        ... |                      ... |                 ... |                        ... |     ... |            ... |           ... |       ... |      ... |
 
 </p>
 </details>
 
-This allows calculating scores for arbitrary combinations of positional attributes, e.g. `p_query=['lemma', 'pos']`.  The dataframe contains the counts and is annotated with all available association measures in the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`).
+Setting `p_query` allows calculating scores for arbitrary combinations of positional attributes, e.g. `p_query=['lemma', 'pos']`.  The dataframe contains the observed counts in contingency notation and is annotated with all available association measures from the [pandas-association-measures](https://pypi.org/project/association-measures/) package (parameter `ams`).
 
 
 ### Keyword Analyses ###
 
 Having created a subcorpus
-
 ```python
-subcorpus = corpus.query(
-    s_query='text_party', s_values={'CDU', 'CSU'}
-)
+subcorpus = corpus.query(s_query='text_party', s_values={'CDU', 'CSU'})
 ```
-
 you can use its `keywords()` method for retrieving keywords:
 
 <details>
@@ -183,7 +192,11 @@ Just as with collocates, the result is a `DataFrame` with lemmata as index and f
 
 ## Testing ##
 
-The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.  This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
+The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.
+```python
+corpus = Corpus("GERMAPARL1386", registry_dir="tests/corpora/registry/")
+```
+This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
 
 <details>
 <summary><code>corpus.available_attributes()</code></summary>
@@ -220,11 +233,12 @@ The module ships with a small test corpus ("GERMAPARL1386"), which contains all 
 </p>
 </details>
 
-The corpus is located in this [repository](tests/test-corpora/).  All tests are written using this corpus as well as some reference counts and scores obtained from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists.  Make sure you install all development dependencies (especially [pytest](https://pytest.org/)).  You can then
-
-    pytest -m "not benchmark"
-    pytest -m benchmark
-    pytest --cov-report term-missing -v --cov=ccc/
+The corpus is located in this [repository](tests/corpora/).  All tests are written using this corpus as well as some reference counts and scores obtained from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists.  Make sure you install all development dependencies (especially [pytest](https://pytest.org/)).  You can then
+```
+pytest -m "not benchmark"
+pytest -m benchmark
+pytest --cov-report term-missing -v --cov=ccc/
+```
 
 ## Acknowledgements ##
 
@@ -232,4 +246,4 @@ The corpus is located in this [repository](tests/test-corpora/).  All tests are 
 - Special thanks to **Markus Opolka** for the original implementation of [association-measures](https://github.com/fau-klue/pandas-association-measures) and for forcing me to write tests.
 - The test corpus was extracted from the [GermaParl](https://github.com/PolMine/GermaParlTEI) corpus (see the [PolMine Project](https://polmine.github.io/)); many thanks to **Andreas Blätte**.
 - This work was supported by the [Emerging Fields Initiative (EFI)](https://www.fau.eu/research/collaborative-research/emerging-fields-initiative/) of [**Friedrich-Alexander-Universität Erlangen-Nürnberg**](https://www.fau.eu/), project title [Exploring the *Fukushima Effect*](https://www.linguistik.phil.fau.de/projects/efe/) (2017-2020).
-- Further development of the package is funded by the Deutsche Forschungsgemeinschaft (DFG) within the projects [Reconstructing Arguments from Noisy Text (2018-2021) and Newsworthy Debates (2021-2024)](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057, as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
+- Further development of the package was funded by the Deutsche Forschungsgemeinschaft (DFG) within the projects [Reconstructing Arguments from Noisy Text (2018-2021) and Newsworthy Debates (2021-2024)](https://www.linguistik.phil.fau.de/projects/rant/), grant number 377333057, as part of the Priority Program [**Robust Argumentation Machines**](http://www.spp-ratio.de/) (SPP-1999).
