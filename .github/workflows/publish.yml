@@ -16,8 +16,8 @@ jobs:
     - name: Install CWB
       run: |
         sudo apt-get install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
-        wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
-        wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
+        wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb/download
+        wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb/download
         sudo apt-get install ./cwb_3.5.0-1_amd64.deb
         sudo apt-get install ./cwb-dev_3.5.0-1_amd64.deb
     - name: Set up Python 3.12
