@@ -32,8 +32,8 @@ sudo apt install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
 
 On Ubuntu, you will also need to install the corresponding `cwb-dev` package:
 ```
-wget https://kumisystems.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
-wget https://master.dl.sourceforge.net/project/cwb/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
+wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
+wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
 sudo apt install ./cwb_3.5.0-1_amd64.deb
 sudo apt install ./cwb-dev_3.5.0-1_amd64.deb
 ```
