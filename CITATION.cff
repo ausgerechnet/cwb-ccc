@@ -5,6 +5,6 @@ authors:
   given-names: "Philipp"
   orcid: "https://orcid.org/0000-0002-4785-9205"
 title: "cwb-ccc"
-version: 0.12.2
-date-released: 2024-10-18
+version: 0.13.0
+date-released: 2025-05-02
 url: "https://github.com/ausgerechnet/cwb-ccc"
