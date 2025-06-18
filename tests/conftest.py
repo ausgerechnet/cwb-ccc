@@ -98,7 +98,7 @@ def tagesschau():
 def holmes_en():
     """ settings for aligned HOLMES corpus """
 
-    corpus_name = "HOLMES_EN"
+    corpus_name = "HOLMES-EN"
     registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
     return {
         'registry_dir': registry_dir,
@@ -110,7 +110,7 @@ def holmes_en():
 def holmes_de():
     """ settings for aligned HOLMES corpus """
 
-    corpus_name = "HOLMES_DE"
+    corpus_name = "HOLMES-DE"
     registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
     return {
         'registry_dir': registry_dir,
