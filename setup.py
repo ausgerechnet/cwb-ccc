@@ -86,7 +86,7 @@ setup(
     name="cwb-ccc",
     version=version["__version__"],
     description="CWB wrapper to extract concordances and score frequency lists",
-    license='GNU General Public License v3 or later (GPLv3+)',
+    license="GPL-3.0-or-later",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Philipp Heinrich",
