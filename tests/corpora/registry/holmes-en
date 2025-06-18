@@ -1,0 +1,40 @@
+##
+## registry entry for corpus HOLMES-EN
+##
+
+# long descriptive name for the corpus
+NAME ""
+# corpus ID (must be lowercase in registry!)
+ID   holmes-en
+# path to binary data files
+HOME /home/ausgerechnet/repositories/cwb-ccc/tests/corpora/data/holmes-en
+# optional info file (displayed by "info;" command in CQP)
+INFO /home/ausgerechnet/repositories/cwb-ccc/tests/corpora/data/holmes-en/.info
+
+# corpus properties provide additional information about the corpus:
+##:: charset = "utf8"	# character encoding of corpus data
+##:: language = "??"	# insert ISO code for language (de, en, fr, ...)
+#========================================================================#
+
+
+##
+## p-attributes (token annotations)
+##
+
+ATTRIBUTE word
+ATTRIBUTE pos
+ATTRIBUTE lemma
+
+
+##
+## s-attributes (structural markup)
+##
+
+# <p num=".."> ... </p>
+STRUCTURE p
+STRUCTURE p_num	# [annotations]
+
+# <s id=".."> ... </s>
+STRUCTURE s
+STRUCTURE s_id	# [annotations]
+ALIGNED holmes-de

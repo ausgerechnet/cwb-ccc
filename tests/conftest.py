@@ -95,6 +95,30 @@ def tagesschau():
 
 
 @pytest.fixture
+def holmes_en():
+    """ settings for aligned HOLMES corpus """
+
+    corpus_name = "HOLMES_EN"
+    registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
+    return {
+        'registry_dir': registry_dir,
+        'corpus_name': corpus_name
+    }
+
+
+@pytest.fixture
+def holmes_de():
+    """ settings for aligned HOLMES corpus """
+
+    corpus_name = "HOLMES_DE"
+    registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
+    return {
+        'registry_dir': registry_dir,
+        'corpus_name': corpus_name
+    }
+
+
+@pytest.fixture
 def germaparl_full():
     """ settings for local germaparl corpus """
 
