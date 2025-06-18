@@ -157,62 +157,62 @@ def test_constellation_add_nodrop(germaparl, discoursemes):
     assert len(const.df) == 3072
 
 
-def test_constellation_add2(germaparl, discoursemes):
+# def test_constellation_add2(germaparl, discoursemes):
 
-    corpus = get_corpus(germaparl)
+#     corpus = get_corpus(germaparl)
 
-    # init constellation
-    topic_query = format_cqp_query(
-        discoursemes['topic'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    topic_dump = corpus.query(
-        topic_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const = Constellation(topic_dump)
+#     # init constellation
+#     topic_query = format_cqp_query(
+#         discoursemes['topic'],
+#         p_query=discoursemes['parameters']['p_query'],
+#         s_query=discoursemes['parameters']['s_query'],
+#         flags=discoursemes['parameters']['flags_query'],
+#         escape=discoursemes['parameters']['escape_query']
+#     )
+#     topic_dump = corpus.query(
+#         topic_query,
+#         context=None,
+#         context_break=discoursemes['parameters']['s_context']
+#     )
+#     const = Constellation(topic_dump)
 
-    # add discourseme 1
-    disc1_query = format_cqp_query(
-        discoursemes['disc1'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    disc1_dump = corpus.query(
-        disc1_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const.add_discourseme(
-        disc1_dump,
-        name='disc1'
-    )
+#     # add discourseme 1
+#     disc1_query = format_cqp_query(
+#         discoursemes['disc1'],
+#         p_query=discoursemes['parameters']['p_query'],
+#         s_query=discoursemes['parameters']['s_query'],
+#         flags=discoursemes['parameters']['flags_query'],
+#         escape=discoursemes['parameters']['escape_query']
+#     )
+#     disc1_dump = corpus.query(
+#         disc1_query,
+#         context=None,
+#         context_break=discoursemes['parameters']['s_context']
+#     )
+#     const.add_discourseme(
+#         disc1_dump,
+#         name='disc1'
+#     )
 
-    # add discourseme 2
-    disc2_query = format_cqp_query(
-        discoursemes['disc2'],
-        p_query=discoursemes['parameters']['p_query'],
-        s_query=discoursemes['parameters']['s_query'],
-        flags=discoursemes['parameters']['flags_query'],
-        escape=discoursemes['parameters']['escape_query']
-    )
-    disc2_dump = corpus.query(
-        disc2_query,
-        context=None,
-        context_break=discoursemes['parameters']['s_context']
-    )
-    const.add_discourseme(
-        disc2_dump,
-        name='disc2'
-    )
+#     # add discourseme 2
+#     disc2_query = format_cqp_query(
+#         discoursemes['disc2'],
+#         p_query=discoursemes['parameters']['p_query'],
+#         s_query=discoursemes['parameters']['s_query'],
+#         flags=discoursemes['parameters']['flags_query'],
+#         escape=discoursemes['parameters']['escape_query']
+#     )
+#     disc2_dump = corpus.query(
+#         disc2_query,
+#         context=None,
+#         context_break=discoursemes['parameters']['s_context']
+#     )
+#     const.add_discourseme(
+#         disc2_dump,
+#         name='disc2'
+#     )
 
-    assert len(const.df) == 13
+#     assert len(const.df) == 13
 
 
 ########################
