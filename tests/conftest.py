@@ -83,6 +83,18 @@ def germaparl():
 
 
 @pytest.fixture
+def tagesschau():
+    """ settings for small tagesschau testing corpus """
+
+    corpus_name = "TAGESSCHAU-MINI"
+    registry_dir = os.path.join(DIR_PATH, "corpora", "registry")
+    return {
+        'registry_dir': registry_dir,
+        'corpus_name': corpus_name
+    }
+
+
+@pytest.fixture
 def germaparl_full():
     """ settings for local germaparl corpus """
 
