@@ -96,18 +96,18 @@ setup(
         'ccc'
     ],
     ext_modules=extensions,
-    python_requires='>=3.8.0',
+    python_requires='>=3.9.0',
     install_requires=install_requires,
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 4 - Beta",
         "Operating System :: Unix",
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Programming Language :: Cython'
     ],
 )
