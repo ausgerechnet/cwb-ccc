@@ -8,7 +8,7 @@
 
 **cwb-ccc** is a Python 3 wrapper around the [IMS Open Corpus Workbench (CWB)](http://cwb.sourceforge.net/).  Main purpose of the module is to run queries (including queries with more than two anchor points), extract concordance lines, and score frequency lists (particularly to extract collocates and keywords).
 
-The [Quickstart](#quickstart) here gives a rough overview.  For a more detailed dive into the functionality, see the [Vignette](demos/vignette.md).
+The [Quickstart](#quickstart) in this README gives a rough overview.  For a more detailed dive into the functionality, see the [Vignette](demos/vignette-v0.11.0.md).
 
 * [Installation](#installation)
 * [Quickstart](#quickstart)
@@ -38,14 +38,18 @@ sudo apt install ./cwb_3.5.0-1_amd64.deb
 sudo apt install ./cwb-dev_3.5.0-1_amd64.deb
 ```
 
-On MacOS, you can simply
+On MacOS, you can simply use
 ```
 brew install cwb3
 ```
 
 **Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
 
-In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine.
+In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine:
+```
+python3 -m venv venv
+source venv/bin/activate
+```
 
 **Installation using pip**:  You can install cwb-ccc with pip from [PyPI](https://pypi.org/project/cwb-ccc/):
 ```
@@ -73,7 +77,7 @@ python3 setup.py bdist_ext --inplace
 To list all available corpora, you can use
 ```python
 from ccc import Corpora
-corpora = Corpora(registry_dir="/usr/local/share/cwb/registry/")
+Corpora(registry_dir="/usr/local/share/cwb/registry/")
 ```
 
 Most functionality is tied to the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
