@@ -474,7 +474,7 @@ class Corpus:
     ##############
     # subcorpora #
     ##############
-    def show_nqr(self):
+    def available_nqr(self):
         """Get subcorpora defined in CQP as DataFrame.
 
         :return: available subcorpora
@@ -1402,7 +1402,7 @@ class SubCorpus(Corpus):
 
     def _assign(self, subcorpus_name, df_dump, overwrite):
 
-        if subcorpus_name in self.show_nqr()['subcorpus'].values:
+        if subcorpus_name in self.available_nqr()['subcorpus'].values:
             # NQR exists
             if overwrite:
                 logger.info(f'NQR "{subcorpus_name}" exists, overwriting')
@@ -1421,7 +1421,7 @@ class SubCorpus(Corpus):
             cqp.nqr_save(self.corpus_name, subcorpus_name)
             cqp.__del__()
 
-        if subcorpus_name not in self.show_nqr()['subcorpus'].values:
+        if subcorpus_name not in self.available_nqr()['subcorpus'].values:
             logger.error(f'could not assigne NQR "{subcorpus_name}" from dataframe')
         elif overwrite:
             logger.info(f'assigned NQR "{subcorpus_name}" from dataframe')

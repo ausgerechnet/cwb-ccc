@@ -448,7 +448,7 @@ def test_ccc_quick_query(germaparl):
         filter_queries=filter_queries.values()
     )
 
-    assert identifier in corpus.show_nqr()['subcorpus'].values
+    assert identifier in corpus.available_nqr()['subcorpus'].values
 
 
 def test_ccc_quick_query_2(germaparl):
@@ -467,7 +467,7 @@ def test_ccc_quick_query_2(germaparl):
         filter_queries=queries.values()
     )
 
-    assert identifier in corpus.show_nqr()['subcorpus'].values
+    assert identifier in corpus.available_nqr()['subcorpus'].values
 
 
 #####################################################
@@ -535,11 +535,11 @@ def test_create_cached_nqr(germaparl):
 
     subcorpus = corpus.query('[lemma="jetzt"]')
     assert isinstance(subcorpus, SubCorpus)
-    # assert "Jetzt" not in corpus.show_nqr().values
+    # assert "Jetzt" not in corpus.available_nqr().values
 
     subcorpus = corpus.query('[lemma="jetzt"]', name='Jetzt')
     assert isinstance(subcorpus, SubCorpus)
-    # assert "Jetzt" in corpus.show_nqr().values
+    # assert "Jetzt" in corpus.available_nqr().values
 
 
 @pytest.mark.subcorpus
@@ -547,7 +547,7 @@ def test_nqr_from_s_att(germaparl):
 
     corpus = get_corpus(germaparl)
     corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
-    assert "Union" in corpus.show_nqr().values
+    assert "Union" in corpus.available_nqr().values
     assert isinstance(corpus.subcorpus("Union"), SubCorpus)
 
 
@@ -631,7 +631,7 @@ def test_subcorpus_query_s_att(germaparl):
 
     corpus = get_corpus(germaparl)
     black = corpus.query_s_att("text_party", values={"CDU", "CSU"}, name="Union")
-    assert "Union" in corpus.show_nqr().values
+    assert "Union" in corpus.available_nqr().values
     assert isinstance(black, SubCorpus)
 
     interjection = corpus.query_s_att("p_type", values={"interjection"})
