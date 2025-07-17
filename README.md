@@ -1,6 +1,7 @@
 # Collocation and Concordance Computation #
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test.yml?query=branch%3Amaster)
 [![Build](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml/badge.svg?branch=master)](https://github.com/ausgerechnet/cwb-ccc/actions/workflows/build-test-macos.yml?query=branch%3Amaster)
+[![Documentation](https://readthedocs.org/projects/cwb-ccc/badge/?version=latest)](https://cwb-ccc.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/cwb-ccc.svg)](https://badge.fury.io/py/cwb-ccc)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/cwb-ccc)](https://img.shields.io/pypi/dm/cwb-ccc)
 [![License](https://img.shields.io/pypi/l/cwb-ccc.svg)](https://github.com/ausgerechnet/cwb-ccc/blob/master/LICENSE)

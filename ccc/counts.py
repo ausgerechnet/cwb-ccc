@@ -394,38 +394,42 @@ class Counts:
 
     @time_it
     def mwus(self, cqp, queries, p_atts=None, fill_missing=True, strategy=1):
-        """Calculates frequencies for MWU queries in activated subcorpus.
-        queries are a list of valid CQP queries, e.g.
+        """
+        Calculates frequencies for MWU queries in activated subcorpus.
 
-        '[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"%cd & pos="NE"]?'
+        `queries` are a list of valid CQP queries, e.g.:
 
-        - strategy 1: split NO| - ; flags x; combo x; mwu NO
-        - strategy 2: split NO| - ; flags x; combo x; mwu YES
-        - strategy 3: split NO| - ; flags x; combo  ; mwu YES
-
-        caveat: strategy 1 does not yield breakdown in attributes
-        this implies also different indexing
+            '[lemma="Angela"%cd & pos="NE"] [lemma="Merkel"%cd & pos="NE"]?'
 
         Strategies:
+
+        - Strategy 1: split NO| - ; flags x; combo x; mwu NO
+        - Strategy 2: split NO| - ; flags x; combo x; mwu YES
+        - Strategy 3: split NO| - ; flags x; combo  ; mwu YES
+
+        Caveat: strategy 1 does not yield breakdown in attributes;
+        this implies also different indexing.
+
+        Details of each strategy:
+
         - Strategy 1: for each item
-          1. run query
-          2. get size of NQR via CQP
+            1. run query
+            2. get size of NQR via CQP
         - Strategy 2:
-          1. run query for all items at the same time
-          2. dump df
-          3. count_dump()
+            1. run query for all items at the same time
+            2. dump df
+            3. count_dump()
         - Strategy 3:
-          1. run query for all items at the same time
-          2. count_matches()
+            1. run query for all items at the same time
+            2. count_matches()
 
         :param CQP cqp: running cqp process
         :param set queries: set of query strings to get frequency breakdown for
         :param bool fill_missing: count 0 for missing items?
-        :param int strategy: strategy to use (see below)
+        :param int strategy: strategy to use (see above)
 
         :return: counts of the queries (strategy 1) or the items in the queries
         :rtype: FreqFrame
-
         """
 
         # subcorpus name to use

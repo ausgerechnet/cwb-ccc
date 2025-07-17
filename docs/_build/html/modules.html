@@ -1,0 +1,575 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="ccc package" href="ccc.html" /><link rel="prev" title="cwb-ccc documentation" href="index.html" />
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
+        <title>ccc - cwb-ccc v0.13.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">cwb-ccc v0.13.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  
+  <span class="sidebar-brand-text">cwb-ccc v0.13.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">ccc</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of ccc</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html">ccc package</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/modules.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="ccc">
+<h1>ccc<a class="headerlink" href="#ccc" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ccc.html">ccc package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.cache">ccc.cache module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cache.Cache"><code class="docutils literal notranslate"><span class="pre">Cache</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cache.Cache.delete"><code class="docutils literal notranslate"><span class="pre">Cache.delete()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cache.Cache.get"><code class="docutils literal notranslate"><span class="pre">Cache.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cache.Cache.set"><code class="docutils literal notranslate"><span class="pre">Cache.set()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cache.generate_idx"><code class="docutils literal notranslate"><span class="pre">generate_idx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cache.generate_library_idx"><code class="docutils literal notranslate"><span class="pre">generate_library_idx()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.cl">ccc.cl module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.AlignAttrib"><code class="docutils literal notranslate"><span class="pre">AlignAttrib</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AlignAttrib.cpos2alg"><code class="docutils literal notranslate"><span class="pre">AlignAttrib.cpos2alg()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AlignAttrib.getName"><code class="docutils literal notranslate"><span class="pre">AlignAttrib.getName()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc"><code class="docutils literal notranslate"><span class="pre">AttStruc</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc.cpos2struc"><code class="docutils literal notranslate"><span class="pre">AttStruc.cpos2struc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc.find_all"><code class="docutils literal notranslate"><span class="pre">AttStruc.find_all()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc.find_pos"><code class="docutils literal notranslate"><span class="pre">AttStruc.find_pos()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc.getName"><code class="docutils literal notranslate"><span class="pre">AttStruc.getName()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttStruc.map_idlist"><code class="docutils literal notranslate"><span class="pre">AttStruc.map_idlist()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.AttrDictionary"><code class="docutils literal notranslate"><span class="pre">AttrDictionary</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttrDictionary.expand_pattern"><code class="docutils literal notranslate"><span class="pre">AttrDictionary.expand_pattern()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttrDictionary.get_matching"><code class="docutils literal notranslate"><span class="pre">AttrDictionary.get_matching()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.AttrDictionary.get_word"><code class="docutils literal notranslate"><span class="pre">AttrDictionary.get_word()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.Corpus"><code class="docutils literal notranslate"><span class="pre">Corpus</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.Corpus.attribute"><code class="docutils literal notranslate"><span class="pre">Corpus.attribute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.Corpus.get_encoding"><code class="docutils literal notranslate"><span class="pre">Corpus.get_encoding()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.Corpus.to_str"><code class="docutils literal notranslate"><span class="pre">Corpus.to_str()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.Corpus.to_unicode"><code class="docutils literal notranslate"><span class="pre">Corpus.to_unicode()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.IDList"><code class="docutils literal notranslate"><span class="pre">IDList</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.IDList.join"><code class="docutils literal notranslate"><span class="pre">IDList.join()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib"><code class="docutils literal notranslate"><span class="pre">PosAttrib</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.cpos2id"><code class="docutils literal notranslate"><span class="pre">PosAttrib.cpos2id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.find"><code class="docutils literal notranslate"><span class="pre">PosAttrib.find()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.find_list"><code class="docutils literal notranslate"><span class="pre">PosAttrib.find_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.find_pattern"><code class="docutils literal notranslate"><span class="pre">PosAttrib.find_pattern()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.frequency"><code class="docutils literal notranslate"><span class="pre">PosAttrib.frequency()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.getDictionary"><code class="docutils literal notranslate"><span class="pre">PosAttrib.getDictionary()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cl.PosAttrib.getName"><code class="docutils literal notranslate"><span class="pre">PosAttrib.getName()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.collocates">ccc.collocates module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.collocates.Collocates"><code class="docutils literal notranslate"><span class="pre">Collocates</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.collocates.Collocates.count"><code class="docutils literal notranslate"><span class="pre">Collocates.count()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.collocates.Collocates.show"><code class="docutils literal notranslate"><span class="pre">Collocates.show()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.collocates.dump2cooc"><code class="docutils literal notranslate"><span class="pre">dump2cooc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.concordances">ccc.concordances module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance"><code class="docutils literal notranslate"><span class="pre">Concordance</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.dataframe"><code class="docutils literal notranslate"><span class="pre">Concordance.dataframe()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.dict"><code class="docutils literal notranslate"><span class="pre">Concordance.dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.kwic"><code class="docutils literal notranslate"><span class="pre">Concordance.kwic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.lines"><code class="docutils literal notranslate"><span class="pre">Concordance.lines()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.simple"><code class="docutils literal notranslate"><span class="pre">Concordance.simple()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.concordances.Concordance.slots"><code class="docutils literal notranslate"><span class="pre">Concordance.slots()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.concordances.format_line"><code class="docutils literal notranslate"><span class="pre">format_line()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.counts">ccc.counts module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.Counts"><code class="docutils literal notranslate"><span class="pre">Counts</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.counts.Counts.cpos"><code class="docutils literal notranslate"><span class="pre">Counts.cpos()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.counts.Counts.dump"><code class="docutils literal notranslate"><span class="pre">Counts.dump()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.counts.Counts.matches"><code class="docutils literal notranslate"><span class="pre">Counts.matches()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.counts.Counts.mwus"><code class="docutils literal notranslate"><span class="pre">Counts.mwus()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.count_items"><code class="docutils literal notranslate"><span class="pre">count_items()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.cwb_lexdecode"><code class="docutils literal notranslate"><span class="pre">cwb_lexdecode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.cwb_scan_corpus"><code class="docutils literal notranslate"><span class="pre">cwb_scan_corpus()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.read_freq_list"><code class="docutils literal notranslate"><span class="pre">read_freq_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.counts.score_counts"><code class="docutils literal notranslate"><span class="pre">score_counts()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.cqp">ccc.cqp module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqp.CQP"><code class="docutils literal notranslate"><span class="pre">CQP</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Checkerr"><code class="docutils literal notranslate"><span class="pre">CQP.Checkerr()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Count"><code class="docutils literal notranslate"><span class="pre">CQP.Count()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Dump"><code class="docutils literal notranslate"><span class="pre">CQP.Dump()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Error"><code class="docutils literal notranslate"><span class="pre">CQP.Error()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Error_message"><code class="docutils literal notranslate"><span class="pre">CQP.Error_message()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Exec"><code class="docutils literal notranslate"><span class="pre">CQP.Exec()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Group"><code class="docutils literal notranslate"><span class="pre">CQP.Group()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Ok"><code class="docutils literal notranslate"><span class="pre">CQP.Ok()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Query"><code class="docutils literal notranslate"><span class="pre">CQP.Query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Readerr"><code class="docutils literal notranslate"><span class="pre">CQP.Readerr()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.SetProcCycles"><code class="docutils literal notranslate"><span class="pre">CQP.SetProcCycles()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Set_error_handler"><code class="docutils literal notranslate"><span class="pre">CQP.Set_error_handler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Status"><code class="docutils literal notranslate"><span class="pre">CQP.Status()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.Undump"><code class="docutils literal notranslate"><span class="pre">CQP.Undump()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.nqr_activate"><code class="docutils literal notranslate"><span class="pre">CQP.nqr_activate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.nqr_from_dump"><code class="docutils literal notranslate"><span class="pre">CQP.nqr_from_dump()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.nqr_from_query"><code class="docutils literal notranslate"><span class="pre">CQP.nqr_from_query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cqp.CQP.nqr_save"><code class="docutils literal notranslate"><span class="pre">CQP.nqr_save()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqp.ErrCQP"><code class="docutils literal notranslate"><span class="pre">ErrCQP</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqp.ErrKilled"><code class="docutils literal notranslate"><span class="pre">ErrKilled</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqp.start_cqp"><code class="docutils literal notranslate"><span class="pre">start_cqp()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.cqpy">ccc.cqpy module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.check_anchors"><code class="docutils literal notranslate"><span class="pre">check_anchors()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.cqpy_dump"><code class="docutils literal notranslate"><span class="pre">cqpy_dump()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.cqpy_dumps"><code class="docutils literal notranslate"><span class="pre">cqpy_dumps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.cqpy_load"><code class="docutils literal notranslate"><span class="pre">cqpy_load()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.cqpy_load_json"><code class="docutils literal notranslate"><span class="pre">cqpy_load_json()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.cqpy_loads"><code class="docutils literal notranslate"><span class="pre">cqpy_loads()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cqpy.run_query"><code class="docutils literal notranslate"><span class="pre">run_query()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.cwb">ccc.cwb module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cwb.Corpora"><code class="docutils literal notranslate"><span class="pre">Corpora</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpora.corpus"><code class="docutils literal notranslate"><span class="pre">Corpora.corpus()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpora.show"><code class="docutils literal notranslate"><span class="pre">Corpora.show()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus"><code class="docutils literal notranslate"><span class="pre">Corpus</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.available_attributes"><code class="docutils literal notranslate"><span class="pre">Corpus.available_attributes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.available_macros"><code class="docutils literal notranslate"><span class="pre">Corpus.available_macros()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.available_nqr"><code class="docutils literal notranslate"><span class="pre">Corpus.available_nqr()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.available_wordlists"><code class="docutils literal notranslate"><span class="pre">Corpus.available_wordlists()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.copy"><code class="docutils literal notranslate"><span class="pre">Corpus.copy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.cpos2patts"><code class="docutils literal notranslate"><span class="pre">Corpus.cpos2patts()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.cpos2sid"><code class="docutils literal notranslate"><span class="pre">Corpus.cpos2sid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.dump2context"><code class="docutils literal notranslate"><span class="pre">Corpus.dump2context()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.dump2patt"><code class="docutils literal notranslate"><span class="pre">Corpus.dump2patt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.dump2satt"><code class="docutils literal notranslate"><span class="pre">Corpus.dump2satt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.dump_from_query"><code class="docutils literal notranslate"><span class="pre">Corpus.dump_from_query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.dump_from_s_att"><code class="docutils literal notranslate"><span class="pre">Corpus.dump_from_s_att()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.marginals"><code class="docutils literal notranslate"><span class="pre">Corpus.marginals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.query"><code class="docutils literal notranslate"><span class="pre">Corpus.query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.query_cqp"><code class="docutils literal notranslate"><span class="pre">Corpus.query_cqp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.query_s_att"><code class="docutils literal notranslate"><span class="pre">Corpus.query_s_att()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.quick_conc"><code class="docutils literal notranslate"><span class="pre">Corpus.quick_conc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.quick_query"><code class="docutils literal notranslate"><span class="pre">Corpus.quick_query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.size"><code class="docutils literal notranslate"><span class="pre">Corpus.size()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.start_cqp"><code class="docutils literal notranslate"><span class="pre">Corpus.start_cqp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.Corpus.subcorpus"><code class="docutils literal notranslate"><span class="pre">Corpus.subcorpus()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpora"><code class="docutils literal notranslate"><span class="pre">SubCorpora</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpora.collocates"><code class="docutils literal notranslate"><span class="pre">SubCorpora.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpora.concordance"><code class="docutils literal notranslate"><span class="pre">SubCorpora.concordance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpora.keywords"><code class="docutils literal notranslate"><span class="pre">SubCorpora.keywords()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpora.query"><code class="docutils literal notranslate"><span class="pre">SubCorpora.query()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus"><code class="docutils literal notranslate"><span class="pre">SubCorpus</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.breakdown"><code class="docutils literal notranslate"><span class="pre">SubCorpus.breakdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.collocates"><code class="docutils literal notranslate"><span class="pre">SubCorpus.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.concordance"><code class="docutils literal notranslate"><span class="pre">SubCorpus.concordance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.context"><code class="docutils literal notranslate"><span class="pre">SubCorpus.context()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.correct_anchors"><code class="docutils literal notranslate"><span class="pre">SubCorpus.correct_anchors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.keywords"><code class="docutils literal notranslate"><span class="pre">SubCorpus.keywords()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.marginals"><code class="docutils literal notranslate"><span class="pre">SubCorpus.marginals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.matches"><code class="docutils literal notranslate"><span class="pre">SubCorpus.matches()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.set_context"><code class="docutils literal notranslate"><span class="pre">SubCorpus.set_context()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.set_context_as_matches"><code class="docutils literal notranslate"><span class="pre">SubCorpus.set_context_as_matches()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.cwb.SubCorpus.size"><code class="docutils literal notranslate"><span class="pre">SubCorpus.size()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.cwb.init_data_dir"><code class="docutils literal notranslate"><span class="pre">init_data_dir()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.discoursemes">ccc.discoursemes module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation"><code class="docutils literal notranslate"><span class="pre">Constellation</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation.add_discourseme"><code class="docutils literal notranslate"><span class="pre">Constellation.add_discourseme()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation.breakdown"><code class="docutils literal notranslate"><span class="pre">Constellation.breakdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation.collocates"><code class="docutils literal notranslate"><span class="pre">Constellation.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation.concordance"><code class="docutils literal notranslate"><span class="pre">Constellation.concordance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_"><code class="docutils literal notranslate"><span class="pre">Constellation_</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.add_discourseme"><code class="docutils literal notranslate"><span class="pre">Constellation_.add_discourseme()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.associations"><code class="docutils literal notranslate"><span class="pre">Constellation_.associations()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.breakdown"><code class="docutils literal notranslate"><span class="pre">Constellation_.breakdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.collocates"><code class="docutils literal notranslate"><span class="pre">Constellation_.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.concordance"><code class="docutils literal notranslate"><span class="pre">Constellation_.concordance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.cwb_id"><code class="docutils literal notranslate"><span class="pre">Constellation_.cwb_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.match"><code class="docutils literal notranslate"><span class="pre">Constellation_.match</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.matchend"><code class="docutils literal notranslate"><span class="pre">Constellation_.matchend</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.meta"><code class="docutils literal notranslate"><span class="pre">Constellation_.meta()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Constellation_.name"><code class="docutils literal notranslate"><span class="pre">Constellation_.name</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.Discourseme"><code class="docutils literal notranslate"><span class="pre">Discourseme</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Discourseme.breakdown"><code class="docutils literal notranslate"><span class="pre">Discourseme.breakdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Discourseme.collocates"><code class="docutils literal notranslate"><span class="pre">Discourseme.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Discourseme.concordance"><code class="docutils literal notranslate"><span class="pre">Discourseme.concordance()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.Discourseme.meta"><code class="docutils literal notranslate"><span class="pre">Discourseme.meta()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.TextConstellation"><code class="docutils literal notranslate"><span class="pre">TextConstellation</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.TextConstellation.add_discourseme"><code class="docutils literal notranslate"><span class="pre">TextConstellation.add_discourseme()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.TextConstellation.associations"><code class="docutils literal notranslate"><span class="pre">TextConstellation.associations()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.TextConstellation.breakdown"><code class="docutils literal notranslate"><span class="pre">TextConstellation.breakdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.discoursemes.TextConstellation.concordance"><code class="docutils literal notranslate"><span class="pre">TextConstellation.concordance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.create_constellation"><code class="docutils literal notranslate"><span class="pre">create_constellation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.discoursemes.textual_associations"><code class="docutils literal notranslate"><span class="pre">textual_associations()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.dumps">ccc.dumps module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.dumps.Dumps"><code class="docutils literal notranslate"><span class="pre">Dumps</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.dumps.Dumps.collocates"><code class="docutils literal notranslate"><span class="pre">Dumps.collocates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.dumps.Dumps.keywords"><code class="docutils literal notranslate"><span class="pre">Dumps.keywords()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.keywords">ccc.keywords module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.keywords.Keywords"><code class="docutils literal notranslate"><span class="pre">Keywords</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="ccc.html#ccc.keywords.Keywords.show"><code class="docutils literal notranslate"><span class="pre">Keywords.show()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.keywords.keywords"><code class="docutils literal notranslate"><span class="pre">keywords()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.utils">ccc.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.aggregate_matches"><code class="docutils literal notranslate"><span class="pre">aggregate_matches()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.apply_correction"><code class="docutils literal notranslate"><span class="pre">apply_correction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.calculate_offset"><code class="docutils literal notranslate"><span class="pre">calculate_offset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.chunk_anchors"><code class="docutils literal notranslate"><span class="pre">chunk_anchors()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.correct_anchors"><code class="docutils literal notranslate"><span class="pre">correct_anchors()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.cqp_escape"><code class="docutils literal notranslate"><span class="pre">cqp_escape()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.cqp_unescape"><code class="docutils literal notranslate"><span class="pre">cqp_unescape()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.decode"><code class="docutils literal notranslate"><span class="pre">decode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.dump_left_join"><code class="docutils literal notranslate"><span class="pre">dump_left_join()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.filter_df"><code class="docutils literal notranslate"><span class="pre">filter_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.find_all"><code class="docutils literal notranslate"><span class="pre">find_all()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.fold_df"><code class="docutils literal notranslate"><span class="pre">fold_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.fold_item"><code class="docutils literal notranslate"><span class="pre">fold_item()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.format_cqp_query"><code class="docutils literal notranslate"><span class="pre">format_cqp_query()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.format_roles"><code class="docutils literal notranslate"><span class="pre">format_roles()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.group_lines"><code class="docutils literal notranslate"><span class="pre">group_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.intersect_intervals"><code class="docutils literal notranslate"><span class="pre">intersect_intervals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.merge_intervals"><code class="docutils literal notranslate"><span class="pre">merge_intervals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.merge_s_atts"><code class="docutils literal notranslate"><span class="pre">merge_s_atts()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.preprocess_query"><code class="docutils literal notranslate"><span class="pre">preprocess_query()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="ccc.html#ccc.utils.time_it"><code class="docutils literal notranslate"><span class="pre">time_it()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc.version">ccc.version module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ccc.html#module-ccc">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="ccc.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">ccc package</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Home</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Philipp Heinrich
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=bb33721e"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
