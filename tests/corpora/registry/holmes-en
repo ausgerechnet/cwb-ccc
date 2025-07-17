@@ -7,9 +7,9 @@ NAME ""
 # corpus ID (must be lowercase in registry!)
 ID   holmes-en
 # path to binary data files
-HOME /home/ausgerechnet/repositories/cwb-ccc/tests/corpora/data/holmes-en
+HOME tests/corpora/data/holmes-en
 # optional info file (displayed by "info;" command in CQP)
-INFO /home/ausgerechnet/repositories/cwb-ccc/tests/corpora/data/holmes-en/.info
+INFO tests/corpora/data/holmes-en/.info
 
 # corpus properties provide additional information about the corpus:
 ##:: charset = "utf8"	# character encoding of corpus data
