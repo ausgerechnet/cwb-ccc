@@ -1,7 +1,22 @@
-library(tidyverse)
+#!/usr/bin/env Rscript
 
-path.in <- 
-dir.out <- 
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(tidyverse))
+
+parser <- ArgumentParser(description = "Extract good collocation candidates from large table")
+
+parser$add_argument("--path.in", type = "character", required = TRUE, help = "Path to frequency list (tsv)")
+parser$add_argument("--dir.out", type = "character", required = TRUE, help = "Directory to store results")
+
+args <- parser$parse_args()
+
+path.in <- args$path.in
+dir.out <- args$dir.out
+
+if (!dir.exists(dir.out)) {
+  dir.create(dir.out, recursive = TRUE)
+}library(tidyverse)
+
 
 # function for the automatic extraction of good collocation candidates
 # (ensemble model using the following AMs)

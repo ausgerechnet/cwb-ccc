@@ -4,7 +4,6 @@ library(kableExtra)
 library(DT)
 library(colorspace)
 library(matrixStats)
-# library(anomalize)
 library(gespeR)
 library(irr)
 library(gridExtra)
@@ -12,8 +11,8 @@ library(ggrepel)
 
 options(dplyr.summarise.inform = FALSE)
 
-# function for formatting concordance lines
-concordance.format.old <- function(conc, n = 10, crop=NULL, columns = c("left_word", "node_word", "right_word")){
+# CONCORDANCING ####
+ccc_concordance_format.old <- function(conc, n = 10, crop = NULL, columns = c("left_word", "node_word", "right_word")){
   conc %>%
     head(n) %>%
     select(columns) %>%
@@ -26,7 +25,7 @@ concordance.format.old <- function(conc, n = 10, crop=NULL, columns = c("left_wo
     kable_styling(latex_options = "striped")
 }
 
-concordance.format <- function(conc, s.show = c(), path.out = NULL, crop = NULL){
+ccc_concordance_format <- function(conc, s.show = c(), path.out = NULL, crop = NULL){
 
   # prepare input
   df <- tibble()
@@ -64,23 +63,22 @@ concordance.format <- function(conc, s.show = c(), path.out = NULL, crop = NULL)
 
   # display in Quarto document
   else {
-    a <- df |> 
+    df |> 
       kbl(booktabs = T, align = c("rcl"), longtable = T,
-          table.attr = "style = \"color: white; background-color: black;\"") %>%
-      row_spec(0, bold = T) %>%
-      column_spec(c(1, 3), width = "6cm") %>%
-      column_spec(2, bold = T, width = "3cm") %>%
+          table.attr = "style = \"color: white; background-color: black;\"") |>
+      row_spec(0, bold = T) |>
+      column_spec(c(1, 3), width = "6cm") |>
+      column_spec(2, bold = T, width = "3cm") |>
       kable_styling(latex_options = "striped")
-    return(a)
   }
 }
 
-# function for plotting collocates
-collocates.plot <- function(df.plot,
-                            am = 'conservative_log_ratio',    # x-axis
-                            significance = 'log_likelihood',  # shade
-                            size = 'marginal',
-                            max_item_length = 30){
+# COLLOCATION ####
+ccc_collocation_plot <- function(df.plot,
+                                 am = 'conservative_log_ratio',    # x-axis
+                                 significance = 'log_likelihood',  # shade
+                                 size = 'marginal',
+                                 max_item_length = 30){
   
   # deal with row names if necessary
   if(! 'item' %in% names(df.plot)){
@@ -110,8 +108,10 @@ collocates.plot <- function(df.plot,
 
 }
 
+# UFA ####
+
 # function for translating UFA collocates into data frame
-ufa.table <- function(tables, am = 'log_likelihood'){
+ccc_ufa_table <- function(tables, am = 'log_likelihood'){
   
   # get tables
   df <- data.frame(item = character())
@@ -137,7 +137,7 @@ ufa.table <- function(tables, am = 'log_likelihood'){
 }
 
 # function for calculating average overlap between two data frames stored in list of tables arranged by given am
-pairwise.overlap <- function(tables, name1, name2, am = "log_likelihood", cut_off = 100, p = .95){
+ccc_pairwise_overlap <- function(tables, name1, name2, am = "log_likelihood", cut_off = 100, p = .95){
   
   # create top-cut_off-list according to column1
   left <- tables[[name1]] %>%
@@ -161,7 +161,7 @@ pairwise.overlap <- function(tables, name1, name2, am = "log_likelihood", cut_of
 }
 
 # function for calculating average overlap between two columns
-pairwise.overlap.2 <- function(df, column1, column2, cut_off = 100, p = .95, method = "rbo"){
+ccc_pairwise_overlap.2 <- function(df, column1, column2, cut_off = 100, p = .95, method = "rbo"){
   
   if (method == "rbo"){
 
@@ -207,11 +207,11 @@ pairwise.overlap.2 <- function(df, column1, column2, cut_off = 100, p = .95, met
 }
 
 # function for creating dataframe of average overlaps
-overlap.table <- function(tables, name = "s", am = "log_likelihood", cut_off = 100, p = .95){
+ccc_overlap_table <- function(tables, name = "s", am = "log_likelihood", cut_off = 100, p = .95){
   
   values <- c()
   for (i in 2:length(tables)){
-    value <- pairwise.overlap(tables,
+    value <- ccc_pairwise_overlap(tables,
                               names(tables)[i-1], 
                               names(tables)[i],
                               am = am,
