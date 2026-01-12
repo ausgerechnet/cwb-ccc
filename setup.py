@@ -99,7 +99,7 @@ setup(
     python_requires='>=3.9.0',
     install_requires=install_requires,
     classifiers=[
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "License :: GPL-3.0-or-later",
         "Development Status :: 4 - Beta",
         "Operating System :: Unix",
         "Programming Language :: Python :: 3",
