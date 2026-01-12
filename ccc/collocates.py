@@ -125,6 +125,7 @@ class Collocates:
             if isinstance(marginals, str):
                 if marginals == 'corpus':
                     N = self.corpus.corpus_size - len(self.f1_set)
+                    # N = self.corpus.size() - len(self.f1_set)
                     marginals = self.corpus.marginals(f.index, self.p_query)
                 else:
                     raise NotImplementedError
