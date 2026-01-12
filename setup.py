@@ -56,8 +56,8 @@ cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=T
 ####################################
 
 # ensure compatibility with CWB v3.4.36 and below
-if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) == 4 and int(cwb_version.split(".")[2]) < 37:
-    cwb_linker_flags = "-L/usr/local/lib -lcl  -lm   -lpcre -lglib-2.0"
+if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) <= 4 and int(cwb_version.split(".")[2]) < 37:
+    cwb_linker_flags = "-L/usr/local/lib -lcl -lm -lpcre -lglib-2.0"
 
 # define include directories, library directories, and library names
 libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]

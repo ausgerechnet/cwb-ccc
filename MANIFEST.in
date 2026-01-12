@@ -1,2 +1,2 @@
-global-include *.pyx
+recursive-include ccc *.pyx *.pxd *.c
 include requirements.txt
