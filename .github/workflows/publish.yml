@@ -30,6 +30,7 @@ jobs:
         make install
     - name: Create source distribution
       run: |
+        make compile
         make sdist
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1

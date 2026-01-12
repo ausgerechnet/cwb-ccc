@@ -36,6 +36,7 @@ jobs:
         make lint
     - name: Build
       run: |
+        make compile
         make build
     - name: Test
       run: |
