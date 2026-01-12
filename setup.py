@@ -56,8 +56,8 @@ cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=T
 ####################################
 
 # ensure compatibility with CWB v3.4.36 and below
-if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) == 4 and int(cwb_version.split(".")[2]) < 37:
-    cwb_linker_flags = "-L/usr/local/lib -lcl  -lm   -lpcre -lglib-2.0"
+if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) <= 4 and int(cwb_version.split(".")[2]) < 37:
+    cwb_linker_flags = "-L/usr/local/lib -lcl -lm -lpcre -lglib-2.0"
 
 # define include directories, library directories, and library names
 libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]
@@ -86,7 +86,7 @@ setup(
     name="cwb-ccc",
     version=version["__version__"],
     description="CWB wrapper to extract concordances and score frequency lists",
-    license='GNU General Public License v3 or later (GPLv3+)',
+    license="GPL-3.0-or-later",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Philipp Heinrich",
@@ -96,18 +96,17 @@ setup(
         'ccc'
     ],
     ext_modules=extensions,
-    python_requires='>=3.8.0',
+    python_requires='>=3.9.0',
     install_requires=install_requires,
     classifiers=[
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 4 - Beta",
         "Operating System :: Unix",
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Programming Language :: Cython'
     ],
 )

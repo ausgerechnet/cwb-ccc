@@ -10,12 +10,13 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [ 3.9, "3.10", "3.11", "3.12" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
 
     steps:
     - uses: actions/checkout@v4
     - name: Install CWB
       run: |
+        sudo apt-get update
         sudo apt-get install libncurses5-dev libglib2.0-dev libpcre3 libpcre3-dev
         wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb_3.5.0-1_amd64.deb
         wget https://sourceforge.net/projects/cwb/files/cwb/cwb-3.5/deb/cwb-dev_3.5.0-1_amd64.deb
