@@ -147,6 +147,15 @@ def test_collocates(germaparl):
     assert coll.index[0] == 'die'
 
 
+def test_collocates_subcorpus(germaparl):
+    corpus = get_corpus(germaparl)
+    subcorpus = corpus.query(s_query='text_parliamentary_group', s_values={"SPD"})
+    dump = subcorpus.query("'SPD'")
+    coll = dump.collocates(show_negative=True)
+    # TODO this test exemplifies issue #88
+    # assert coll.index[0] == 'die'
+
+
 def test_collocates_options(germaparl):
     corpus = get_corpus(germaparl)
     dump = corpus.query('"SPD"')
@@ -251,7 +260,7 @@ def test_perf_dumps(benchmark, germaparl):
     benchmark.pedantic(test_dumps_collocates, kwargs={'germaparl': germaparl}, rounds=5, iterations=2)
 
 
-@pytest.mark.now
+# @pytest.mark.now
 def test_sliding_window(tagesschau):
 
     # create sliding window: either
