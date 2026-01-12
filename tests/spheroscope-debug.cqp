@@ -1,0 +1,33 @@
+VSS;
+
+set ParseOnly on;
+set SpheroscopeDebug on;
+set SpheroscopeDebug;
+
+define macro noun(2) '[$0 = "$1" & pos = "N.*"]';
+define macro noun(1) '/noun[lemma, "$0"]';
+define macro elephant(0) '/noun["elephant"]';
+define macro animal(0) '[word = RE($animal) %cd]';
+
+define $animal = "elephant cat dog mouse";
+define $v_walk = "walk go amble run hasten stroll";
+
+# show macro;
+# show var;
+cat "\n";
+
+cat "/elephant[]\n";
+/elephant[];
+cat "\n";
+
+cat "/animal[]\n";
+/animal[];
+cat "\n";
+
+cat "/animal[] $v_walk /animal[]\n";
+/animal[] $v_walk /animal[];
+cat "\n";
+
+cat "TAB /elephant[] {0,4} [lemma = $v_walk]";
+TAB /elephant[] {0,4} [lemma = $v_walk];
+cat "\n";
