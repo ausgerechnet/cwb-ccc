@@ -161,37 +161,39 @@ ccc_pairwise_overlap <- function(tables, name1, name2, am = "log_likelihood", cu
 }
 
 # function for calculating average overlap between two columns
-ccc_pairwise_overlap.2 <- function(df, column1, column2, cut_off = 100, p = .95, method = "rbo"){
+ccc_pairwise_overlap_col <- function(df, column1, column2, cut_off = 100, p = .95, method = "rbo"){
   
   if (method == "rbo"){
 
-    # create top-cut_off-list according to column1
-    left <- df %>% 
-      arrange(desc(!!sym(column1))) %>%
-      head(cut_off)
-    left.list <- left[, column1]
-    names(left.list) <- row.names(left)
+    left.list <- df |> tibble() |> pull(column1)
+    names(left.list) <- row.names(df)
+    right.list <- df |> tibble() |> pull(column2)
+    names(right.list) <- row.names(df)
     
-    # create top-cut_off-list according to column2
-    right <- df %>%
-      arrange(desc(!!sym(column2))) %>%
-      head(cut_off)
-    right.list <- right[, column2]
-    names(right.list) <- row.names(right)
-
     # calculate rbo
-    value = rbo(left.list, right.list, p)
+    value <- rbo(left.list |> discard(is.na), right.list |> discard(is.na), p)
+
   }
 
   else if (method == "kappa"){
     
     # create input data frame
     df.input <- df %>%
-      arrange(desc(!!sym(column1))) %>%
-      mutate(rank.left = 1:n()) %>%
-      arrange(desc(!!sym(column2))) %>%
-      mutate(rank.right = 1:n()) %>%
-      select(rank.left, rank.right)
+      mutate(
+        in.left  = if_else(
+          is.na(!!sym(column1)),
+          0,
+          1
+        ),
+        in.right = if_else(
+          is.na(!!sym(column2)),
+          0,
+          1
+        )
+      ) %>%
+      select(in.left, in.right)
+    
+    print(df.input)
 
     # calculate kappa
     value <- kappa2(df.input)$value
@@ -224,3 +226,4 @@ ccc_overlap_table <- function(tables, name = "s", am = "log_likelihood", cut_off
   
   return(g)
 }
+
