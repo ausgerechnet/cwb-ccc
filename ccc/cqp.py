@@ -165,7 +165,7 @@ class CQP:
         cmd = re.sub(r';\s*$', r'', cmd)
         logger.debug("CQP << " + cmd + ";")
         try:
-            self.CQP_process.stdin.write(cmd + '; .EOL.;\n')
+            self.CQP_process.stdin.write(cmd + ';\n;.EOL.;\n')
         except IOError:
             return None
         # In CQP.pm lines are appended to a list @result.
