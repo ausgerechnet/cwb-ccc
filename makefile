@@ -22,7 +22,7 @@ coverage:
 
 compile:
 	. venv/bin/activate && \
-	cython -2 ccc/cl.pyx
+	cython ccc/cl.pyx
 build:
 	. venv/bin/activate && \
 	python3 setup.py build_ext --inplace

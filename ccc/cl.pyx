@@ -1,4 +1,4 @@
-# cython: language_level=2
+# cython: language_level=3
 # -*- coding: utf-8 -*-
 
 """
@@ -116,7 +116,7 @@ cdef class IDList:
         lo = 0
         hi = self.length
         while hi - lo > 1:
-            mid = (hi+lo)/2
+            mid = (hi+lo)//2
             val = self.ids[mid]
             if val == v:
                 return True
