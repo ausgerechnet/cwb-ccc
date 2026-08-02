@@ -33,6 +33,16 @@ jobs:
       run: |
         make compile
         make sdist
+    - name: install from sdist (build isolation, with Cython)
+      run: |
+        python3 -m venv /tmp/venv1
+        /tmp/venv1/bin/pip install dist/*.tar.gz
+        /tmp/venv1/bin/python -c "from ccc import Corpus"
+    - name: install from sdist (no build isolation, fallback .c path)
+      run: |
+        python3 -m venv /tmp/venv2
+        /tmp/venv2/bin/pip install --no-build-isolation dist/*.tar.gz
+        /tmp/venv2/bin/python -c "from ccc import Corpus"
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
