@@ -21,11 +21,11 @@ from glob import glob
 from io import StringIO
 from tempfile import NamedTemporaryFile
 
-# requirements
 from pandas import DataFrame, read_csv
 
 logger = logging.getLogger(__name__)
 
+MAX_QUERY_LEN = 16384
 
 # GLOBAL CONSTANTS OF MODULE:
 CPROGRESSCONTROLCYCLE = 5   # secs between each progress control cycle
@@ -196,7 +196,12 @@ class CQP:
 
     def Query(self, query):
         """Execute query in safe mode (query lock)."""
-        result = []
+
+        query_len = len(query)
+        if query_len > MAX_QUERY_LEN:
+            logger.error(f"query too long: {query_len} > {MAX_QUERY_LEN}")
+            return "query too long"
+
         key = str(random.randint(1, 1000000))
         errormsg = ''  # collect CQP error messages AS STRING
         ok = True      # check if any error occurs
@@ -204,6 +209,7 @@ class CQP:
         if self.status != 'ok':
             errormsg = errormsg + self.error_message
             ok = False
+
         result = self.Exec(query)
         if self.status != 'ok':
             errormsg = errormsg + self.error_message.decode('utf-8')
@@ -379,8 +385,7 @@ class CQP:
     # SOME ALIASES FOR NQRs #
     #########################
     def nqr_from_query(self, query, name='Last',
-                       match_strategy='longest', return_dump=True,
-                       propagate_error=False):
+                       match_strategy='longest', return_dump=True):
         """Defines NQR from query, optionally returns dump.
 
         :param str query: valid CQP query
@@ -395,11 +400,13 @@ class CQP:
         name = 'Last' if name is None else name
 
         logger.info(f'defining NQR "{name}" from query: {query}')
-        self.Query(f'{name}={query};')
+        res = self.Query(f'{name}={query};')
+        if res == "query too long":
+            return "query too long"
 
         if not self.Ok():
             logger.error(f'{self.error_message}')
-            return self.error_message if propagate_error else DataFrame()
+            return self.error_message
 
         size = int(self.Exec(f"size {name}"))
         if size == 0:

@@ -638,11 +638,14 @@ class Corpus:
             query=start_query,
             name=name,
             match_strategy=match_strategy,
-            return_dump=True,
-            propagate_error=propagate_error
+            return_dump=True
         )
-        if propagate_error and isinstance(df_dump, str):
-            return df_dump
+        # an error occurred
+        if isinstance(df_dump, str):
+            if propagate_error:
+                return df_dump
+            else:
+                return DataFrame()
 
         logger.info(f"found {len(df_dump)} matches")
 
