@@ -101,7 +101,7 @@ cdef class IDList:
                     is_sorted = False
                 old_val = seq[i]
                 self.ids[i] = seq[i]
-            assert sorted
+            assert is_sorted
 
     def __len__(self):
         return self.length
