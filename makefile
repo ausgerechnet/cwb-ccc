@@ -26,7 +26,7 @@ compile:
 build:
 	. venv/bin/activate && \
 	python3 setup.py build_ext --inplace
-sdist:
+sdist: build
 	. venv/bin/activate && \
 	python3 setup.py sdist
 deploy:

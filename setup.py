@@ -7,11 +7,12 @@ import subprocess
 
 from setuptools import Extension, setup
 
-# try:
-#     from Cython.Build import cythonize
-#     USE_CYTHON = True
-# except ImportError:
-USE_CYTHON = False              # use cython -2 ccc/cl.pyx instead
+try:
+    from Cython.Build import cythonize
+    USE_CYTHON = True
+    # will run equivalent of cython ccc/cl.pyx
+except ImportError:
+    USE_CYTHON = False
 
 
 ########################
@@ -75,7 +76,6 @@ ccc_cl = Extension(
 # cythonize?
 extensions = [ccc_cl]
 if USE_CYTHON:
-    from Cython.Build import cythonize
     extensions = cythonize(extensions)
 
 
