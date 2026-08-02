@@ -648,15 +648,15 @@ def test_query_over_length_limit(germaparl):
     # result = corpus.query(long_query)
     # disjunction = " | ".join(str(i) for i in range(12139))
     # long_query = f'[lemma="{disjunction}"]'
-    for n in [4096, 8192, 10000, 12000, 15000, 16000, 16373]:
-        long_string = "a" * n
+    for n in [4096, 8192, 10000, 12000, 15000, 16000, 16383, 16384]:
+        long_string = "a" * (n - 23)  # actual input string: 'Last={query};'
         long_query = f'[lemma="Arbeit|{long_string}"]'
         result = corpus.query(long_query)
         assert isinstance(result, SubCorpus)
         assert len(result.df) == 91
 
-    for n in [16374, 16377, 16378, 16379, 16380, 16384]:
-        long_string = "a" * n
+    for n in [16385, 20000, 50000]:
+        long_string = "a" * (n - 23)
         long_query = f'[lemma="Arbeit|{long_string}"]'
         result = corpus.query(long_query, propagate_error=True)
         assert result == "query too long"
