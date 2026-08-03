@@ -637,3 +637,26 @@ def test_subcorpus_query_s_att(germaparl):
     interjection = corpus.query_s_att("p_type", values={"interjection"})
     black_interjection = black.query_s_att("p_type", values={"interjection"})
     assert len(black.matches()) > len(interjection.matches()) > len(black_interjection.matches())
+
+
+@pytest.mark.now
+def test_query_over_length_limit(germaparl):
+
+    corpus = get_corpus(germaparl)
+
+    # long_query = " ".join(f'[word="{i}"]' for i in range(5002))
+    # result = corpus.query(long_query)
+    # disjunction = " | ".join(str(i) for i in range(12139))
+    # long_query = f'[lemma="{disjunction}"]'
+    for n in [4096, 8192, 10000, 12000, 15000, 16000, 16383, 16384]:
+        long_string = "a" * (n - 23)  # actual input string: 'Last={query};'
+        long_query = f'[lemma="Arbeit|{long_string}"]'
+        result = corpus.query(long_query)
+        assert isinstance(result, SubCorpus)
+        assert len(result.df) == 91
+
+    for n in [16385, 20000, 50000]:
+        long_string = "a" * (n - 23)
+        long_query = f'[lemma="Arbeit|{long_string}"]'
+        result = corpus.query(long_query, propagate_error=True)
+        assert result == "query too long"

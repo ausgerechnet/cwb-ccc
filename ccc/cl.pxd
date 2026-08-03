@@ -1,4 +1,4 @@
-# cython: language_level=2
+# cython: language_level=3
 # -*- coding: utf-8 -*-
 
 # Original version by Yannick Versley (2013)

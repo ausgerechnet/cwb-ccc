@@ -8,6 +8,7 @@ definition of the Corpora, Corpus and SubCorpus classes
 import logging
 import os
 from io import StringIO
+from itertools import groupby
 
 # requirements
 from numpy import maximum, minimum
@@ -453,6 +454,74 @@ class Corpus:
         return df
 
     ################
+    # a-attributes #
+    ################
+    def cpos2alg(self, cpos, a_att):
+        """Get alignment attribute at cpos. -1 if not present.
+
+        :param int cpos: corpus position
+
+        :return: alignment attribute
+        :rtype: int
+
+        """
+        a_attributes = self.attributes.attribute(a_att, "a")
+        try:
+            return a_attributes.cpos2alg(cpos)
+        except KeyError:
+            return -1
+
+    def _dump2aatt_row(self, row, a_att):
+        """Retrieve a-attribute annotation from a row."""
+
+        cpos_start = row.get("match", -1)
+        cpos_end = row.get("matchend", -1)
+
+        # Empty row
+        if cpos_start == cpos_end == -1:
+            return (-1, -1, -1, -1)
+
+        if cpos_start == -1:
+            cpos_start = cpos_end
+        if cpos_end == -1:
+            cpos_end = cpos_start
+
+        a_attr = self.attributes.attribute(a_att, "a")
+
+        values = [
+            a_attr[value]
+            for value, _ in groupby(
+                self.cpos2alg(cpos, a_att)
+                for cpos in range(int(cpos_start), int(cpos_end) + 1)
+            )
+        ]
+
+        if not values:
+            return (-1, -1, -1, -1)
+
+        return (
+            min(value[0] for value in values),  # start_a
+            max(value[1] for value in values),  # end_a
+            min(value[2] for value in values),  # start_b
+            max(value[3] for value in values),  # end_b
+        )
+
+    def dump2aatt(self, df_dump, a_att):
+        """Retrieve a-attribute annotation for each row."""
+
+        results = df_dump.reset_index().apply(
+            self._dump2aatt_row,
+            axis=1,
+            args=(a_att,),
+        )
+
+        return DataFrame(
+            results.tolist(),
+            columns=["start_a", "end_a", "start_b", "end_b"],
+            index=results.index,
+        )
+
+    ################
     # s-attributes #
     ################
     def cpos2sid(self, cpos, s_att):
@@ -638,11 +707,14 @@ class Corpus:
             query=start_query,
             name=name,
             match_strategy=match_strategy,
-            return_dump=True,
-            propagate_error=propagate_error
+            return_dump=True
         )
-        if propagate_error and isinstance(df_dump, str):
-            return df_dump
+        # an error occurred
+        if isinstance(df_dump, str):
+            if propagate_error:
+                return df_dump
+            else:
+                return DataFrame()
 
         logger.info(f"found {len(df_dump)} matches")
 
@@ -1551,6 +1623,7 @@ class SubCorpus(Corpus):
         return df
 
     def concordance(self, form='simple', p_show=['word'], s_show=[],
+                    a_show=[],
                     order='first', cut_off=100, matches=None,
                     slots=None, cwb_ids=False):
 
@@ -1559,7 +1632,7 @@ class SubCorpus(Corpus):
             df_dump=self.df
         )
 
-        return conc.lines(
+        lines = conc.lines(
             form=form,
             p_show=p_show,
             s_show=s_show,
@@ -1569,6 +1642,28 @@ class SubCorpus(Corpus):
             slots=slots,
             cwb_ids=cwb_ids
         )
+
+        # join aligned versions
+        for a_att in a_show:
+            alignments = self.dump2aatt(self.df, a_att).\
+                rename({'start_b': 'match', 'end_b': 'matchend'}, axis=1).\
+                set_index(['match', 'matchend'])
+            aligned = SubCorpus(
+                subcorpus_name=None,
+                df_dump=alignments,
+                corpus_name=a_att.upper(),
+                lib_dir=self.lib_dir,
+                cqp_bin=self.cqp_bin,
+                registry_dir=self.registry_dir,
+                data_dir=None,
+                overwrite=True,
+                inval_cache=True
+
+            )
+            for p_att in p_show:
+                lines[a_att + '_' + p_att] = aligned.dump2patt(alignments, p_att=p_att)[p_att].reset_index(drop=True).tolist()
+
+        return lines
 
     def collocates(self, p_query=['lemma'], mws=20, window=5,
                    order='O11', cut_off=100, ams=None, min_freq=2,

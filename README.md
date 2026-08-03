@@ -14,7 +14,7 @@ The [Quickstart](#quickstart) in this README gives a rough overview.  For a more
 * [Installation](#installation)
 * [Quickstart](#quickstart)
   * [Accessing Corpora](#accessing-corpora)
-  * [Queries and SubCorpora](#queries-and-subcorpus)
+  * [Queries and SubCorpora](#queries-and-subcorpora)
   * [Concordancing](#concordancing)
   * [Collocates](#collocation-analyses)
   * [Keywords](#keyword-analyses)
@@ -44,7 +44,7 @@ On MacOS, you can simply use
 brew install cwb3
 ```
 
-**Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
+**Python dependencies**:  Python dependencies are specified in [requirements.txt](requirements.txt) and will be installed automatically if you install via pip or follow the instructions below.  Note that since version v0.13.0, `cwb-ccc` uses `pandas2` and `numpy2`, which requires Python 3.9 or above.
 
 In all cases, we recommend installing dependencies in a [virtual environment](https://docs.python.org/3/library/venv.html) to avoid conflicts with other installs on your machine:
 ```
@@ -57,16 +57,14 @@ source venv/bin/activate
 python3 -m pip install cwb-ccc
 ```
 
-**Installation from source**:  You can also clone the source from [github](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, install all dependencies
+**Installation from source**:  You can clone the source from [GitHub](https://github.com/ausgerechnet/cwb-ccc), `cd` in the respective folder, install all dependencies
 ```
+git clone git@github.com:ausgerechnet/cwb-ccc.git
+cd cwb-ccc
 python3 -m pip install -U pip setuptools wheel twine
 python3 -m pip install -r requirements-dev.txt
 ```
-compile the C-extension
-```
-python3 -m cython -2 ccc/cl.pyx
-```
-and build it
+and build cwb-ccc from scratch:
 ```
 python3 setup.py bdist_ext --inplace
 ```
@@ -78,13 +76,13 @@ python3 setup.py bdist_ext --inplace
 To list all available corpora, you can use
 ```python
 from ccc import Corpora
-Corpora(registry_dir="/usr/local/share/cwb/registry/")
+Corpora(registry_dir='/usr/local/share/cwb/registry/')
 ```
 
 Most functionality is tied to the `Corpus` class, which establishes the connection to your CWB-indexed corpus:
 ```python
 from ccc import Corpus
-corpus = Corpus(corpus_name="GERMAPARL1386", registry_dir="tests/corpora/registry/")
+corpus = Corpus(corpus_name='GERMAPARL1386', registry_dir='tests/corpora/registry/')
 ```
 This will raise a `KeyError` if the named corpus is not in the specified registry.
 
@@ -146,6 +144,15 @@ By default, it retrieves concordance lines in `simple` format in the order in wh
 Use `cut_off` to specify the maximum number of lines.
 
 
+#### Working with aligned corpora ####
+
+New in version v.0.14.0: You can provide an attribute `a_show` to the concordancer in order to retrieve regions from an aligned corpus:
+```python
+src = Corpus('HOLMES-DE', registry_dir='tests/corpora/registry/')
+ich = src.query('[lemma='ich']', context_break='s')
+ich.concordance(p_show=['word'], a_show=['holmes-en'])
+```
+
 ### Collocation Analyses ###
 
 After executing a query, you can use `subcorpus.collocates()` to extract collocates (see the vignette for parameter settings).  The result is a `DataFrame` with lemmata as index and frequency signatures and association measures as columns:
@@ -199,7 +206,7 @@ Just as with collocates, the result is a `DataFrame` with lemmata as index and f
 
 The module ships with a small test corpus ("GERMAPARL1386"), which contains all speeches of the 86th session of the 13th German Bundestag on Feburary 8, 1996.
 ```python
-corpus = Corpus("GERMAPARL1386", registry_dir="tests/corpora/registry/")
+corpus = Corpus('GERMAPARL1386', registry_dir='tests/corpora/registry/')
 ```
 This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with annotation "type" ("regular" or "interjection")) split into 11,364 sentences (s-attribute "s").  The p-attributes are "pos" and "lemma":
 
@@ -240,7 +247,7 @@ This corpus consists of 149,800 tokens in 7332 paragraphs (s-attribute "p" with 
 
 The corpus is located in this [repository](tests/corpora/).  All tests are written using this corpus as well as some reference counts and scores obtained from the [UCS toolkit](http://www.collocations.de/software.html) and some additional frequency lists.  Make sure you install all development dependencies (especially [pytest](https://pytest.org/)).  You can then
 ```
-pytest -m "not benchmark"
+pytest -m 'not benchmark'
 pytest -m benchmark
 pytest --cov-report term-missing -v --cov=ccc/
 ```
