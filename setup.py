@@ -3,7 +3,9 @@
 
 import os
 import shlex
+import shutil
 import subprocess
+import sys
 
 from setuptools import Extension, setup
 
@@ -36,47 +38,77 @@ with open(os.path.join(here, 'requirements.txt'), mode='rt', encoding='utf-8') a
 # cwb-config #
 ##############
 
-# - version
-cwb_version = subprocess.run(shlex.split("cwb-config -v"), capture_output=True).stdout.decode().strip()
-# - cqp binaries
-cwb_bindir = subprocess.run(shlex.split("cwb-config --bindir"), capture_output=True).stdout.decode().strip()
-# - effective registry directory or directories:
-cwb_registry = subprocess.run(shlex.split("cwb-config -r"), capture_output=True).stdout.decode().strip()
-# - libdir (CL library)
-cwb_libdir = subprocess.run(shlex.split("cwb-config --libdir"), capture_output=True).stdout.decode().strip()
-# - incdir (C header)
-cwb_incdir = subprocess.run(shlex.split("cwb-config --incdir"), capture_output=True).stdout.decode().strip()
-# - compiler flags for linking against CL library
-cwb_compiler_flags = subprocess.run(shlex.split("cwb-config -I"), capture_output=True).stdout.decode().strip()
-# - linker flags for linking against CL library
-cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=True).stdout.decode().strip()
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
+CWB_CONFIG = shutil.which("cwb-config")
 
+if CWB_CONFIG is None:
+    warning = (
+        "\n"
+        "============================================================\n"
+        " WARNING: 'cwb-config' not found on PATH.\n"
+        "\n"
+        " cwb-ccc requires the IMS Open Corpus Workbench (CWB) C\n"
+        " library to build its compiled extension (ccc.cl). Without\n"
+        " it, cwb-ccc cannot be installed or used for corpus analysis.\n"
+        "\n"
+        " Install CWB first, see: https://cwb.sourceforge.io/install.php\n"
+        " and make sure 'cwb-config' is on your PATH before retrying.\n"
+        "============================================================\n"
+    )
+    if ON_RTD:
+        # Documentation builds don't need a working native extension —
+        # print a notice but let the (extensionless) install proceed,
+        # so autodoc_mock_imports can take over from here.
+        print(warning, file=sys.stderr)
+        extensions = []
+    else:
+        # A real install with no CWB available is fatal and would
+        # otherwise fail later with an opaque FileNotFoundError deep
+        # inside subprocess — fail here instead, with an actionable
+        # message, as early and visibly as possible.
+        sys.exit(warning)
+else:
 
-####################################
-# define (and compile) C-extension #
-####################################
+    # - version
+    cwb_version = subprocess.run(shlex.split("cwb-config -v"), capture_output=True).stdout.decode().strip()
+    # - cqp binaries
+    cwb_bindir = subprocess.run(shlex.split("cwb-config --bindir"), capture_output=True).stdout.decode().strip()
+    # - effective registry directory or directories:
+    cwb_registry = subprocess.run(shlex.split("cwb-config -r"), capture_output=True).stdout.decode().strip()
+    # - libdir (CL library)
+    cwb_libdir = subprocess.run(shlex.split("cwb-config --libdir"), capture_output=True).stdout.decode().strip()
+    # - incdir (C header)
+    cwb_incdir = subprocess.run(shlex.split("cwb-config --incdir"), capture_output=True).stdout.decode().strip()
+    # - compiler flags for linking against CL library
+    cwb_compiler_flags = subprocess.run(shlex.split("cwb-config -I"), capture_output=True).stdout.decode().strip()
+    # - linker flags for linking against CL library
+    cwb_linker_flags = subprocess.run(shlex.split("cwb-config -L"), capture_output=True).stdout.decode().strip()
 
-# ensure compatibility with CWB v3.4.36 and below
-if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) <= 4 and int(cwb_version.split(".")[2]) < 37:
-    cwb_linker_flags = "-L/usr/local/lib -lcl -lm -lpcre -lglib-2.0"
+    ####################################
+    # define (and compile) C-extension #
+    ####################################
 
-# define include directories, library directories, and library names
-libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]
-inc_dirs = [cwb_incdir] + [t[2:] for t in shlex.split(cwb_compiler_flags) if t.startswith("-I")]
-lib_dirs = [cwb_libdir] + [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-L")]
+    # ensure compatibility with CWB v3.4.36 and below
+    if int(cwb_version.split(".")[0]) == 3 and int(cwb_version.split(".")[1]) <= 4 and int(cwb_version.split(".")[2]) < 37:
+        cwb_linker_flags = "-L/usr/local/lib -lcl -lm -lpcre -lglib-2.0"
 
-ccc_cl = Extension(
-    name="ccc.cl",
-    sources=['ccc/cl' + ('.pyx' if USE_CYTHON else '.c')],
-    include_dirs=inc_dirs,  # list of directories to search for C/C++ header files
-    library_dirs=lib_dirs,  # list of directories to search for C/C++ libraries at link time
-    libraries=libraries     # list of library names (not filenames or paths) to link against
-)
+    # define include directories, library directories, and library names
+    libraries = [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-l")]
+    inc_dirs = [cwb_incdir] + [t[2:] for t in shlex.split(cwb_compiler_flags) if t.startswith("-I")]
+    lib_dirs = [cwb_libdir] + [t[2:] for t in shlex.split(cwb_linker_flags) if t.startswith("-L")]
 
-# cythonize?
-extensions = [ccc_cl]
-if USE_CYTHON:
-    extensions = cythonize(extensions)
+    ccc_cl = Extension(
+        name="ccc.cl",
+        sources=['ccc/cl' + ('.pyx' if USE_CYTHON else '.c')],
+        include_dirs=inc_dirs,  # list of directories to search for C/C++ header files
+        library_dirs=lib_dirs,  # list of directories to search for C/C++ libraries at link time
+        libraries=libraries     # list of library names (not filenames or paths) to link against
+    )
+
+    # cythonize?
+    extensions = [ccc_cl]
+    if USE_CYTHON:
+        extensions = cythonize(extensions)
 
 
 #################
