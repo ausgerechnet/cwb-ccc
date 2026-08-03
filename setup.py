@@ -141,4 +141,10 @@ setup(
         'Programming Language :: Python :: 3.14',
         'Programming Language :: Cython'
     ],
+    extras_require={
+        'docs': [
+            'sphinx',
+            'furo',
+        ],
+    },
 )
