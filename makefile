@@ -4,7 +4,6 @@ install:
 	python3 -m venv venv && \
 	. venv/bin/activate && \
 	pip3 install -U pip setuptools wheel twine && \
-	pip3 install -r requirements.txt && \
 	pip3 install -r requirements-dev.txt
 
 lint:
