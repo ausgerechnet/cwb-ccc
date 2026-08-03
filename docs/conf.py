@@ -12,9 +12,9 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'cwb-ccc'
-copyright = '2025, Philipp Heinrich'
+copyright = '2026, Philipp Heinrich'
 author = 'Philipp Heinrich'
-release = 'v0.13.0'
+release = 'v0.14.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -33,3 +33,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'furo'
 html_static_path = ['_static']
+
+# conf.py
+autodoc_mock_imports = ['ccc.cl']

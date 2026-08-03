@@ -149,7 +149,7 @@ Use `cut_off` to specify the maximum number of lines.
 New in version v.0.14.0: You can provide an attribute `a_show` to the concordancer in order to retrieve regions from an aligned corpus:
 ```python
 src = Corpus('HOLMES-DE', registry_dir='tests/corpora/registry/')
-ich = src.query('[lemma='ich']', context_break='s')
+ich = src.query('[lemma="ich"]', context_break='s')
 ich.concordance(p_show=['word'], a_show=['holmes-en'])
 ```
 
