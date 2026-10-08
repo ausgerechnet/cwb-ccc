@@ -1,9 +1,11 @@
 import os
+import shutil
 
 import pytest
 
 from ccc import Corpus
-from ccc.library import Library, parse_macro_signature
+from ccc.library import (Library, generate_library_idx, parse_macro_signature,
+                         parse_show_macro, parse_show_var)
 
 from .conftest import DATA_PATH
 
@@ -70,6 +72,8 @@ def test_library_cqp_commands(germaparl):
 
     # content-addressed: same content, same file
     assert library.cqp_commands(directory) == commands
+
+    shutil.rmtree(directory)
 
 
 def test_define_wordlist(germaparl):
@@ -143,3 +147,49 @@ def test_propagation(germaparl):
     # definitions on derived corpora do not affect the original
     subcorpus.define_wordlist('spd', ['SPD'])
     assert '$spd' not in corpus.available_wordlists()
+
+
+def test_parse_show():
+
+    assert parse_show_macro("/ap(0)\n\t/np(1)\n") == ['/ap(0)', '/np(1)']
+    assert parse_show_var("$parties =\nCDU  CSU\n$b =\nx") == ['$b', '$parties']
+
+
+def test_lib_idx_file_names(germaparl):
+
+    lib_dir = os.path.join(DATA_PATH, 'library-rename')
+    shutil.rmtree(lib_dir, ignore_errors=True)
+    shutil.copytree(germaparl['lib_dir'], lib_dir)
+    idx = generate_library_idx(lib_dir)
+    assert idx == generate_library_idx(germaparl['lib_dir'])
+
+    # renaming a wordlist changes its name in CQP, so it must change the idx
+    os.rename(os.path.join(lib_dir, 'wordlists', 'parties.txt'),
+              os.path.join(lib_dir, 'wordlists', 'union.txt'))
+    assert generate_library_idx(lib_dir) != idx
+
+    shutil.rmtree(lib_dir)
+
+
+def test_save(germaparl):
+
+    lib_dir = os.path.join(DATA_PATH, 'library-save')
+    shutil.rmtree(lib_dir, ignore_errors=True)
+
+    library = Library(wordlists={'union': ['CDU', 'CSU']})
+    library.add_macro('lemma_pos(2)', '[lemma="$0" & pos="$1"]')
+    library.add_macro('lemma_pos(1)', '[lemma="$0"]')
+    paths = library.save(lib_dir)
+    assert len(paths) == 2
+    with pytest.raises(FileExistsError):
+        library.save(lib_dir)
+    library.save(lib_dir, overwrite=True)
+
+    # saved library behaves like the in-memory one
+    corpus = Corpus(germaparl['corpus_name'], registry_dir=germaparl['registry_dir'],
+                    lib_dir=lib_dir, data_dir=DATA_PATH)
+    assert '$union' in corpus.available_wordlists()
+    assert {'/lemma_pos(1)', '/lemma_pos(2)'} <= set(corpus.available_macros())
+    assert len(corpus.query('/lemma_pos["Seehofer", "NE"]', context=0).df) == 30
+
+    shutil.rmtree(lib_dir)

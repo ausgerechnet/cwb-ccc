@@ -8,7 +8,6 @@ simple caching using shelve/pickle.
 import logging
 import os
 import shelve
-from glob import glob
 from hashlib import sha256
 
 logger = logging.getLogger(__name__)
@@ -24,17 +23,11 @@ def generate_idx(identifiers, prefix='', length=10):
 
 
 def generate_library_idx(lib_dir, prefix='', length=10):
-    """generate an ID for a library,
-    i.e. all files ending on '.txt' in "wordlists" and "macros" of lib_dir
+    """generate an ID for a library (deprecated: use ccc.library.generate_library_idx)
 
     """
-    wordlists = glob(os.path.join(lib_dir, 'wordlists', '*.txt'))
-    macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
-    paths = macros + wordlists
-    identifiers = [
-        generate_idx(open(p, 'rt', encoding='utf-8')) for p in sorted(paths)
-    ]
-    return generate_idx(identifiers, prefix, length)
+    from .library import generate_library_idx
+    return generate_library_idx(lib_dir, prefix, length)
 
 
 class Cache:

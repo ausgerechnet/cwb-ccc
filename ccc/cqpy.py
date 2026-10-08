@@ -11,6 +11,7 @@ read-write support for CQPY query files
 """
 import json
 import logging
+import os
 import re
 
 # requirements
@@ -39,7 +40,7 @@ def cqpy_load_json(query_path):
 
     # meta
     if 'name' not in query.keys():
-        query['name'] = query_path.split("/")[-1].split(".")[0]
+        query['name'] = os.path.splitext(os.path.basename(query_path))[0]
     if 'pattern' not in query.keys():
         query['pattern'] = 9999
     out['meta'] = {

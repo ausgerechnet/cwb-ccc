@@ -16,14 +16,14 @@ from pandas import DataFrame, concat, read_csv
 from pandas.errors import EmptyDataError
 
 # part of module
-from .cache import Cache, generate_idx, generate_library_idx
+from .cache import Cache, generate_idx
 from .cl import Corpus as Attributes
 from .collocates import Collocates
 from .concordances import Concordance, format_line
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .keywords import Keywords
-from .library import Library
+from .library import Library, parse_show_macro, parse_show_var
 from .utils import (aggregate_matches, chunk_anchors, correct_anchors,
                     decode, dump_left_join, fold_df, format_roles,
                     intersect_intervals, merge_intervals,
@@ -141,13 +141,11 @@ def init_data_dir(data_dir, corpus_name, lib_dir=None, inval_cache=True):
     if not isinstance(data_dir, str):
         raise ValueError("parameter data_dir must be str")
 
-    # ensure library exists; generate library idx to invalidate cache when updated
+    # generate library idx to invalidate cache when updated
     if (not inval_cache) or (lib_dir is None):
         lib_idx = "lib-vanilla"
     else:
-        os.makedirs(os.path.join(lib_dir, "wordlists"), exist_ok=True)
-        os.makedirs(os.path.join(lib_dir, "macros"), exist_ok=True)
-        lib_idx = generate_library_idx(lib_dir, 'lib-', 7)
+        lib_idx = Library(lib_dir).lib_idx('lib-', 7)
 
     # each corpus has its separate directory for each library
     subdir = corpus_name + "-" + lib_idx
@@ -268,7 +266,7 @@ class Corpus:
         """
 
         cqp = self.start_cqp()
-        defined_macros = cqp.Exec("show macro;").split("\n")
+        defined_macros = parse_show_macro(cqp.Exec("show macro;"))
         cqp.__del__()
 
         return defined_macros
@@ -282,12 +280,8 @@ class Corpus:
         """
 
         cqp = self.start_cqp()
-        defined_wordlists = cqp.Exec("show var;").split("\n")
+        names = parse_show_var(cqp.Exec("show var;"))
         cqp.__del__()
-
-        names = sorted(
-            [n.rstrip(" =") for n in defined_wordlists if n.startswith("$") and n.endswith(" =")]
-        )
 
         return names
 

@@ -495,16 +495,7 @@ def start_cqp(cqp_bin, registry_dir,
         library = Library(lib_dir)
 
     if library is not None:
-
-        lib_tmp = None if data_dir is None else os.path.join(data_dir, "library")
-        for cqp_exec in library.cqp_commands(lib_tmp):
-            cqp.Exec(cqp_exec)
-
-        # for wordlists defined in macros, it is necessary to execute the macro once
-        macros = cqp.Exec("show macro;").split("\n")
-        for macro in macros:
-            if macro.endswith("(0)"):
-                cqp.Exec(macro.split("(")[0] + "();")
+        library.load(cqp, None if data_dir is None else os.path.join(data_dir, "library"))
 
     # initialize corpus after macro definition, so execution of macro doesn't spend time
     if corpus_name is not None:
