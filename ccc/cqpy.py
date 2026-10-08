@@ -9,6 +9,7 @@ read-write support for CQPY query files
 - query formatting (whitespace incl. linebreaks) is preserved
 
 """
+import copy
 import json
 import logging
 import os
@@ -109,7 +110,8 @@ def cqpy_load(path):
     load cqpy query file from path, return dictionary
     """
 
-    return cqpy_loads(open(path, 'rt').read())
+    with open(path, 'rt', encoding='utf-8') as f:
+        return cqpy_loads(f.read())
 
 
 def cqpy_loads(doc):
@@ -129,7 +131,7 @@ def cqpy_loads(doc):
 
     # read header
     header_list = [re.sub(r"\A# ", "", h) for h in header.split("\n")]
-    query = yaml.load("\n".join(header_list), Loader=yaml.FullLoader)
+    query = yaml.load("\n".join(header_list), Loader=yaml.FullLoader) or dict()
 
     # add CQP
     query['cqp'] = cqp.lstrip().rstrip()
@@ -161,7 +163,8 @@ def cqpy_dump(query, path, comment=True, mode='wt'):
     write query in CQPY format to path
     """
 
-    open(path, mode=mode).write(cqpy_dumps(query, comment))
+    with open(path, mode=mode, encoding='utf-8') as f:
+        f.write(cqpy_dumps(query, comment))
 
 
 def cqpy_dumps(query, comment=True):
@@ -212,6 +215,10 @@ def run_query(corpus, query,
 
     """
 
+    # work on copies so that neither the query nor the defaults are modified
+    query = copy.deepcopy(query)
+    p_show = list(p_show)
+
     # the actual CQP query
     cqp = query['cqp']
 
@@ -246,7 +253,7 @@ def run_query(corpus, query,
             if p in query['display']:
                 # logger.warning(f"use of '{p}' is deprecated")
                 if query['display'][p] not in p_show:
-                    p_show += [query['display'][p]]
+                    p_show = p_show + [query['display'][p]]
 
     # query the corpus
     dump = corpus.query_cqp(

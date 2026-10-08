@@ -193,3 +193,80 @@ def test_save(germaparl):
     assert len(corpus.query('/lemma_pos["Seehofer", "NE"]', context=0).df) == 30
 
     shutil.rmtree(lib_dir)
+    shutil.rmtree(corpus.data_dir)
+
+
+def test_queries_from_lib_dir(germaparl):
+
+    corpus = get_corpus(germaparl)
+    assert 'jemand_sagt' in corpus.available_queries()
+
+    query = corpus.library.get_query('jemand_sagt')
+    assert query['query']['context_break'] == 's'
+    with pytest.raises(KeyError):
+        corpus.library.get_query('does_not_exist')
+
+    lines = corpus.run_query('jemand_sagt')
+    assert all([v in lines.columns for v in ['word', 'entity_lemma', 'vp_lemma']])
+
+
+def test_define_query(germaparl):
+
+    corpus = get_corpus(germaparl, lib=False, queries={'seehofer': '[lemma="Seehofer"]'})
+    corpus.define_query('horst_seehofer', {
+        'cqp': '@1[lemma="Horst"] @2[lemma="Seehofer"]',
+        'query': {'context_break': 's'},
+        'anchors': {'slots': {'first': 1, 'last': 2}}
+    })
+    assert corpus.available_queries() == ['horst_seehofer', 'seehofer']
+
+    lines = corpus.run_query('seehofer')
+    assert len(lines) == len(corpus.query('[lemma="Seehofer"]', context=0).df)
+
+    lines = corpus.run_query('horst_seehofer')
+    assert 'first_word' in lines.columns and 'last_word' in lines.columns
+
+    # running a query does not modify the stored definition
+    query = corpus.library.get_query('horst_seehofer')
+    query['cqp'] = 'changed'
+    corpus.run_query('horst_seehofer', p_show=['word'])
+    assert corpus.library.get_query('horst_seehofer')['cqp'].startswith('@1')
+
+    with pytest.raises(ValueError):
+        corpus.define_query('no/slash', '[]')
+    with pytest.raises(ValueError):
+        corpus.define_query('no_cqp', {'query': {}})
+
+
+def test_query_overrides_lib_dir(germaparl):
+
+    corpus = get_corpus(germaparl, queries={'jemand_sagt': '[lemma="sagen"]'})
+    assert corpus.library.get_query('jemand_sagt') == {'cqp': '[lemma="sagen"]'}
+    assert corpus.available_queries().count('jemand_sagt') == 1
+
+
+def test_save_queries(germaparl):
+
+    lib_dir = os.path.join(DATA_PATH, 'library-save-queries')
+    shutil.rmtree(lib_dir, ignore_errors=True)
+
+    query = {
+        'cqp': '@1[lemma="Horst"] @2[lemma="Seehofer"]',
+        'query': {'context_break': 's'},
+        'anchors': {'corrections': {1: -1}, 'slots': {'first': 1}}
+    }
+    library = Library(queries={'plain': '[lemma="Seehofer"]', 'cqpy': query})
+    paths = library.save(lib_dir)
+    assert sorted(os.path.basename(p) for p in paths) == ['cqpy.cqpy', 'plain.cqpy']
+
+    # round trip
+    loaded = Library(lib_dir)
+    assert loaded.available_queries() == ['cqpy', 'plain']
+    assert loaded.get_query('cqpy') == query
+    assert loaded.get_query('plain') == {'cqp': '[lemma="Seehofer"]'}
+
+    # queries don't affect the library idx (they are not loaded into CQP)
+    assert len(library) == 0 and library.idx() is None
+    assert loaded.lib_idx() == Library().lib_idx()
+
+    shutil.rmtree(lib_dir)

@@ -22,6 +22,7 @@ from .collocates import Collocates
 from .concordances import Concordance, format_line
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
+from .cqpy import run_query
 from .keywords import Keywords
 from .library import Library, parse_show_macro, parse_show_var
 from .utils import (aggregate_matches, chunk_anchors, correct_anchors,
@@ -106,7 +107,7 @@ class Corpora:
         return corpora
 
     def corpus(self, corpus_name, lib_dir=None, data_dir=None, inval_cache=True,
-               wordlists=None, macros=None):
+               wordlists=None, macros=None, queries=None):
         """Activate a corpus.
 
         :param str corpus_name: name of corpus in CWB registry
@@ -115,6 +116,7 @@ class Corpora:
         :param bool inval_cache: invalidate cache when updating library?
         :param dict wordlists: {name: [item, ...]}
         :param dict macros: {name or signature: body}
+        :param dict queries: {name: CQP query (str) or CQPY query (dict)}
 
         :return: corpus
         :rtype: Corpus
@@ -128,7 +130,8 @@ class Corpora:
                       data_dir=data_dir,
                       inval_cache=inval_cache,
                       wordlists=wordlists,
-                      macros=macros)
+                      macros=macros,
+                      queries=queries)
 
 
 def init_data_dir(data_dir, corpus_name, lib_dir=None, inval_cache=True):
@@ -169,7 +172,7 @@ class Corpus:
     def __init__(self, corpus_name, lib_dir=None, cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
                  data_dir=None, inval_cache=True,
-                 wordlists=None, macros=None, library=None):
+                 wordlists=None, macros=None, queries=None, library=None):
         """Establish connection to CQP and corpus attributes, set paths, read
         library.
 
@@ -189,6 +192,7 @@ class Corpus:
         :param bool inval_cache: invalidate cache when updating library?
         :param dict wordlists: {name: [item, ...]}
         :param dict macros: {name or signature: body}
+        :param dict queries: {name: CQP query (str) or CQPY query (dict)}
         :param Library library: macros and wordlists (takes precedence over lib_dir)
 
         """
@@ -202,6 +206,8 @@ class Corpus:
             library.add_wordlist(name, items)
         for name, body in (macros or dict()).items():
             library.add_macro(name, body)
+        for name, query in (queries or dict()).items():
+            library.add_query(name, query)
         self.library = library
         lib_dir = library.lib_dir
 
@@ -312,6 +318,46 @@ class Corpus:
 
         self.library.add_macro(name, body, n_args)
         self._update_cache_salt()
+
+    def define_query(self, name, query):
+        """Store a query for this corpus (and all corpora derived from it
+        afterwards). Overrides queries of the same name in lib_dir.
+
+        >>> corpus.define_query('seehofer', '[lemma="Horst"]? @1[lemma="Seehofer"]')
+        >>> corpus.define_query('seehofer', {'cqp': '...', 'query': {'context_break': 's'}})
+
+        :param str name: name of query
+        :param query: CQP query (str) or CQPY query (dict, see ccc.cqpy)
+
+        """
+
+        self.library.add_query(name, query)
+
+    def available_queries(self):
+        """Get names of available queries (in lib_dir/queries/*.cqpy and in memory).
+
+        :return: names of queries
+        :rtype: list
+
+        """
+
+        return self.library.available_queries()
+
+    def run_query(self, query, **kwargs):
+        """Run a stored query and get concordance lines (see ccc.cqpy.run_query).
+        Parameters stored in the query take precedence over kwargs.
+
+        :param query: name of a stored query, or CQPY query (dict)
+
+        :return: concordance lines
+        :rtype: DataFrame
+
+        """
+
+        if isinstance(query, str):
+            query = self.library.get_query(query)
+
+        return run_query(self, query, **kwargs)
 
     def _update_cache_salt(self):
         """Identify in-memory library definitions in cache keys (definitions

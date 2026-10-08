@@ -152,7 +152,7 @@ ich = src.query('[lemma='ich']', context_break='s')
 ich.concordance(p_show=['word'], a_show=['holmes-en'])
 ```
 
-#### Wordlists and macros ####
+#### Wordlists, macros, and queries ####
 
 Wordlists and macros can be read from a library directory (`lib_dir/wordlists/*.txt` and `lib_dir/macros/*.txt`):
 ```python
@@ -170,7 +170,22 @@ corpus.define_macro('lemma_pos(2)', '[lemma="$0" & pos="$1"]')
 corpus.query('[word=$union]')
 corpus.query('/lemma_pos["Seehofer", "NE"]')
 ```
-Note that CQP strips quotes from macro arguments, so string arguments have to be quoted in the macro body (`"$0"`).  In-memory definitions override definitions of the same name in `lib_dir`, are passed on to subcorpora, and are taken into account when caching.  Use `corpus.library.save('path/to/library/')` to write them to a library directory for later use via `lib_dir` (existing files are only replaced with `overwrite=True`).
+Note that CQP strips quotes from macro arguments, so string arguments have to be quoted in the macro body (`"$0"`).  In-memory definitions override definitions of the same name in `lib_dir`, are passed on to subcorpora, and are taken into account when caching.
+
+Queries can be stored in the library as well, either as [CQPY files](ccc/cqpy.py) in `lib_dir/queries/*.cqpy` or in memory (as CQP string or as dictionary in CQPY format, including query settings, anchor corrections, and slots).  `corpus.run_query()` runs a stored query and returns concordance lines:
+```python
+corpus = Corpus('GERMAPARL1386', registry_dir='tests/corpora/registry/', lib_dir='tests/corpora/library/')
+corpus.define_query('horst_seehofer', {
+    'cqp': '@1[lemma="Horst"] @2[lemma="Seehofer"]',
+    'query': {'context_break': 's'},
+    'anchors': {'slots': {'first': 1, 'last': 2}}
+})
+corpus.available_queries()
+corpus.run_query('horst_seehofer')
+corpus.run_query('jemand_sagt')
+```
+
+Use `corpus.library.save('path/to/library/')` to write all in-memory wordlists, macros, and queries to a library directory for later use via `lib_dir` (existing files are only replaced with `overwrite=True`).
 
 
 ### Collocation Analyses ###

@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """library.py
 
-macros and wordlists, read from a library directory and / or defined
-in memory
+macros, wordlists, and queries, read from a library directory and / or
+defined in memory
 
 """
+import copy
 import logging
 import os
 import re
@@ -13,11 +14,13 @@ from glob import glob
 from tempfile import gettempdir
 
 from .cache import generate_idx
+from .cqpy import cqpy_dumps, cqpy_load
 
 logger = logging.getLogger(__name__)
 
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 SIGNATURE_PATTERN = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\(([^()]*)\)$")
+QUERY_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 
 
 def parse_show_macro(cqp_output):
@@ -96,48 +99,58 @@ def parse_macro_signature(name, n_args=None):
 
 
 class Library:
-    """Macros and wordlists for CQP.
+    """Macros, wordlists, and queries for CQP.
 
     Definitions are taken from
-    - a library directory (lib_dir/wordlists/*.txt, lib_dir/macros/*.txt)
+    - a library directory (lib_dir/wordlists/*.txt, lib_dir/macros/*.txt,
+      lib_dir/queries/*.cqpy)
     - in-memory definitions (which take precedence)
 
-    In-memory definitions are written to content-addressed files and
-    loaded via CQP's `define … < "file"`, which avoids escaping issues
-    and limits on command length.
+    In-memory wordlists and macros are written to content-addressed
+    files and loaded via CQP's `define … < "file"`, which avoids
+    escaping issues and limits on command length.
+
+    Queries are not loaded into CQP; they are stored in CQPY format
+    (see ccc.cqpy) and can be run via Corpus.run_query().
 
     """
 
-    def __init__(self, lib_dir=None, wordlists=None, macros=None):
+    def __init__(self, lib_dir=None, wordlists=None, macros=None, queries=None):
         """
         :param str lib_dir: /path/to/macros/and/wordlists/
         :param dict wordlists: {name: [item, ...]}
         :param dict macros: {name or signature: body}
+        :param dict queries: {name: CQP query (str) or CQPY query (dict)}
 
         """
 
         self.lib_dir = lib_dir
         self.wordlists = dict()
         self.macros = dict()
+        self.queries = dict()
 
         for name, items in (wordlists or dict()).items():
             self.add_wordlist(name, items)
         for name, body in (macros or dict()).items():
             self.add_macro(name, body)
+        for name, query in (queries or dict()).items():
+            self.add_query(name, query)
 
     def __str__(self):
 
         return '\n'.join([
             f'lib_dir:   {self.lib_dir}',
             f'wordlists: {", ".join("$" + n for n in self.wordlists)}',
-            f'macros:    {", ".join("/" + n for n in self.macros)}'
+            f'macros:    {", ".join("/" + n for n in self.macros)}',
+            f'queries:   {", ".join(self.queries)}'
         ])
 
     def __repr__(self):
         return self.__str__()
 
     def __len__(self):
-        """Number of in-memory definitions."""
+        """Number of in-memory definitions that are loaded into CQP
+        (i.e. wordlists and macros, but not queries)."""
         return len(self.wordlists) + len(self.macros)
 
     def add_wordlist(self, name, items):
@@ -174,6 +187,52 @@ class Library:
         key = f"{name}({n_args})"
         self.macros[key] = (signature, body.strip())
 
+    def add_query(self, name, query):
+        """Store a query in memory.
+
+        :param str name: name of query
+        :param query: CQP query (str) or CQPY query (dict with key 'cqp' and
+                      optional keys 'meta', 'query', 'anchors', 'display')
+
+        """
+
+        if not QUERY_NAME_PATTERN.match(name):
+            raise ValueError(f'invalid query name "{name}"')
+        if isinstance(query, str):
+            query = {'cqp': query}
+        elif not isinstance(query, dict) or 'cqp' not in query:
+            raise ValueError("query must be str or dict with key 'cqp'")
+
+        self.queries[name] = copy.deepcopy(query)
+
+    def get_query(self, name):
+        """Get a query (in-memory definitions take precedence over lib_dir).
+
+        :param str name: name of query
+
+        :return: CQPY query (a copy, so that modifications don't propagate)
+        :rtype: dict
+
+        """
+
+        if name in self.queries:
+            return copy.deepcopy(self.queries[name])
+
+        paths = self.query_paths()
+        if name in paths:
+            return cqpy_load(paths[name])
+
+        raise KeyError(f'query "{name}" not defined')
+
+    def available_queries(self):
+        """Names of all queries (in lib_dir and in memory).
+
+        :rtype: list
+
+        """
+
+        return sorted(set(self.query_paths()) | set(self.queries))
+
     def remove_wordlist(self, name):
         self.wordlists.pop(name.lstrip("$"), None)
 
@@ -181,12 +240,16 @@ class Library:
         name, n_args, _ = parse_macro_signature(name, n_args)
         self.macros.pop(f"{name}({n_args})", None)
 
+    def remove_query(self, name):
+        self.queries.pop(name, None)
+
     def copy(self):
         """Get a copy (so that modifications don't propagate)."""
 
         library = Library(self.lib_dir)
         library.wordlists = {name: list(items) for name, items in self.wordlists.items()}
         library.macros = dict(self.macros)
+        library.queries = copy.deepcopy(self.queries)
         return library
 
     def lib_idx(self, prefix='', length=10):
@@ -241,6 +304,22 @@ class Library:
 
         return wordlists, macros
 
+    def query_paths(self):
+        """Paths of queries in lib_dir.
+
+        :return: {name: path}
+        :rtype: dict
+
+        """
+
+        if self.lib_dir is None:
+            return dict()
+
+        return {
+            os.path.splitext(os.path.basename(path))[0]: os.path.abspath(path)
+            for path in sorted(glob(os.path.join(self.lib_dir, 'queries', '*.cqpy')))
+        }
+
     def cqp_commands(self, directory=None):
         """Get CQP commands that define all wordlists and macros. In-memory
         definitions are written to files in directory first.
@@ -294,8 +373,8 @@ class Library:
 
     def save(self, lib_dir, overwrite=False):
         """Save in-memory definitions to a library directory (one file per
-        wordlist and one file per macro name), so that they can be
-        used via lib_dir later on.
+        wordlist, one file per macro name, and one CQPY file per query),
+        so that they can be used via lib_dir later on.
 
         :param str lib_dir: /path/to/macros/and/wordlists/
         :param bool overwrite: overwrite existing files?
@@ -314,6 +393,10 @@ class Library:
         for key, (signature, body) in sorted(self.macros.items()):
             path = os.path.join(lib_dir, 'macros', f'{key.split("(")[0]}.txt')
             files[path] = files.get(path, "") + f"MACRO {signature}\n{body}\n;\n\n"
+
+        for name, query in self.queries.items():
+            path = os.path.join(lib_dir, 'queries', f'{name}.cqpy')
+            files[path] = cqpy_dumps(query)
 
         if not overwrite:
             existing = [path for path in files if os.path.exists(path)]
