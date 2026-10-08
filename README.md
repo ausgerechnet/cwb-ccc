@@ -170,7 +170,7 @@ corpus.define_macro('lemma_pos(2)', '[lemma="$0" & pos="$1"]')
 corpus.query('[word=$union]')
 corpus.query('/lemma_pos["Seehofer", "NE"]')
 ```
-Note that CQP strips quotes from macro arguments, so string arguments have to be quoted in the macro body (`"$0"`).  In-memory definitions override definitions of the same name in `lib_dir`, are passed on to subcorpora, and are taken into account when caching.
+Note that CQP strips quotes from macro arguments, so string arguments have to be quoted in the macro body (`"$0"`).  In-memory definitions override definitions of the same name in `lib_dir`, are passed on to subcorpora, and are taken into account when caching.  Use `corpus.library.save('path/to/library/')` to write them to a library directory for later use via `lib_dir` (existing files are only replaced with `overwrite=True`).
 
 
 ### Collocation Analyses ###
