@@ -17,11 +17,12 @@ import subprocess
 import sys
 import threading
 import time
-from glob import glob
 from io import StringIO
 from tempfile import NamedTemporaryFile
 
 from pandas import DataFrame, read_csv
+
+from .library import Library
 
 logger = logging.getLogger(__name__)
 
@@ -464,7 +465,8 @@ class CQP:
 
 def start_cqp(cqp_bin, registry_dir,
               data_dir=None, corpus_name=None,
-              lib_dir=None, subcorpus_name=None):
+              lib_dir=None, subcorpus_name=None,
+              library=None):
     """Start CQP process, activate (sub-)corpus, set directory paths, and
     read library (macros and wordlists).
 
@@ -472,8 +474,9 @@ def start_cqp(cqp_bin, registry_dir,
     :param str registry_dir: /path/to/cwb/registry/
     :param str data_dir: /path/to/data/and/cache/
     :param str corpus_name: name of corpus in CWB registry
-    :param str lib_dir: /path/to/macros/and/wordlists/
+    :param str lib_dir: /path/to/macros/and/wordlists/ (ignored if library is given)
     :param str subcorpus_name: name of subcorpus (NQR)
+    :param Library library: macros and wordlists
 
     :return: CQP process
     :rtype: CQP
@@ -488,26 +491,20 @@ def start_cqp(cqp_bin, registry_dir,
     if data_dir is not None:
         cqp.Exec(f'set DataDirectory "{data_dir}"')
 
-    if lib_dir is not None:
+    if library is None and lib_dir is not None:
+        library = Library(lib_dir)
 
-        # wordlists
-        wordlists = glob(os.path.join(lib_dir, 'wordlists', '*.txt'))
-        for wordlist in wordlists:
-            name = wordlist.split('/')[-1].split('.')[0]
-            abs_path = os.path.abspath(wordlist)
-            cqp_exec = f'define ${name} < "{abs_path}";'
+    if library is not None:
+
+        lib_tmp = None if data_dir is None else os.path.join(data_dir, "library")
+        for cqp_exec in library.cqp_commands(lib_tmp):
             cqp.Exec(cqp_exec)
-        # macros
-        macros = glob(os.path.join(lib_dir, 'macros', '*.txt'))
-        for macro in macros:
-            abs_path = os.path.abspath(macro)
-            cqp_exec = f'define macro < "{abs_path}";'
-            cqp.Exec(cqp_exec)
+
         # for wordlists defined in macros, it is necessary to execute the macro once
         macros = cqp.Exec("show macro;").split("\n")
         for macro in macros:
-            # NB: this yields !cqp.Ok() if macro is not zero-valent
-            cqp.Exec(macro.split("(")[0] + "();")
+            if macro.endswith("(0)"):
+                cqp.Exec(macro.split("(")[0] + "();")
 
     # initialize corpus after macro definition, so execution of macro doesn't spend time
     if corpus_name is not None:

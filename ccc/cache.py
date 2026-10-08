@@ -39,13 +39,31 @@ def generate_library_idx(lib_dir, prefix='', length=10):
 
 class Cache:
 
-    def __init__(self, path=None):
+    def __init__(self, path=None, salt=None):
+        """
+        :param str path: path of shelve
+        :param str salt: prepended to all keys (e.g. to identify in-memory library)
+
+        """
 
         self.path = path
+        self.salt = salt
 
         if path:
             directory = os.path.dirname(path)
             os.makedirs(directory, exist_ok=True)
+
+    def key(self, identifier):
+
+        if isinstance(identifier, str):
+            key = identifier
+        else:
+            key = generate_idx(identifier)
+
+        if self.salt is not None:
+            key = f"{self.salt}:{key}"
+
+        return key
 
     def delete(self, identifier):
 
@@ -53,10 +71,7 @@ class Cache:
             logger.info('no cache path')
             return
 
-        if isinstance(identifier, str):
-            key = identifier
-        else:
-            key = generate_idx(identifier)
+        key = self.key(identifier)
 
         with shelve.open(self.path) as shelf:
             if key in shelf.keys():
@@ -69,10 +84,7 @@ class Cache:
             logger.info('no cache path')
             return
 
-        if isinstance(identifier, str):
-            key = identifier
-        else:
-            key = generate_idx(identifier)
+        key = self.key(identifier)
 
         with shelve.open(self.path) as shelf:
             if key in shelf.keys():
@@ -85,10 +97,7 @@ class Cache:
             logger.error('no cache path')
             return
 
-        if isinstance(identifier, str):
-            key = identifier
-        else:
-            key = generate_idx(identifier)
+        key = self.key(identifier)
 
         with shelve.open(self.path) as shelf:
             logger.info(f'saving object "{key}" to cache')

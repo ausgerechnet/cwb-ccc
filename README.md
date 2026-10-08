@@ -143,7 +143,6 @@ By default, it retrieves concordance lines in `simple` format in the order in wh
 
 Use `cut_off` to specify the maximum number of lines.
 
-
 #### Working with aligned corpora ####
 
 New in version v.0.14.0: You can provide an attribute `a_show` to the concordancer in order to retrieve regions from an aligned corpus:
@@ -152,6 +151,27 @@ src = Corpus('HOLMES-DE', registry_dir='tests/corpora/registry/')
 ich = src.query('[lemma='ich']', context_break='s')
 ich.concordance(p_show=['word'], a_show=['holmes-en'])
 ```
+
+#### Wordlists and macros ####
+
+Wordlists and macros can be read from a library directory (`lib_dir/wordlists/*.txt` and `lib_dir/macros/*.txt`):
+```python
+corpus = Corpus('GERMAPARL1386', registry_dir='tests/corpora/registry/', lib_dir='tests/corpora/library/')
+corpus.query('/np[] [lemma="zeigen"]')
+```
+
+New in version v.0.14.1: You can also define wordlists and macros directly, either when initialising the corpus or later on:
+```python
+corpus = Corpus('GERMAPARL1386', registry_dir='tests/corpora/registry/',
+                wordlists={'union': ['CDU', 'CSU']},
+                macros={'seehofer(0)': '[lemma="Horst"] [lemma="Seehofer"]'})
+corpus.define_wordlist('greens', ['GRÜNEN', 'Grünen'])
+corpus.define_macro('lemma_pos(2)', '[lemma="$0" & pos="$1"]')
+corpus.query('[word=$union]')
+corpus.query('/lemma_pos["Seehofer", "NE"]')
+```
+Note that CQP strips quotes from macro arguments, so string arguments have to be quoted in the macro body (`"$0"`).  In-memory definitions override definitions of the same name in `lib_dir`, are passed on to subcorpora, and are taken into account when caching.
+
 
 ### Collocation Analyses ###
 

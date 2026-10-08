@@ -23,6 +23,7 @@ from .concordances import Concordance, format_line
 from .counts import Counts, cwb_scan_corpus
 from .cqp import start_cqp
 from .keywords import Keywords
+from .library import Library
 from .utils import (aggregate_matches, chunk_anchors, correct_anchors,
                     decode, dump_left_join, fold_df, format_roles,
                     intersect_intervals, merge_intervals,
@@ -104,13 +105,16 @@ class Corpora:
 
         return corpora
 
-    def corpus(self, corpus_name, lib_dir=None, data_dir=None, inval_cache=True):
+    def corpus(self, corpus_name, lib_dir=None, data_dir=None, inval_cache=True,
+               wordlists=None, macros=None):
         """Activate a corpus.
 
         :param str corpus_name: name of corpus in CWB registry
         :param str lib_dir: /path/to/macros/and/wordlists/
         :param str data_dir: /path/to/data/and/cache/
         :param bool inval_cache: invalidate cache when updating library?
+        :param dict wordlists: {name: [item, ...]}
+        :param dict macros: {name or signature: body}
 
         :return: corpus
         :rtype: Corpus
@@ -122,7 +126,9 @@ class Corpora:
                       cqp_bin=self.cqp_bin,
                       registry_dir=self.registry_dir,
                       data_dir=data_dir,
-                      inval_cache=inval_cache)
+                      inval_cache=inval_cache,
+                      wordlists=wordlists,
+                      macros=macros)
 
 
 def init_data_dir(data_dir, corpus_name, lib_dir=None, inval_cache=True):
@@ -164,7 +170,8 @@ class Corpus:
 
     def __init__(self, corpus_name, lib_dir=None, cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
-                 data_dir=None, inval_cache=True):
+                 data_dir=None, inval_cache=True,
+                 wordlists=None, macros=None, library=None):
         """Establish connection to CQP and corpus attributes, set paths, read
         library.
 
@@ -182,8 +189,23 @@ class Corpus:
         :param str registry_dir: /path/to/cwb/registry/
         :param str data_dir: /path/to/data/and/cache/
         :param bool inval_cache: invalidate cache when updating library?
+        :param dict wordlists: {name: [item, ...]}
+        :param dict macros: {name or signature: body}
+        :param Library library: macros and wordlists (takes precedence over lib_dir)
 
         """
+
+        # init library
+        if library is None:
+            library = Library(lib_dir)
+        else:
+            library = library.copy()
+        for name, items in (wordlists or dict()).items():
+            library.add_wordlist(name, items)
+        for name, body in (macros or dict()).items():
+            library.add_macro(name, body)
+        self.library = library
+        lib_dir = library.lib_dir
 
         # preprocess data dir
         data_dir = init_data_dir(data_dir, corpus_name, lib_dir, inval_cache)
@@ -207,6 +229,7 @@ class Corpus:
 
         # init cache
         self.cache = Cache(os.path.join(self.data_dir, "CACHE"))
+        self._update_cache_salt()
 
         # init counts
         self.counts = Counts(self.corpus_name, self.registry_dir)
@@ -268,6 +291,42 @@ class Corpus:
 
         return names
 
+    def define_wordlist(self, name, items):
+        """Define a wordlist for this corpus (and all corpora derived from it
+        afterwards). Overrides wordlists of the same name in lib_dir.
+
+        :param str name: name of wordlist (with or without leading '$')
+        :param list items: items of the wordlist
+
+        """
+
+        self.library.add_wordlist(name, items)
+        self._update_cache_salt()
+
+    def define_macro(self, name, body, n_args=None):
+        """Define a macro for this corpus (and all corpora derived from it
+        afterwards). Overrides macros with the same signature in lib_dir.
+
+        >>> corpus.define_macro('np', '[pos="ART"]? [pos="ADJA"]* [pos="NN"]')
+        >>> corpus.define_macro('vp_with(1)', '[lemma="$0"] []{0,3} [pos="VV.*"]')
+
+        :param str name: name of macro, or full signature such as 'np(0)'
+        :param str body: CQP query; arguments are referred to as $0, $1, …
+        :param int n_args: number of arguments (only for plain names, default: 0)
+
+        """
+
+        self.library.add_macro(name, body, n_args)
+        self._update_cache_salt()
+
+    def _update_cache_salt(self):
+        """Identify in-memory library definitions in cache keys (definitions
+        in lib_dir are identified via data_dir).
+
+        """
+
+        self.cache.salt = self.library.idx(prefix='lib-', length=7) if self.inval_cache else None
+
     def available_attributes(self):
         """Get indexed p- and s-attributes. Will be run once when initializing
         the corpus.
@@ -308,7 +367,8 @@ class Corpus:
             self.data_dir,
             self.corpus_name,
             self.lib_dir,
-            self.subcorpus_name
+            self.subcorpus_name,
+            library=self.library
         )
 
     def copy(self):
@@ -325,7 +385,8 @@ class Corpus:
             self.cqp_bin,
             self.registry_dir,
             self.data_dir,
-            self.inval_cache
+            self.inval_cache,
+            library=self.library
         )
 
     ################
@@ -1385,7 +1446,8 @@ class Corpus:
     def subcorpus(self, subcorpus_name=None, df_dump=None, overwrite=True):
 
         return SubCorpus(subcorpus_name, df_dump, self.corpus_name,
-                         self.lib_dir, self.cqp_bin, self.registry_dir, self.data_dir, overwrite, self.inval_cache)
+                         self.lib_dir, self.cqp_bin, self.registry_dir, self.data_dir, overwrite, self.inval_cache,
+                         library=self.library)
 
 
 class SubCorpus(Corpus):
@@ -1393,7 +1455,7 @@ class SubCorpus(Corpus):
     def __init__(self, subcorpus_name, df_dump, corpus_name,
                  lib_dir=None, cqp_bin='cqp',
                  registry_dir='/usr/local/share/cwb/registry/',
-                 data_dir=None, overwrite=True, inval_cache=True):
+                 data_dir=None, overwrite=True, inval_cache=True, library=None):
         """
         :param str subcorpus_name: name of NQR in CQP
         :param DataFrame df_dump: a "DumpFrame"
@@ -1451,7 +1513,7 @@ class SubCorpus(Corpus):
 
         """
 
-        super().__init__(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir, inval_cache)
+        super().__init__(corpus_name, lib_dir, cqp_bin, registry_dir, data_dir, inval_cache, library=library)
 
         if (subcorpus_name is None and df_dump is None):
             logger.warning('no subcorpus information provided, returning Corpus')
@@ -1657,8 +1719,8 @@ class SubCorpus(Corpus):
                 registry_dir=self.registry_dir,
                 data_dir=None,
                 overwrite=True,
-                inval_cache=True
-
+                inval_cache=True,
+                library=self.library
             )
             for p_att in p_show:
                 lines[a_att + '_' + p_att] = aligned.dump2patt(alignments, p_att=p_att)[p_att].reset_index(drop=True).tolist()
